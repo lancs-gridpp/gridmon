@@ -1,0 +1,23 @@
+#!/bin/bash
+# -*- c-basic-offset: 4; indent-tabs-mode: nil -*-
+
+PREFIX=/usr/local
+
+while [ $# -gt 0 ] ; do
+    arg="$1"
+    shift
+
+    case "$arg" in
+        (--prefix=*)
+            PREFIX="${arg#--prefix=}"
+            ;;
+        (*)
+            printf >&2 '%s: unknown argument %s\n' "$arg"
+            exit 1
+            ;;
+    esac
+done
+
+{
+    printf 'PREFIX=%s\n' "$PREFIX"
+} > config.mk

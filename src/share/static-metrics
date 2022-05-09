@@ -1,0 +1,247 @@
+#!/bin/bash
+# -*- c-basic-offset: 4; indent-tabs-mode: nil -*-
+
+## Copyright (c) 2022, Lancaster University
+## All rights reserved.
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions
+## are met:
+##
+## 1. Redistributions of source code must retain the above copyright
+##    notice, this list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above
+##    copyright notice, this list of conditions and the following
+##    disclaimer in the documentation and/or other materials provided
+##    with the distribution.
+##
+## 3. Neither the name of the copyright holder nor the names of its
+##    contributors may be used to endorse or promote products derived
+##    from this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+## LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+## FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+## COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+## INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+## (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+## SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+## STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+## OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+while [ $# -gt 0 ] ; do
+    arg="$1" ; shift
+
+    case "$arg" in
+        (+o)
+            unset OUTPUT
+            ;;
+
+        (-o)
+            OUTPUT="$1" ; shift
+            ;;
+
+        (-*|+*)
+            printf >&2 '%s: unknown switch %s\n' "$0" "$arg"
+            exit 1
+            ;;
+
+        (*)
+            INPUTS+=("$arg")
+            ;;
+    esac
+done
+
+function parse_attrs () {
+    local key="$1" ; shift
+    while [ $# -gt 0 ] ; do
+        local arg="$1" ; shift
+        local value="${arg#*=}"
+        if [ "$value" = "$arg" ] ; then
+            if [ -z "${NODE["$key"]}" ] ; then
+                NODE["$key"]="$value"
+            elif [ -z "${FUNC["$key"]}" ] ; then
+                FUNC["$key"]="$value"
+            elif [ -z "${BUILDING["$key"]}" ] ; then
+                BUILDING["$key"]="$value"
+            elif [ -z "${ROOM["$key"]}" ] ; then
+                ROOM["$key"]="$value"
+            elif [ -z "${CABINET["$key"]}" ] ; then
+                CABINET["$key"]="$value"
+            elif [ -z "${LEVEL["$key"]}" ] ; then
+                LEVEL["$key"]="$value"
+            else
+                printf >&2 'Value %q discarded for %q\n' "$value" "$key"
+            fi
+        else
+            local name="${arg%"=$value"}"
+            case "$name" in
+                (node)
+                    NODE["$key"]="$value"
+                    ;;
+
+                (func)
+                    FUNC["$key"]="$value"
+                    ;;
+
+                (building)
+                    BUILDING["$key"]="$value"
+                    ;;
+
+                (room)
+                    ROOM["$key"]="$value"
+                    ;;
+
+                (cabinet|rack)
+                    CABINET["$key"]="$value"
+                    ;;
+
+                (level)
+                    LEVEL["$key"]="$value"
+                    ;;
+
+                (roles)
+                    ROLES["$key"]="$value"
+                    ;;
+
+                (osds)
+                    OSDS["$key"]="$value"
+                    ;;
+
+                (*)
+                    printf >&2 'Unknown attr %q with value %q for %q\n' \
+                               "$name" "$value" "$key"
+                    ;;
+            esac
+        fi
+    done
+}
+
+
+## Parse inputs and build up data.
+declare -A NODE FUNC PING UP BUILDING ROOM CABINET LEVEL ROLES OSDS
+for input in "${INPUTS[@]}" ; do
+    while read -a words ; do
+        if [ -z "${words[0]}" ] ; then continue ; fi
+        if [ "${words[0]:0:1}" = '#' ] ; then continue ; fi
+        parse_attrs "${words[@]}"
+        host="${words[0]}"
+
+        ## Get an RTT.
+        readarray -t lines < <(ping -c 1 -w 1 "$host" 2> /dev/null)
+        last="${lines[${#lines[@]}-1]}"
+        if [[ "$last" =~ ^rtt\ min/avg/max/mdev\ =\ ([^/]+)/ ]] ; then
+            PING["$host"]="${BASH_REMATCH[1]}"
+            UP["$host"]=1
+        else
+            UP["$host"]=0
+        fi
+    done < "$input"
+done
+
+function doit () {
+    printf '# HELP ip_up whether a host is reachable\n'
+    printf '# TYPE ip_up gauge\n'
+    for host in "${!NODE[@]}" ; do
+        printf 'ip_up{exported_instance="%s"} %d\n' \
+               "${NODE["$host"]:-"$host"}" "${UP["$host"]}"
+    done
+
+    printf '# HELP ip_osd_drives how many drives are allocated as OSDs\n'
+    printf '# TYPE ip_osd_drives gauge\n'
+    for host in "${!OSDS[@]}" ; do
+        printf 'ip_osd_drives{exported_instance="%s"} %d\n' \
+               "${NODE["$host"]:-"$host"}" "${OSDS["$host"]}"
+    done
+
+    printf '# HELP ip_metadata extra info about an IP address\n'
+    for host in "${!NODE[@]}" ; do
+        printf 'ip_metadata{exported_instance="%s",hostname="%s"' \
+               "${NODE["$host"]:-"$host"}" "${host}"
+        if [ "${FUNC["$host"]}" ] ; then
+            printf ',func="%s"' "${FUNC["$host"]}"
+        fi
+        if [ "${BUILDING["$host"]}" ] ; then
+            printf ',building="%s"' "${BUILDING["$host"]}"
+        fi
+        if [ "${ROOM["$host"]}" ] ; then
+            printf ',room="%s"' "${ROOM["$host"]}"
+        fi
+        if [ "${CABINET["$host"]}" ] ; then
+            printf ',rack="%s"' "${CABINET["$host"]}"
+        fi
+        if [ "${LEVEL["$host"]}" ] ; then
+            printf ',level="%s"' "${LEVEL["$host"]}"
+        fi
+        # if [ "${OSDS["$host"]}" ] ; then
+        #     printf ',osds="%s"' "${OSDS["$host"]}"
+        # fi
+
+        ## Convert the comma-separated roles into a word list.
+        rolewords=(${ROLES["$host"]//,/ })
+        declare -A roles=()
+        for role in "${roles[@]}" ; do
+            roles["$role"]=yes
+        done
+
+        ## Include roles derived from legacy function.
+        case "${FUNC["$host"]}" in
+            (storage-data)
+                roles["storage"]=yes
+                roles["ceph_data"]=yes
+                ;;
+
+            (storage-monitor)
+                roles["storage"]=yes
+                roles["ceph_monitor"]=yes
+                roles["ceph_manager"]=yes
+                ;;
+
+            (storage-metadata)
+                roles["storage"]=yes
+                roles["ceph_metadata"]=yes
+                ;;
+
+            (storage-gateway)
+                roles["storage"]=yes
+                roles["storage_gateway"]=yes
+                ;;
+
+            (*)
+                roles["${FUNC["$host"]//-/_}"]=yes
+                ;;
+        esac
+
+        if [ "${#roles[@]}" -gt 0 ] ; then
+            printf ',role_%s="yes"' "${!roles[@]}"
+            printf ',roles="/'
+            printf '%s/' "${!roles[@]}"
+            printf '"'
+        fi
+
+        printf '} 1\n'
+    done
+
+    printf '# HELP ip_ping RTT to IP in ms\n'
+    printf '# TYPE ip_ping gauge\n'
+    for host in "${!PING[@]}" ; do
+        printf 'ip_ping{exported_instance="%s"} %s\n' \
+               "${NODE["$host"]:-"$host"}" "${PING["$host"]}"
+    done
+}
+
+if [ "$OUTPUT" -a "$OUTPUT" != '-' ] ; then
+    OUTPUT="$(realpath -m "$OUTPUT")"
+    tmp="${OUTPUT%/*}/.${OUTPUT##*/}.tmp"
+    if touch "$tmp" ; then
+        doit > "$tmp"
+        mv "$tmp" "$OUTPUT"
+    fi
+else
+    doit
+fi
