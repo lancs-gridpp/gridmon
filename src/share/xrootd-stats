@@ -42,10 +42,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import functools
 import xml
 import sys
+from getopt import getopt
 
+sample_now = time.time()
 ## This is a sample to populate the history with for test purposes.
 sample = {
-    1651696117: {
+    sample_now: {
         ('xrootd-server', 'main'): {
             'buff': {
                 'adj': 0,
@@ -121,7 +123,7 @@ sample = {
                 'et': 6,
                 'toe': 1651696117
             },
-            'start': 1651679316,
+            'start': sample_now - 16801,
             'xrootd': {
                 'aio': {
                     'max': 0,
@@ -1316,21 +1318,53 @@ udp_host = ''
 udp_port = 9485
 http_host = 'localhost'
 http_port = 8744
+horizon = 60 * 30
+fake_data = False
+opts, args = getopt(sys.argv[1:], "h:u:U:t:T:X")
+for opt, val in opts:
+    if opt == '-h':
+        horizon = int(val) * 60
+    elif opt == '-u':
+        udp_port = int(val)
+    elif opt == '-U':
+        udp_host = val
+    elif opt == '-t':
+        http_port = int(val)
+    elif opt == '-T':
+        http_host = val
+    elif opt == '-X':
+        fake_data = True
+        pass
+    continue
 
 ## Record XRootD stats history, indexed by timestamp and instance.
-history = XRootDHistory(horizon = 60 * 30)
+history = XRootDHistory(horizon=horizon)
 
-## Create a datagram Internet socket, and bind to INADDR_ANY and a
-## specific port.  TODO: Hide this in the metrics receiver class,
-metrics_in = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-metrics_in.bind((udp_host, udp_port))
+if fake_data:
+    ## Don't bother listening for data, just populate with some fake
+    ## stuff for testing.
+    recv_thrd = None
+    receiver = None
+    for ts in sample:
+        inst_data = sample[ts]
+        for inst in inst_data:
+            data = inst_data[inst]
+            history.install(ts, inst, data)
+            continue
+        continue
+else:
+    ## Create a datagram Internet socket, and bind to INADDR_ANY and a
+    ## specific port.  TODO: Hide this in the metrics receiver class,
+    metrics_in = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    metrics_in.bind((udp_host, udp_port))
 
-receiver = MetricsReceiver(metrics_in, history)
+    receiver = MetricsReceiver(metrics_in, history)
 
-## Run receiver.keep_polling() as a separate thread.
-recv_thrd = threading.Thread(target=MetricsReceiver.keep_polling,
-                             args=(receiver,))
-recv_thrd.start()
+    ## Run receiver.keep_polling() as a separate thread.
+    recv_thrd = threading.Thread(target=MetricsReceiver.keep_polling,
+                                 args=(receiver,))
+    recv_thrd.start()
+    pass
 
 print('Creating HTTP server...')
 ## TODO: last_calls might need to be thread-safe...?
@@ -1347,10 +1381,14 @@ except KeyboardInterrupt:
 
 history.halt()
 print('Halted history')
-receiver.halt()
-print('Halted receiver')
-recv_thrd.join()
-print('Receiver thread joined')
+if receiver is not None:
+    receiver.halt()
+    print('Halted receiver')
+    pass
+if recv_thrd is not None:
+    recv_thrd.join()
+    print('Receiver thread joined')
+    pass
 
 webserver.server_close()
 print('Server stopped.')
