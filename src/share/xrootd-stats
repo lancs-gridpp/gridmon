@@ -89,11 +89,11 @@ sample = {
             },
             'oss': {
                 'paths': {
-                    '"/cephfs"': {
+                    '/cephfs': {
                         'free': 9991486255104,
                         'ifr': -1,
                         'ino': 315834240,
-                        'lp': '"/cephfs"',
+                        'lp': '/cephfs',
                         'tot': 10966251003904
                     }
                 }
@@ -487,9 +487,9 @@ class MetricsReceiver:
                 print('  Searching for path %d' % i)
                 elem = blk.find('./paths/stats[@id="%d"]' % i)
                 print(ElementTree.tostring(blk, encoding="unicode"))
-                name = elem.find('./rp').text
+                name = elem.find('./rp').text[1:-1]
                 psub = sub.setdefault('paths', { }).setdefault(name, { })
-                psub['lp'] = elem.find('./lp').text
+                psub['lp'] = elem.find('./lp').text[1:-1]
                 for key in [ 'free', 'ifr', 'ino', 'tot' ]:
                     psub[key] = int(elem.find('./' + key).text)
                 continue
