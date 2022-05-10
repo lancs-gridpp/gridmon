@@ -44,8 +44,8 @@ import xml
 import sys
 from getopt import getopt
 
-sample_now = time.time()
 ## This is a sample to populate the history with for test purposes.
+sample_now = time.time()
 sample = {
     sample_now: {
         ('xrootd-server', 'main'): {
@@ -171,11 +171,12 @@ sample = {
 #sys.exit()
 
 class XRootDHistory:
-    def __init__(self, horizon=60*30):
+    def __init__(self, schema, horizon=60*30):
         self.entries = { }
         self.lock = threading.Lock()
         self.horizon = horizon
         self.running = True
+        self.schema = schema
         pass
 
     def install(self, ts, inst, data):
@@ -189,101 +190,97 @@ class XRootDHistory:
             pass
         pass
 
-    def add_metric2(self, k, mtr, fmt, func, attrs):
-        entry = self.entries.get(k)
-        if entry is None:
-            return ''
-        msg = ''
-        for inst in entry:
-            try:
-                data = entry[inst]
-                value = func(data)
-            except:
-                continue
-            labels = 'host="%s",name="%s"' % inst
-            if attrs is not None:
-                ## The key is the attribute name.  The value is a
-                ## tuple (afmt, af).  afmt is a format specifier for
-                ## the value.  af is a function to obtain the value
-                ## from the data.
-                for an in attrs:
-                    atp = attrs[an]
-                    af = atp[1]
-                    afmt = atp[0]
-                    av = af(data)
-                    labels += (',%s="' + afmt + '"') % (an, av)
-                    continue
-                pass
-            msg += mtr
-            msg += '{'
-            msg += labels
-            msg += '}'
-            msg += (' ' + fmt + ' %.3f\n') % (value, k)
+    def add_metric_sample(self, k, tup, mtr, fmt, func, attrs):
+        entry = self.entries[k]
+        value = func(tup, entry)
+
+        ## Each element of attrs gives the attribute name, the format
+        ## specifier, and a function to provide the value.  The
+        ## function is provided with the tuple that identifies the
+        ## metric, and the data at the given timestamp k.
+        labels = []
+        if attrs is None:
+            attrs = { }
+            pass
+        for an, (afmt, af) in attrs.items():
+            av = af(tup, entry)
+            labels.append(('%s="' + afmt + '"') % (an, av))
             continue
+
+        msg = ''
+        msg += mtr
+        msg += '{'
+        msg += ','.join(labels)
+        msg += '}'
+        msg += (' ' + fmt + ' %.3f\n') % (value, k)
         return msg
 
-    def add_metric(self, k, mtr, fmt, func, attrs):
-        entry = self.entries.get(k)
-        if entry is None:
-            return ''
-        msg = ''
-        for inst in entry:
-            try:
-                data = entry[inst]
-                value = func(data)
-            except:
-                continue
-            labels = 'host="%s",name="%s"' % inst
-            if attrs is not None:
-                ## The key is the attribute name.  The value is a
-                ## tuple (afmt, af).  afmt is a format specifier for
-                ## the value.  af is a function to obtain the value
-                ## from the data.
-                for an in attrs:
-                    atp = attrs[an]
-                    af = atp[1]
-                    afmt = atp[0]
-                    av = af(data)
-                    labels += (',%s="' + afmt + '"') % (an, av)
-                    continue
-                pass
-            msg += mtr
-            msg += '{'
-            msg += labels
-            msg += '}'
-            msg += (' ' + fmt + ' %.3f\n') % (value, k)
-            continue
-        return msg
+    def add_metric_family(self, ks, se):
+        mtr = se['base']
+        sel = se['select']
+        bits = se['samples']
+        hlp = se.get('help')
+        unit = se.get('unit')
+        typ = se.get('type')
+        attrs = se.get('attrs')
 
-    def select_metric(self, entry, sel, already):
-        if len(sel) == 0:
-            return { }
-        res = { }
-        for sf in sel:
-            continue
-        pass
-
-    def add_metric_family(self, ks, sel, mtr, bits, hlp=None, unit=None,
-                          typ=None, attrs=None):
         ## A metric with a unit should end with the unit.
         if unit is not None:
             mtr += '_' + unit
             pass
 
-        ## For each timestamp in ks, build up a set of tuples (one per
-        ## entry in sel)...
-        tups_per_ts = { }
+        ## Within this family, build up an index by metric (identified
+        ## by a tuple), and list the timestamps that contribute points
+        ## to that metric.
+        tses_for_tup = { }
         for k in ks:
             entry = self.entries.get(k)
             if entry is None:
                 continue
-
-            for sf in sel:
+            for tup in sel(entry):
+                kset = tses_for_tup.setdefault(tup, set())
+                kset.add(k)
                 continue
             continue
-        pass
 
-    def add_metrics(self, ks, mtr, bits, hlp=None, unit=None,
+        ## Start the message with metadata.
+        msg = ''
+        if typ is not None:
+            msg += '# TYPE %s %s\n' % (mtr, typ)
+            pass
+        if unit is not None:
+            msg += '# UNIT %s %s\n' % (mtr, unit)
+            pass
+        if hlp is not None:
+            ## TODO: Escape the message.
+            msg += '# HELP %s %s\n' % (mtr, hlp)
+            pass
+
+        for tup, kset in tses_for_tup.items():
+            ## Get timestamps in order.
+            kseq = list(kset)
+            kseq.sort()
+
+            ## Do each metric point.
+            for k in kseq:
+                ## Do each metric sample.
+                for sfx, (fmt, func) in bits.items():
+                    msg += self.add_metric_sample(k, tup, mtr + sfx,
+                                                  fmt, func, attrs)
+                    continue
+                continue
+            continue
+
+        return msg
+
+    def add_metrics(self, ks):
+        msg = ''
+        for ms in self.schema:
+            msg += self.add_metric_family(ks, ms)
+            continue
+        return msg
+
+    def add_metricxxxxs(self, ks, mtr, bits, hlp=None, unit=None,
                     typ=None, attrs=None):
         ## A metric with a unit should end with the unit.
         if unit is not None:
@@ -349,724 +346,10 @@ class XRootDHistory:
             ## Identify the latest time of all matching entries and
             ## the caller's timestamp.
             latest = ts if len(ks) == 0 else max(ts, ks[-1])
-        
+
             ## Build up a message with any data that has arrived since
             ## ts.
-            msg += self.add_metrics(ks, 'xrootd_buff_mem',
-                                    bits=[
-                                        ("", "%d",
-                                         lambda data: data['buff']['mem'])
-                                    ],
-                                    typ='gauge', unit='bytes',
-                                    hlp='bytes allocated to buffers')
-
-            msg += self.add_metrics(ks, 'xrootd_buff_buffs',
-                                    bits=[
-                                        ("", "%d",
-                                         lambda data: data['buff']['buffs'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='number of allocated buffers')
-
-            msg += self.add_metrics(ks, 'xrootd_buff_adj',
-                                    bits=[
-                                        ("_total", "%d",
-                                         lambda data: data['buff']['adj']),
-                                        ('_created', "%d",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='number of buffer profile adjustments')
-
-            msg += self.add_metrics(ks, 'xrootd_buff_reqs',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['buff']['reqs']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='number of buffer requests')
-
-            msg += self.add_metrics(ks, 'xrootd_link_num',
-                                    bits=[
-                                        ("", "%d",
-                                         lambda data: data['link']['num'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='number of current connections')
-
-            msg += self.add_metrics(ks, 'xrootd_sgen_et',
-                                    unit='seconds',
-                                    bits=[
-                                        ("", "%.6f",
-                                         lambda data: data['sgen']['et'] / 1e6)
-                                    ],
-                                    typ='gauge',
-                                    hlp='elapsed time for stats completion')
-
-            msg += self.add_metrics(ks, 'xrootd_sgen_toe',
-                                    unit='seconds',
-                                    bits=[
-                                        ("", "%d",
-                                         lambda data: data['sgen']['toe'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='stats completion time')
-
-            msg += self.add_metrics(ks, 'xrootd_sgen_as',
-                                    bits=[
-                                        ("", "%d",
-                                         lambda data: data['sgen']['as'] / 1e6)
-                                    ],
-                                    typ='gauge',
-                                    hlp='async stats')
-
-            msg += self.add_metrics(ks, 'xrootd_link_ctime',
-                                    unit='seconds',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['ctime']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='cummulative time spent in connections')
-
-            msg += self.add_metrics(ks, 'xrootd_link_maxn',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['maxn']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='maximum number of concurrent connections')
-
-            msg += self.add_metrics(ks, 'xrootd_link_tot',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['tot']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='total number of connections')
-
-            msg += self.add_metrics(ks, 'xrootd_link_tmo',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['tmo']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='read request timeouts')
-
-            msg += self.add_metrics(ks, 'xrootd_link_stall',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['stall']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='partial data received occurrences')
-
-            msg += self.add_metrics(ks, 'xrootd_link_sfps',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['sfps']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='partial sendfile ops')
-
-            msg += self.add_metrics(ks, 'xrootd_link_in',
-                                    unit='bytes',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['in']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='bytes received')
-
-            msg += self.add_metrics(ks, 'xrootd_link_out',
-                                    unit='bytes',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['link']['out']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='bytes transmitted')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_idle',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['sched']['idle'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='scheduler threads waiting for work')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_inq',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['sched']['inq'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='jobs in run queue')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_jobs',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['sched']['jobs']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='jobs requiring a thread')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_maxinq',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['sched']['maxinq']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='longest run-queue length')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_tcr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['sched']['tcr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='thread creations')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_tde',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['sched']['tde']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='thread destructions')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_threads',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['sched']['threads'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='current scheduler threads')
-
-            msg += self.add_metrics(ks, 'xrootd_sched_tlimr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['sched']['tlimr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='thread limit attained occurrences')
-
-            msg += self.add_metrics(ks, 'xrootd_poll_att',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['poll']['att'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='file descriptors attached for polling')
-
-            msg += self.add_metrics(ks, 'xrootd_poll_en',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['poll']['en']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='poll enable ops')
-
-            msg += self.add_metrics(ks, 'xrootd_poll_ev',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['poll']['ev']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='polling events')
-
-            msg += self.add_metrics(ks, 'xrootd_poll_int',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['poll']['int']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='unsolicited polling events')
-
-            msg += self.add_metrics(ks, 'xrootd_proc_sys',
-                                    unit='seconds',
-                                    bits=[
-                                        ('_total', "%.6f",
-                                         lambda data: data['proc']['sys']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='system time')
-
-            msg += self.add_metrics(ks, 'xrootd_proc_usr',
-                                    unit='seconds',
-                                    bits=[
-                                        ('_total', "%.6f",
-                                         lambda data: data['proc']['usr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='user time')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_han',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['ofs']['han'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='active file handles')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_opp',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['ofs']['opp'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='files open in read-write POSC mode')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_opw',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['ofs']['opw'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='files open in read-write mode')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_opr',
-                                    bits=[
-                                        ('', "%d",
-                                         lambda data: data['ofs']['opr'])
-                                    ],
-                                    typ='gauge',
-                                    hlp='files open in read mode')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_meta',
-                                    attrs={
-                                        'role': ('%s', lambda data : data['ofs']['role'])
-                                    },
-                                    bits=[
-                                        ('_info', "%d", lambda data: 1)
-                                    ],
-                                    typ='info',
-                                    hlp='reporter metadata')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_bxq',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['bxq']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='background tasks processed')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_dly',
-                                    unit='seconds',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['dly']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='delays imposed')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_err',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['err']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='errors encountered')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_rdr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['rdr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='redirects processed')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_rep',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['rep']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='background replies processed')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_ser',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['ser']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='received events indicating failure')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_sok',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['sok']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='received events indicating success')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_ups',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['ups']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='POSC-mode file unpersisted occurrences')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_tpc_grnt',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['tpc']['grnt']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='TPCs granted')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_tpc_deny',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['tpc']['deny']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='TPCs denied')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_tpc_err',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['tpc']['err']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='failed TPCs')
-
-            msg += self.add_metrics(ks, 'xrootd_ofs_tpc_exp',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['ofs']['tpc']['exp']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='TPCs with expired auth')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_num',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['num']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd protocol selections')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_dly',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['dly']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd delayed requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_err',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['err']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd requests in error')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_rdr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['rdr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd redirections')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_aio_max',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['aio']['max']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd maximum simultaneous asynchronous requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_aio_num',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['aio']['num']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd asynchronous requests processed')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_aio_rej',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['aio']['rej']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd asynchronous requests converted to synchronous')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_getf',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['getf']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd getfile requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_misc',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['misc']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd other requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_open',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['open']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd file-open requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_pr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['pr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd pre-read requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_putf',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['putf']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd putfile requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_rf',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['rf']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd cache-refresh requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_rd',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['rd']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd read requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_rs',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['rs']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd readv segments')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_rv',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['rv']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd readv requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_sync',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['sync']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd sync requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_ops_wr',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['ops']['wr']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd write requests')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_lgn_num',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['lgn']['num']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd login attempts')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_lgn_af',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['lgn']['af']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd login failures')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_lgn_au',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['lgn']['au']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd login authentications')
-
-            msg += self.add_metrics(ks, 'xrootd_xrootd_lgn_ua',
-                                    bits=[
-                                        ('_total', "%d",
-                                         lambda data: data['xrootd']['lgn']['ua']),
-                                        ('_created', "%.3f",
-                                         lambda data: data['start'])
-                                    ],
-                                    typ='counter',
-                                    hlp='xrootd unauthenticated logins')
-
-            # msg += self.add_metrics(ks, 'xrootd_oss_paths_free',
-            #                         unit='bytes',
-            #                         attrs={
-            #                             'real_path': ('%s', path),
-            #                             'logical_path': ('%s', lambda data: data['oss']['paths'][path]['lp'])
-            #                         },
-            #                         bits=[
-            #                             ("", "%d",
-            #                              lambda data: data['oss']['paths'][path]['free'] * 1024)
-            #                         ],
-            #                         typ='gauge',
-            #                         hlp='available capacity')
-            # msg += self.add_metrics(ks, 'xrootd_oss_paths_tot',
-            #                         unit='bytes',
-            #                         attrs={
-            #                             'real_path': ('%s', path)
-            #                         },
-            #                         bits=[
-            #                             ("", "%d",
-            #                              lambda data: data['oss']['paths'][path]['tot'] * 1024)
-            #                         ],
-            #                         typ='gauge',
-            #                         hlp='total capacity')
-            # msg += self.add_metrics(ks, 'xrootd_oss_paths_ifr',
-            #                         unit='bytes',
-            #                         attrs={
-            #                             'real_path': ('%s', path)
-            #                         },
-            #                         bits=[
-            #                             ("", "%d",
-            #                              lambda data: data['oss']['paths'][path]['ifr'])
-            #                         ],
-            #                         typ='gauge',
-            #                         hlp='free inodes')
-            # msg += self.add_metrics(ks, 'xrootd_oss_paths_ino',
-            #                         unit='bytes',
-            #                         attrs={
-            #                             'real_path': ('%s', path)
-            #                         },
-            #                         bits=[
-            #                             ("", "%d",
-            #                              lambda data: data['oss']['paths'][path]['ino'])
-            #                         ],
-            #                         typ='gauge',
-            #                         hlp='total inodes')
+            msg += self.add_metrics(ks)
 
             msg += '# EOF\n'
 
@@ -1337,8 +620,1235 @@ for opt, val in opts:
         pass
     continue
 
+
+
+schema = [
+    {
+        'base': 'xrootd_buff_mem',
+        'type': 'gauge',
+        'unit': 'bytes',
+        'help': 'bytes allocated to buffers',
+        'select': lambda e: [ t for t in e
+                              if 'buff' in e[t] and 'mem' in e[t]['buff'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['buff']['mem']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_buff_buffs',
+        'type': 'gauge',
+        'help': 'number of allocated buffers',
+        'select': lambda e: [ t for t in e
+                              if 'buff' in e[t] and 'buffs' in e[t]['buff'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['buff']['buffs']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_buff_adj',
+        'type': 'counter',
+        'help': 'number of buffer profile adjustments',
+        'select': lambda e: [ t for t in e
+                              if 'buff' in e[t] and 'adj' in e[t]['buff'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['buff']['adj']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_buff_reqs',
+        'type': 'counter',
+        'help': 'number of buffer requests',
+        'select': lambda e: [ t for t in e
+                              if 'buff' in e[t] and 'reqs' in e[t]['buff'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['buff']['reqs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_num',
+        'type': 'gauge',
+        'help': 'number of concurrent connections',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'num' in e[t]['link'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['link']['num']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_ctime',
+        'unit': 'seconds',
+        'type': 'counter',
+        'help': 'cummulative time spent in connections',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'ctime' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%.3f', lambda t, d: d[t[0:2]]['link']['ctime']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_maxn',
+        'type': 'counter',
+        'help': 'maximum number of concurrent connections',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'maxn' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['maxn']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_tot',
+        'type': 'counter',
+        'help': 'total number of connections',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'tot' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['tot']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_tmo',
+        'type': 'counter',
+        'help': 'read request timeouts',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'tmo' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['tmo']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_stall',
+        'type': 'counter',
+        'help': 'partial data received occurences',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'stall' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['stall']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_sfps',
+        'type': 'counter',
+        'help': 'partial sendfile ops',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'sfps' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['sfps']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_in',
+        'unit': 'bytes',
+        'type': 'counter',
+        'help': 'bytes received',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'in' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['in']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_link_out',
+        'unit': 'bytes',
+        'type': 'counter',
+        'help': 'bytes received',
+        'select': lambda e: [ t for t in e
+                              if 'link' in e[t] and 'out' in e[t]['link'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['out']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sgen_et',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'elapsed time for stats completion',
+        'select': lambda e: [ t for t in e
+                              if 'sgen' in e[t] and 'et' in e[t]['sgen'] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d[t[0:2]]['sgen']['et'] / 1e6),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sgen_toe',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'stats completion time',
+        'select': lambda e: [ t for t in e
+                              if 'sgen' in e[t] and 'toe' in e[t]['sgen'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['sgen']['toe']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sgen_as',
+        'type': 'gauge',
+        'help': 'asynchronous stats',
+        'select': lambda e: [ t for t in e
+                              if 'sgen' in e[t] and 'as' in e[t]['sgen'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['sgen']['as']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_idle',
+        'type': 'gauge',
+        'help': 'scheduler threads waiting for work',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'idle' in e[t]['sched'] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['idle']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_inq',
+        'type': 'gauge',
+        'help': 'jobs in run queue',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'inq' in e[t]['sched'] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['inq']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_jobs',
+        'type': 'counter',
+        'help': 'jobs requiring a thread',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'jobs' in e[t]['sched'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['jobs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_maxinq',
+        'type': 'counter',
+        'help': 'longest run-queue length',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'maxinq' in e[t]['sched'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['maxinq']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_tcr',
+        'type': 'counter',
+        'help': 'thread creations',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'tcr' in e[t]['sched'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tcr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_tde',
+        'type': 'counter',
+        'help': 'thread destructions',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'tde' in e[t]['sched'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tde']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_threads',
+        'type': 'gauge',
+        'help': 'current scheduler threads',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'threads' in e[t]['sched'] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['threads']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_sched_tlimr',
+        'type': 'counter',
+        'help': 'thread limit attained occurrences',
+        'select': lambda e: [ t for t in e
+                              if 'sched' in e[t] and 'tlimr' in e[t]['sched'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tlimr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_poll_att',
+        'type': 'gauge',
+        'help': 'file descriptors attached for polling',
+        'select': lambda e: [ t for t in e
+                              if 'poll' in e[t] and 'att' in e[t]['poll'] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d[t[0:2]]['poll']['att']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_poll_en',
+        'type': 'counter',
+        'help': 'poll enable ops',
+        'select': lambda e: [ t for t in e
+                              if 'poll' in e[t] and 'en' in e[t]['poll'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['en']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_poll_ev',
+        'type': 'counter',
+        'help': 'polling events',
+        'select': lambda e: [ t for t in e
+                              if 'poll' in e[t] and 'ev' in e[t]['poll'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['ev']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_poll_int',
+        'type': 'counter',
+        'help': 'unsolicited polling events',
+        'select': lambda e: [ t for t in e
+                              if 'poll' in e[t] and 'int' in e[t]['poll'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['int']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_proc_sys',
+        'unit': 'seconds',
+        'type': 'counter',
+        'help': 'system time',
+        'select': lambda e: [ t for t in e
+                              if 'proc' in e[t] and 'sys' in e[t]['proc'] ],
+        'samples': {
+            '_total': ('%.6f', lambda t, d: d[t[0:2]]['proc']['sys']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_proc_usr',
+        'unit': 'seconds',
+        'type': 'counter',
+        'help': 'user time',
+        'select': lambda e: [ t for t in e
+                              if 'proc' in e[t] and 'usr' in e[t]['proc'] ],
+        'samples': {
+            '_total': ('%.6f', lambda t, d: d[t[0:2]]['proc']['usr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_meta',
+        'type': 'info',
+        'help': 'reporter metadata',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'role' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'role': ('%s', lambda t, d: d[t[0:2]]['ofs']['role']),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_han',
+        'type': 'gauge',
+        'help': 'active file handles',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'han' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['han']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_opp',
+        'type': 'gauge',
+        'help': 'files open in read-write POSC mode',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'opp' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opp']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_opw',
+        'type': 'gauge',
+        'help': 'files open in read-write mode',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'opw' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opw']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_opr',
+        'type': 'gauge',
+        'help': 'files open in read mode',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'opr' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opr']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_bxq',
+        'type': 'counter',
+        'help': 'user time',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'bxq' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['bxq']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_dly',
+        'type': 'counter',
+        'help': 'delays imposed',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'dly' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['dly']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_err',
+        'type': 'counter',
+        'help': 'errors encountered',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'err' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_rdr',
+        'type': 'counter',
+        'help': 'redirects processed',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'rdr' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['rdr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_rep',
+        'type': 'counter',
+        'help': 'background replies processed',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'rep' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['rep']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_ser',
+        'type': 'counter',
+        'help': 'received events indicating failure',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'ser' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['ser']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_sok',
+        'type': 'counter',
+        'help': 'received events indicating success',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'sok' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['sok']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_ups',
+        'type': 'counter',
+        'help': 'POSC-mode file unpersisted occurrences',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t] and 'ups' in e[t]['ofs'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['ups']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_tpc_grnt',
+        'type': 'counter',
+        'help': 'TPCs granted',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t]
+                              and 'tpc' in e[t]['ofs']
+                              and 'grnt' in e[t]['ofs']['tpc'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['grnt']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_tpc_deny',
+        'type': 'counter',
+        'help': 'TPCs denied',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t]
+                              and 'tpc' in e[t]['ofs']
+                              and 'deny' in e[t]['ofs']['tpc'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['deny']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_tpc_err',
+        'type': 'counter',
+        'help': 'TPCs failed',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t]
+                              and 'tpc' in e[t]['ofs']
+                              and 'err' in e[t]['ofs']['tpc'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_ofs_tpc_exp',
+        'type': 'counter',
+        'help': 'TPCs with expired auth',
+        'select': lambda e: [ t for t in e
+                              if 'ofs' in e[t]
+                              and 'tpc' in e[t]['ofs']
+                              and 'exp' in e[t]['ofs']['tpc'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['exp']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_num',
+        'type': 'counter',
+        'help': 'xrootd protocol selections',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'num' in e[t]['xrootd'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_dly',
+        'type': 'counter',
+        'help': 'xrootd delayed requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'dly' in e[t]['xrootd'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['dly']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_err',
+        'type': 'counter',
+        'help': 'xrootd errors encountered',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'err' in e[t]['xrootd'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_rdr',
+        'type': 'counter',
+        'help': 'xrootd redirections',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'rdr' in e[t]['xrootd'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['rdr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_aio_max',
+        'type': 'counter',
+        'help': 'xrootd maximum simultaneous asynchronous requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'aio' in e[t]['xrootd']
+                              and 'max' in e[t]['xrootd']['aio'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['max']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_aio_num',
+        'type': 'counter',
+        'help': 'xrootd asynchronous requests processed',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'aio' in e[t]['xrootd']
+                              and 'num' in e[t]['xrootd']['aio'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_aio_rej',
+        'type': 'counter',
+        'help': 'xrootd asynchronous requests converted to synchronous',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'aio' in e[t]['xrootd']
+                              and 'rej' in e[t]['xrootd']['aio'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['rej']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_getf',
+        'type': 'counter',
+        'help': 'xrootd getfile requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'getf' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['getf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_misc',
+        'type': 'counter',
+        'help': 'xrootd other requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'misc' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['misc']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_open',
+        'type': 'counter',
+        'help': 'xrootd file-open requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'open' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['open']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_pr',
+        'type': 'counter',
+        'help': 'xrootd pre-read requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'pr' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['pr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_putf',
+        'type': 'counter',
+        'help': 'xrootd putfile requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'putf' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['putf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_rf',
+        'type': 'counter',
+        'help': 'xrootd cache-refresh requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'rf' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_rd',
+        'type': 'counter',
+        'help': 'xrootd read requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'rd' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rd']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_rs',
+        'type': 'counter',
+        'help': 'xrootd readv segments',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'rs' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_rv',
+        'type': 'counter',
+        'help': 'xrootd readv requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'rv' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rv']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_sync',
+        'type': 'counter',
+        'help': 'xrootd sync requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'sync' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['sync']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_ops_wr',
+        'type': 'counter',
+        'help': 'xrootd write requests',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'ops' in e[t]['xrootd']
+                              and 'wr' in e[t]['xrootd']['ops'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['wr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_lgn_num',
+        'type': 'counter',
+        'help': 'xrootd login attempts',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'lgn' in e[t]['xrootd']
+                              and 'num' in e[t]['xrootd']['lgn'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_lgn_af',
+        'type': 'counter',
+        'help': 'xrootd login failures',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'lgn' in e[t]['xrootd']
+                              and 'af' in e[t]['xrootd']['lgn'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['af']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_lgn_au',
+        'type': 'counter',
+        'help': 'xrootd login authentications',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'lgn' in e[t]['xrootd']
+                              and 'au' in e[t]['xrootd']['lgn'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['au']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_xrootd_lgn_ua',
+        'type': 'counter',
+        'help': 'xrootd unauthenticated logins',
+        'select': lambda e: [ t for t in e
+                              if 'xrootd' in e[t]
+                              and 'lgn' in e[t]['xrootd']
+                              and 'ua' in e[t]['xrootd']['lgn'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['ua']),
+            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_oss_paths_free',
+        'unit': 'bytes',
+        'type': 'gauge',
+        'help': 'available capacity',
+        'select': lambda e: [ t + (rp,)
+                              for t in e
+                              for rp in e[t]['oss']['paths'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['free']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'rp': ('%s', lambda t, d: t[2]),
+            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+        }
+    },
+
+    {
+        'base': 'xrootd_oss_paths_tot',
+        'unit': 'bytes',
+        'type': 'gauge',
+        'help': 'total capacity',
+        'select': lambda e: [ t + (rp,)
+                              for t in e
+                              for rp in e[t]['oss']['paths'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['tot']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'rp': ('%s', lambda t, d: t[2]),
+            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+        }
+    },
+
+    {
+        'base': 'xrootd_oss_paths_ifr',
+        'unit': 'inodes',
+        'type': 'gauge',
+        'help': 'available capacity',
+        'select': lambda e: [ t + (rp,)
+                              for t in e
+                              for rp in e[t]['oss']['paths'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ifr']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'rp': ('%s', lambda t, d: t[2]),
+            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+        }
+    },
+
+    {
+        'base': 'xrootd_oss_paths_ino',
+        'unit': 'inodes',
+        'type': 'gauge',
+        'help': 'total capacity',
+        'select': lambda e: [ t + (rp,)
+                              for t in e
+                              for rp in e[t]['oss']['paths'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ino']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'rp': ('%s', lambda t, d: t[2]),
+            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+        }
+    },
+]
+
+
 ## Record XRootD stats history, indexed by timestamp and instance.
-history = XRootDHistory(horizon=horizon)
+history = XRootDHistory(schema, horizon=horizon)
 
 if fake_data:
     ## Don't bother listening for data, just populate with some fake
