@@ -1,6 +1,25 @@
 # Purpose
 
+These are bespoke scripts to augment metrics available for collection by Prometheus for monitoring components of a Grid installation, beyond those metrics provided by the likes of the Prometheus node exporter, Ceph monitors, etc.
 
+## Static metrics
+
+The script `static-metrics` is used to generate Prometheus-compatible metrics expressing essentially static intent.
+(It also includes `ping` RTTs, just to muddy the waters.)
+The script is to be run as a cronjob to generate a file served statically through a regular HTTP server.
+
+The following options are accepted:
+
+- `-o *file*` -- Atomically write output to the file.  An adjacent file is created, and then moved into place.
+- `+o` -- Write to standard output.
+
+Other arguments are taken as source filenames.
+Each is read in turn, and then listed hosts are `ping`ed, and their RTTs are recorded.
+Finally, the metrics are written out.
+
+### Source format
+
+### Generated metrics
 
 ## XRootD-Prometheus bridge
 
@@ -12,7 +31,7 @@ The script distinguishes HTTP clients by `Authorization` header, and remembers t
 
 The following arguments are accepted:
 
-- `-h *int*` -- minutes of horizon, beyond which metrics are discarded
+- `-h *int*` -- minutes of horizon, beyond which metrics are discarded; 30 is the default
 - `-u *port*` -- port number to bind to (UDP); 9485 is the default
 - `-U *host*` -- hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
 - `-t *port*` -- port number to bind to (HTTP/TCP); 8744 is the default
@@ -107,3 +126,11 @@ In addition to `host` and `name`, the following are defined to have `lp` and `rp
 - `xrootd_oss_paths_tot_bytes` -- capacity
 - `xrootd_oss_paths_ifr_inodes` -- free space
 - `xrootd_oss_paths_ino_inodes` -- capacity
+
+
+## PerfSONAR statistics
+
+The script `perfsonar-stats` is supposed to pull data from the `esmond` service of a PerfSONAR instance, and turn it into Prometheus-compatible metrics.
+However, it still needs a lot of work, as the data it currently fetches is not meaningful.
+For example, doubling the scraping rate scales up the values of the metrics, which shouldn't happen if the metrics are genuine; changes to the rate should only affect the granularity of the metrics, not their values.
+The script also needs work to accept configuration options.
