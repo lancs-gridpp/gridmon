@@ -19,7 +19,45 @@ Finally, the metrics are written out.
 
 ### Source format
 
+Each line identifies a host, and defines several attributes to be presented as metrics.
+Attributes are space-separated, and follow the host identifier (an IP address or DNS name).
+The default order of attributes is:
+
+1. `exported_instance` -- the key field identifying the host in the metric, defaulting to the host identifier
+1. `function` -- a deprecated field acting as a shorthand for `roles` (below)
+1. `building` -- the building housing the physical device
+1. `room` -- the machine room or laboratory housing the physical device
+1. `rack` -- the rack identifier housing the physical device
+1. `level` -- the position within the rack housing the physical device
+
+Trailing attributes are optional, and most can be named, e.g., `rack=21`, in defiance of the default order.
+The following attributes are also optional, and must be named if used:
+
+- `osds` -- the number of Ceph OSDs expected to be 'up' on the host
+- `roles` -- a comma-separated list of roles (e.g., `storage`, `ceph_data`, `ceph_monitor`, `ceph_manager`, `ceph_metadata`, `storage_gateway`, etc
+
+`function` may be any of the following, with their `roles` equivalents:
+
+- `storage-data` ⇒ `storage`, `ceph_data`
+- `storage-monitor` ⇒ `storage`, `ceph_monitor`, `ceph_manager`
+- `storage-metadata` ⇒ `storage`, `ceph_metadata`
+- `storage-gateway` ⇒ `storage`, `storage_gateway`
+
+Anything else is mapped to itself as a role.
+
 ### Generated metrics
+
+All metrics include `exported_instance` as an attribute.
+
+`ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise.
+`ip_ping` is the RTT in milliseconds.
+
+`ip_osd_drives` is the number of OSDs expected to be up on a host.
+It normally corresponds to the number of discs installed.
+
+`ip_metadata` is always 1, but includes other attributes such as `hostname` (the host identifier), along with `building`, `room`, `rack`, `level` if specified.
+It also includes an attribute `roles`, which is a slash-separated and slash-surrounded concatenation of the roles for the host, e.g., `/storage/ceph_data/`.
+This should be relatively easy to select host sets with certain roles using regular expressions.
 
 ## XRootD-Prometheus bridge
 
@@ -36,7 +74,6 @@ The following arguments are accepted:
 - `-U *host*` -- hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
 - `-t *port*` -- port number to bind to (HTTP/TCP); 8744 is the default
 - `-T *host*` -- hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
-
 
 Each variable specified by the XRootD format is represented by an OpenMetrics metric family by converting dots to underscores, prefixing with `xrootd_`, and suffixing with additional terms as expected by OpenMetrics.
 
