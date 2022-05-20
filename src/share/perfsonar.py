@@ -37,6 +37,63 @@ from urllib.parse import urljoin
 import json
 import sys
 
+schema = [
+    {
+        'base': 'perfsonar_packets_lost',
+        'type': 'gauge',
+        'help': 'packets lost',
+        'select': lambda e : [ (t,) for t in e
+                               if 'measurements' in e[t]
+                               and 'packet-count-lost' in e[t]['measurement'] ],
+        'samples': {
+            '': ('%d',
+                 lambda t, d: d[t[0]]['measurements']['packet-count-lost']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_metadata',
+        'type': 'info',
+        'help': 'measurement metadata',
+        'select': lambda e : [ (t,) for t in e ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+            'src_addr': ('%s', lambda t, d: d[t[0]]['source']),
+            'dst_addr': ('%s', lambda t, d: d[t[0]]['dst']),
+            'src_name': ('%s', lambda t, d: d[t[0]]['input-source']),
+            'dst_name': ('%s', lambda t, d: d[t[0]]['input-destination']),
+            'agent_addr': ('%s', lambda t, d: d[t[0]]['measurement-agent']),
+            'tool': ('%s', lambda t, d: d[t[0]]['tool-name']),
+            'subj_type': ('%s', lambda t, d: d[t[0]]['subject-type']),
+            'psched_type': ('%s', lambda t, d: d[t[0]]['pscheduler-test-type']),
+        },
+    },
+
+    {
+        'base': 'perfsonar_ip_metadata',
+        'type': 'info',
+        'help': 'IP measurement metadata',
+        'select': lambda e : [ (t,) for t in e
+                               if 'ip-transport-protocol' in e[t]
+                               and e['ip-transport-protocol'] is not None ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+            'ip_transport_proto':
+            ('%s', lambda t, d: d[t[0]]['ip-transport-protocol']),
+        },
+    },
+]
+
+
 def _merge(a, b, pfx=()):
     for key, nv in b.items():
         ## Add a value if not already present.
