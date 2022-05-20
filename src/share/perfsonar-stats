@@ -32,109 +32,74 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
-import urllib.request
-import yaml
-import ssl
+import functools
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from getopt import getopt
 
+## Local libraries
+import perfsonar
+import metrics
 
-## From somewhere...?
-class hashabledict(dict):
-    def __key(self):
-        return tuple((k,self[k]) for k in sorted(self))
-    def __hash__(self):
-        return hash(self.__key())
-    def __eq__(self, other):
-        return self.__key() == other.__key()
+http_host = "localhost"
+http_port = 8732
+endpoint = None
+horizon = 60 * 30
+opts, args = getopt(sys.argv[1:], "h:t:T:E:S:")
+for opt, val in opts:
+    if opt == '-h':
+        horizon = int(val) * 60
+    elif opt == '-T':
+        http_host = val
+    elif opt == '-t':
+        http_port = int(val)
+    elif opt == '-E':
+        endpoint = val
+    elif opt == '-S':
+        endpoint = 'https://' + val + '/esmond/perfsonar/archive/'
+        pass
+    continue
 
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
+class MetricsSender(BaseHTTPRequestHandler):
+    def __init__(self, *args, hist=None, coll=None, **kwargs):
+        self.hist = hist
+        self.coll = coll
+        super().__init__(*args, **kwargs)
+        pass
 
-endpoint = "https://xxxx/esmond/perfsonar/archive/"
-
-result = { }
-lastTime = int(time.time())
-resetTime = lastTime
-
-class MyServer(BaseHTTPRequestHandler):
     def do_GET(self):
-        ## Get all the data since the last query.
-        currTime = int(time.time())
-        global result
-        global endpoint
-        global lastTime
-        global ctx
-        url = endpoint + ("?time-start=%d&time-end=%d" %
-                          (lastTime + 1, currTime))
-        req = urllib.request.urlopen(url, context=ctx)
-        doc = yaml.load(req, Loader=yaml.SafeLoader)
-
-        ## Merge the latest data with our records.
-        for elem in doc:
-            if elem['source'] == elem['measurement-agent']:
-                agent = 'source'
-            else:
-                agent = 'destination'
-                pass
-            duration = float(elem.get("time-duration"))
-            k = hashabledict({ "source": elem.get("input-source"),
-                               "tool": elem.get("tool-name"),
-                               "destination": elem.get("input-destination"),
-                               "agent" : agent })
-            entry = result.get(k)
-            if entry is None:
-                entry = { "count" : 0, "duration": 0.0 }
-                result[k] = entry
-                pass
-            entry['count'] += 1
-            entry['duration'] += duration
+        ## Identify the client by the authorization string.
+        auth = self.headers.get('Authorization')
+        if auth is None:
+            auth = 'anonymous'
             pass
-        lastTime = currTime
 
-        ## Write out the new data.
+        ## Ensure we have the latest metrics.
+        print('\nGetting latest data from %s' % auth)
+        new_data = self.coll.update()
+        print('  Installing latest data')
+        self.hist.install(new_data)
+
+        ## Fetch the message appropriate to the client, and send it.
+        print('  Forming message')
+        body = self.hist.get_message(auth)
         self.send_response(200)
-        self.send_header("Content-Type", "text/plain; charset=UTF-8")
+        ct = 'application/openmetrics-text'
+        ct += '; version=1.0.0; charset=utf-8'
+        self.send_header('Content-Type', ct)
         self.end_headers()
-        out = self.wfile
-        out.write(bytes("# HELP perfsonar_task_duration_seconds" +
-                        " duration of tasks\n", "UTF-8"))
-        out.write(bytes("# TYPE perfsonar_task_duration_seconds" +
-                        " counter\n", "UTF-8"))
-        for k in result:
-            v = result[k]
-            out.write(bytes(('perfsonar_task_duration_seconds_count{' +
-                             'source="%s", destination="%s",' +
-                             ' agent="%s", tool="%s"} %g\n') %
-                            (k['source'], k['destination'], k['agent'],
-                             k['tool'], v['count']), "UTF-8"))
-            out.write(bytes(('perfsonar_task_duration_seconds_sum{source="%s",' +
-                             ' destination="%s", agent="%s", tool="%s"} %g\n') %
-                            (k['source'], k['destination'], k['agent'],
-                             k['tool'], v['duration']), "UTF-8"))
-            out.write(bytes(('perfsonar_task_duration_seconds_created{' +
-                             'source="%s", destination="%s",' +
-                             ' agent="%s", tool="%s"} %f\n') %
-                            (k['source'], k['destination'], k['agent'],
-                             k['tool'], resetTime), "UTF-8"))
+        self.wfile.write(body.encode('UTF-8'))
+        print('  Complete')
         pass
 
     pass
 
-hostName = "localhost"
-serverPort = 8732
+methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
+perfcoll = perfsonar.PerfsonarCollector(endpoint)
+partial_handler = functools.partial(MetricsSender, hist=methist, coll=perfcoll)
+webserver = HTTPServer((http_host, http_port), partial_handler)
 
-if __name__ == "__main__":
-    webServer = HTTPServer((hostName, serverPort), MyServer)
-    print("Started on http://%s:%s" % (hostName, serverPort))
-
-    try:
-        webServer.serve_forever()
-    except KeyboardInterrupt:
-        pass
-
-    webServer.server_close()
-    print("Server stopped.")
+try:
+    webserver.serve_forever()
+except KeyboardInterrupt:
     pass
