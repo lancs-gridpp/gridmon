@@ -63,7 +63,50 @@ class MetricHistory:
     retransmissions of the same metric points are minimized.
 
     """
+
     def __init__(self, schema, horizon=60*30):
+        """The schema is an array of metric family descriptors.  Each is a
+        dict with an entry 'base' giving the base name of the family;
+        optional 'type' (e.g., 'counter', 'gauge', etc, as specified
+        by OpenMetrics); optional 'unit'; optional 'help', 'select' as
+        a selection function supplied with each internal entry for a given
+        timestamp, and yielding a list of tuples that characterize the
+        metric within the entry; 'samples' as a dict mapping from name
+        suffix to a tuple of (format specifier, value function); and
+        'attrs' as a dict from attribute name to value function.
+
+        A selection function is provided with a dict d, a complete
+        entry for a timestamp.  It should return a list of tuples
+        describing how to get data from the entry, as well as
+        attribute it.
+
+        A value function is provided with a tuple t and a dict d.  t
+        is a tuple returned by the selection function, and d is a
+        complete entry for a timestamp.  In the 'samples' dict, it
+        should extract from d the value indicated by t.  In the
+        'attrs' dict, it will usually just return an element from t
+        (to be used as an attribute value), and so d will normally be
+        ignored, but could be used when defining metadata.
+
+        The format specifier in an 'attrs' entry is used to convert
+        the value returned by the value function into a string, which
+        will then be (TODO: escaped and) quoted, and placed in the
+        attribute set.
+
+        The format specifier in a 'samples' entry may be a string,
+        e.g., "%d", or a function.  If a function, it is passed the
+        value returned by the corresponding value function, and is
+        expected to return a dict with real keys specifying the bucket
+        thresholds of a histogram.  In ascending order, these keys
+        should yield monotonicly increasing integer values, starting
+        at zero, indicating the number of events with values less than
+        or equal to the corresponding key.  A 'count' entry should
+        then give the total number of events, and a 'sum' entry should
+        give the sum of all event values.  The total number of events
+        can be greater than the last real entry, if the last bucket
+        has an upper bound of infinity.
+
+        """
         self.timestamps = { }
         self.horizon = horizon
         self.schema = schema
