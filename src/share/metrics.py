@@ -56,6 +56,13 @@ def _merge(a, b, pfx=()):
     pass
 
 class MetricHistory:
+    """Keeps track of timestamped metrics in a thread-safe way.  Metrics
+    timestamped beyond a configurable horizon are discarded.  Data can
+    be represented as a text-form OpenMetrics message.  Multiple
+    clients requesting the data can be tracked, so that
+    retransmissions of the same metric points are minimized.
+
+    """
     def __init__(self, schema, horizon=60*30):
         self.timestamps = { }
         self.horizon = horizon
@@ -66,6 +73,14 @@ class MetricHistory:
         pass
 
     def install(self, samples):
+        """Install new timestamped data, and flush out data beyond the
+        horizon.  'samples' is a dict indexed by Unix timestamp, and
+        will be merged with existing data.  If new data are older than
+        the thresholds for some clients, rewind those clients to
+        ensure they receive the new data, at the risk of
+        retransmitting some later data.
+
+        """
         with self.lock:
             ## Identify times which can be discarded.
             threshold = int(time.time()) - self.horizon
@@ -78,6 +93,7 @@ class MetricHistory:
                 del self.entries[k]
                 continue
 
+            ## Rewind clients back to the oldest of the new entries.
             nts = min(self.entries.keys())
             for ident ts in self.timestamps:
                 if nts < ts:
@@ -223,6 +239,16 @@ class MetricHistory:
         return msg
 
     def get_message(self, ident):
+        """Get the latest data for a given client, in OpenMetrics format.  A
+        timestamp is recorded for each client, and only data newer
+        than this timestamp is returned.  The timestamp is then
+        updated to the most recent metric point just delivered,
+        preventing metrics from being retransmitted.  The timestamp is
+        only rewound in calls to 'install', if the data contains
+        earlier timestamps, which risks retransmission of some
+        metrics.
+
+        """
         msg = ''
 
         with self.lock:
@@ -256,11 +282,13 @@ class MetricHistory:
         return msg
 
     def check(self):
+        """Check whether this history has been terminated."""
         with self.lock:
             return self.running
         pass
 
     def halt(self):
+        """Terminate this history."""
         with self.lock:
             self.running = False
             pass
