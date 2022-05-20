@@ -137,12 +137,15 @@ class MetricHistory:
                 continue
 
             ## Rewind clients back to the oldest of the new entries.
-            nts = min(self.entries.keys())
-            for ident ts in self.timestamps:
-                if nts < ts:
-                    self.timestamps[ident] = nts
-                    pass
-                continue
+            oldts = self.entries.keys()
+            if len(oldts) > 0:
+                nts = min(oldts)
+                for ident, ts in self.timestamps.items():
+                    if nts < ts:
+                        self.timestamps[ident] = nts
+                        pass
+                    continue
+                pass
             pass
         pass
 
