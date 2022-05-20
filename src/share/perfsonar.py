@@ -44,7 +44,7 @@ schema = [
         'help': 'packets lost',
         'select': lambda e : [ (t,) for t in e
                                if 'measurements' in e[t]
-                               and 'packet-count-lost' in e[t]['measurement'] ],
+                               and 'packet-count-lost' in e[t]['measurements'] ],
         'samples': {
             '': ('%d',
                  lambda t, d: d[t[0]]['measurements']['packet-count-lost']),
@@ -65,7 +65,7 @@ schema = [
         'attrs': {
             'metadata_key': ('%s', lambda t, d: t[0]),
             'src_addr': ('%s', lambda t, d: d[t[0]]['source']),
-            'dst_addr': ('%s', lambda t, d: d[t[0]]['dst']),
+            'dst_addr': ('%s', lambda t, d: d[t[0]]['destination']),
             'src_name': ('%s', lambda t, d: d[t[0]]['input-source']),
             'dst_name': ('%s', lambda t, d: d[t[0]]['input-destination']),
             'agent_addr': ('%s', lambda t, d: d[t[0]]['measurement-agent']),
@@ -81,7 +81,7 @@ schema = [
         'help': 'IP measurement metadata',
         'select': lambda e : [ (t,) for t in e
                                if 'ip-transport-protocol' in e[t]
-                               and e['ip-transport-protocol'] is not None ],
+                               and e[t]['ip-transport-protocol'] is not None ],
         'samples': {
             '': ('%d', lambda t, d: 1),
         },
