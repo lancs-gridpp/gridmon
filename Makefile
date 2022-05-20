@@ -16,10 +16,13 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 hidden_scripts += perfsonar-stats
 hidden_scripts += static-metrics
 hidden_scripts += xrootd-stats
+datafiles += metrics.py
+datafiles += perfsonar.py
 
-BINODEPS_SCRIPTDIR=src/share
+BINODEPS_SHAREDIR=src/share
+BINODEPS_SCRIPTDIR=$(BINODEPS_SCRIPTDIR)
 SHAREDIR ?= $(PREFIX)/share/gridmon
 LIBEXECDIR ?= $(PREFIX)/libexec/gridmon
 include binodeps.mk
 
-install:: install-hidden-scripts
+install:: install-hidden-scripts install-data
