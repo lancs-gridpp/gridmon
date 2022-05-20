@@ -33,6 +33,27 @@
 import threading
 import time
 
+def _merge(a, b, pfx=()):
+    for key, nv in b.items():
+        ## Add a value if not already present.
+        if key not in a:
+            a[key] = nv
+            continue
+
+        ## Compare the old value with the new.  Apply recursively if
+        ## they are both dictionaries.
+        ov = a[key]
+        if isinstance(ov, dict) and isinstance(nv, dict):
+            _merge(ov, nv, pfx + (key,))
+            continue
+
+        ## The new value and the existing value must match.
+        if ov != nv:
+            raise Exception('bad merge (%s over %s at %s)' %
+                            (nv, ov, '.'.join(pfx + (key,))))
+
+        continue
+    pass
 
 class MetricHistory:
     def __init__(self, schema, horizon=60*30):
@@ -44,36 +65,13 @@ class MetricHistory:
         self.entries = { }
         pass
 
-    @staticmethod
-    def __merge(a, b, pfx=()):
-        for key, nv in b.items():
-            ## Add a value if not already present.
-            if key not in a:
-                a[key] = nv
-                continue
-
-            ## Compare the old value with the new.  Apply recursively if
-            ## they are both dictionaries.
-            ov = a[key]
-            if isinstance(ov, dict) and isinstance(nv, dict):
-                MetricHistory.__merge(ov, nv, pfx + (key,))
-                continue
-
-            ## The new value and the existing value must match.
-            if ov != nv:
-                raise Exception('bad merge (%s over %s at %s)' %
-                                (nv, ov, '.'.join(pfx + (key,))))
-
-            continue
-        pass
-
     def install(self, samples):
         with self.lock:
             ## Identify times which can be discarded.
             threshold = int(time.time()) - self.horizon
 
             ## Merge the new data with the old.
-            MetricHistory.__merge(self.entries, samples)
+            _merge(self.entries, samples)
 
             ## Discard old entries.
             for k in [ k for k in self.entries if k < threshold ]:
