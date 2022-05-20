@@ -103,7 +103,7 @@ class MetricHistory:
             pass
         pass
 
-    def __sample(self, k, tup, mtr, fmt, func, attrs):
+    def __sample(self, k, tup, mtr, fmt, func, attrs, gcount_name, gsum_name):
         entry = self.entries[k]
         value = func(tup, entry)
 
@@ -125,19 +125,15 @@ class MetricHistory:
         if callable(fmt):
             ## Treat the extracted value as histogram data, and
             ## convert it into a dict of 'sum' (the sum of the events'
-            ## values), 'count' (the number of events), 'count_name'
-            ## (the name of the count metric suffix, defaulting to
-            ## 'count'), and 'sum_name' (the name of the sum metric
-            ## suffix, defaulting to 'sum'), with the remaining keys
-            ## being int/float thresholds giving the cummulative
-            ## contents of each bucket.  The first entry must be 0.
+            ## values), 'count' (the number of events), with the
+            ## remaining keys being int/float thresholds giving the
+            ## cummulative contents of each bucket.  The first entry
+            ## must be 0.
             value = fmt(value)
 
             ## Extract the summary data.
             gsum = value['sum']
             gcount = value['count']
-            gcount_name = value.get('count_name') or 'count'
-            gsum_name = value.get('sum_name') or 'sum'
 
             ## Extract and sort the thresholds.
             thrs = [ thr for thr in value.keys if isinstance(thr, (int,float)) ]
@@ -189,6 +185,9 @@ class MetricHistory:
         typ = se.get('type')
         attrs = se.get('attrs')
 
+        gcount_name = 'gcount' if typ == 'gaugehistogram' else 'count'
+        gsum_name = 'gsum' if typ == 'gaugehistogram' else 'sum'
+
         ## The name of a metric with a unit should end with the unit.
         if unit is not None:
             mtr += '_' + unit
@@ -231,7 +230,8 @@ class MetricHistory:
                 ## Do each metric sample.
                 for sfx, (fmt, func) in bits.items():
                     msg += self.__sample(k, tup, mtr + sfx,
-                                         fmt, func, attrs)
+                                         fmt, func, attrs,
+                                         gcount_name, gsum_name)
                     continue
                 continue
             continue
