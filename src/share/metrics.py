@@ -89,7 +89,7 @@ class MetricHistory:
             pass
         pass
 
-    def add_metric_sample(self, k, tup, mtr, fmt, func, attrs):
+    def __sample(self, k, tup, mtr, fmt, func, attrs):
         entry = self.entries[k]
         value = func(tup, entry)
 
@@ -166,7 +166,7 @@ class MetricHistory:
 
         return msg
 
-    def add_metric_family(self, ks, se):
+    def __family(self, ks, se):
         mtr = se['base']
         sel = se['select']
         bits = se['samples']
@@ -216,19 +216,12 @@ class MetricHistory:
             for k in kseq:
                 ## Do each metric sample.
                 for sfx, (fmt, func) in bits.items():
-                    msg += self.add_metric_sample(k, tup, mtr + sfx,
-                                                  fmt, func, attrs)
+                    msg += self.__sample(k, tup, mtr + sfx,
+                                         fmt, func, attrs)
                     continue
                 continue
             continue
 
-        return msg
-
-    def add_metrics(self, ks):
-        msg = ''
-        for ms in self.schema:
-            msg += self.add_metric_family(ks, ms)
-            continue
         return msg
 
     def get_message(self, ident):
@@ -250,7 +243,9 @@ class MetricHistory:
 
             ## Build up a message with any data that has arrived since
             ## ts.
-            msg += self.add_metrics(ks)
+            for ms in self.schema:
+                msg += self.__family(ks, ms)
+                continue
 
             ## Complete the message.
             msg += '# EOF\n'
