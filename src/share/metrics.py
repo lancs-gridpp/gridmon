@@ -36,6 +36,7 @@ import time
 
 class MetricHistory:
     def __init__(self, schema, horizon=60*30):
+        self.timestamps = { }
         self.horizon = horizon
         self.schema = schema
         self.running = True
@@ -77,6 +78,13 @@ class MetricHistory:
             ## Discard old entries.
             for k in [ k for k in self.entries if k < threshold ]:
                 del self.entries[k]
+                continue
+
+            nts = min(self.entries.keys())
+            for ident ts in self.timestamps:
+                if nts < ts:
+                    self.timestamps[ident] = nts
+                    pass
                 continue
             pass
         pass
@@ -223,10 +231,13 @@ class MetricHistory:
             continue
         return msg
 
-    def get_message(self, ts):
+    def get_message(self, ident):
         msg = ''
 
         with self.lock:
+            ## Get the timestamp for this client.
+            ts = self.timestamps.setdefault(ident, 0)
+
             ## Identify the most recent entries that the client has
             ## not yet seen.  These are sorted to ensure all metrics
             ## come out in the same order.
@@ -241,11 +252,15 @@ class MetricHistory:
             ## ts.
             msg += self.add_metrics(ks)
 
+            ## Complete the message.
             msg += '# EOF\n'
+
+            ## Prevent sending these metrics to the client again.
+            self.timestamps[ident] = latest
 
             pass
 
-        return (msg, latest)
+        return msg
 
     def check(self):
         with self.lock:
