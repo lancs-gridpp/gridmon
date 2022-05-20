@@ -4,4 +4,4 @@
 /jardeps-install.sh
 /scratch/
 /config.mk
-
+/**/__pycache__/
