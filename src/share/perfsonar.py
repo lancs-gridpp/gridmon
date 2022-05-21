@@ -172,7 +172,6 @@ schema = [
 
     {
         'base': 'perfsonar_ttl',
-        'unit': 'ms',
         'type': 'gaugehistogram',
         'help': 'remaining time-to-live',
         'select': lambda e : [ (t,) for t in e
