@@ -182,14 +182,15 @@ class MetricHistory:
             gcount = value['count']
 
             ## Extract and sort the thresholds.
-            thrs = [ thr for thr in value.keys if isinstance(thr, (int,float)) ]
+            thrs = [ thr for thr in value.keys()
+                     if isinstance(thr, (int,float)) ]
             thrs.sort()
 
             ## Generate the buckets.
             for thr in thrs:
                 msg += mtr + "_bucket"
                 msg += '{'
-                msg += ','.join(labels + ('le="%g"' % thr,))
+                msg += ','.join(labels + [ 'le="%g"' % thr ])
                 msg += '}'
                 msg += (' %d %.3f\n') % (value[thr], k)
                 continue
@@ -197,7 +198,7 @@ class MetricHistory:
             ## The +inf bucket and the count are the same.
             msg += mtr + "_bucket"
             msg += '{'
-            msg += ','.join(labels + ('le="+inf"',))
+            msg += ','.join(labels + [ 'le="+inf"' ])
             msg += '}'
             msg += (' %d %.3f\n') % (gcount, k)
             msg += mtr + "_" + gcount_name
