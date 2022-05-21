@@ -30,6 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import functools
 import time
 import ssl
 import urllib.request
@@ -113,6 +114,73 @@ schema = [
         'samples': {
             '': ('%d',
                  lambda t, d: d[t[0]]['measurements']['packet-count-lost']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_packets_sent',
+        'type': 'gauge',
+        'help': 'packets sent',
+        'select': lambda e : [ (t,) for t in e
+                               if 'measurements' in e[t]
+                               and 'packet-count-sent' in e[t]['measurements'] ],
+        'samples': {
+            '': ('%d',
+                 lambda t, d: d[t[0]]['measurements']['packet-count-sent']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_throughput',
+        'unit': 'bps',
+        'type': 'gauge',
+        'help': 'throughput',
+        'select': lambda e : [ (t,) for t in e
+                               if 'measurements' in e[t]
+                               and 'throughput' in e[t]['measurements'] ],
+        'samples': {
+            '': ('%d',
+                 lambda t, d: d[t[0]]['measurements']['throughput']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_owdelay',
+        'unit': 'ms',
+        'type': 'gaugehistogram',
+        'help': 'one-way delay',
+        'select': lambda e : [ (t,) for t in e
+                               if 'measurements' in e[t]
+                               and 'histogram-owdelay' in e[t]['measurements'] ],
+        'samples': {
+            '': (_histo,
+                 lambda t, d: d[t[0]]['measurements']['histogram-owdelay']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_ttl',
+        'unit': 'ms',
+        'type': 'gaugehistogram',
+        'help': 'remaining time-to-live',
+        'select': lambda e : [ (t,) for t in e
+                               if 'measurements' in e[t]
+                               and 'histogram-ttl' in e[t]['measurements'] ],
+        'samples': {
+            '': (functools.partial(_histo, mean=lambda a, b: a),
+                 lambda t, d: d[t[0]]['measurements']['histogram-ttl']),
         },
         'attrs': {
             'metadata_key': ('%s', lambda t, d: t[0]),
