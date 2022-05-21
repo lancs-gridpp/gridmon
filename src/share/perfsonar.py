@@ -36,6 +36,71 @@ import urllib.request
 from urllib.parse import urljoin
 import json
 import sys
+import re
+
+_tozero = re.compile(r"[0-9]")
+
+def _bucket(thr, cnt):
+    ## Make all the digits '0', but the last '1'.
+    global _tozero
+    mval = _tozero.sub('0', thr)
+    ival = mval[0:-1] + '1'
+
+    ## Create a tuple of the original key, its lower threshold, its
+    ## upper threshold, and count.
+    lwr = float(thr)
+    upr = lwr + float(ival)
+    return (thr, lwr, upr, cnt)
+
+def _histo(rbucks, mean=lambda lwr, upr: (lwr + upr) / 2.0):
+    ## Work out upper thresholds of each bucket.  Also compute sums.
+    global _tozero
+    uppers = { }
+    lowers = { }
+    gsum = 0.0
+    gcount = 0
+    seq = [ ]
+    for thr, cnt in rbucks.items():
+        tup = _bucket(thr, cnt)
+        seq.append(tup)
+        gcount += cnt
+        gsum += cnt * mean(tup[1], tup[2])
+        continue
+
+    ## Sort the keys by lower threshold.
+    seq.sort(key=lambda tup: tup[1])
+
+    ## Look for holes and overlaps.
+    lupr = None
+    extra = [ ]
+    for thr, lwr, upr, cnt in seq:
+        ## Detect and fill in a gap.
+        if lupr is None or tup[1] > lupr:
+            extra += ((lwr, 0),)
+            pass
+
+        ## Include ourselves.
+        extra += ((upr, cnt),)
+
+        ## Remember the previous upper threshold for comparison with
+        ## the next tuple's lower.
+        lupr = upr
+        continue
+
+    ## Accumulate.
+    tot = 0
+    acc = []
+    for upr, cnt in extra:
+        tot += cnt
+        acc += ((upr, tot),)
+        continue
+
+    ## Convert to a dict giving the upper thresholds, and include the
+    ## summary data.
+    result = { upr: cnt for upr, cnt in acc }
+    result['sum'] = gsum
+    result['count'] = gcount
+    return result
 
 schema = [
     {
