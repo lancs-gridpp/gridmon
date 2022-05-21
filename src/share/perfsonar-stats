@@ -75,13 +75,13 @@ class MetricsSender(BaseHTTPRequestHandler):
             pass
 
         ## Ensure we have the latest metrics.
-        print('\nGetting latest data from %s' % auth)
+        print('\nGetting latest data')
         new_data = self.coll.update()
         print('  Installing latest data')
         self.hist.install(new_data)
 
         ## Fetch the message appropriate to the client, and send it.
-        print('  Forming message')
+        print('  Forming message for %s' % auth)
         body = self.hist.get_message(auth)
         self.send_response(200)
         ct = 'application/openmetrics-text'
