@@ -36,6 +36,8 @@ import functools
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from getopt import getopt
+import threading
+import time
 
 ## Local libraries
 import perfsonar
@@ -77,11 +79,11 @@ class MetricsSender(BaseHTTPRequestHandler):
             auth = 'anonymous'
             pass
 
-        ## Ensure we have the latest metrics.
-        print('\nGetting latest data')
-        new_data = self.coll.update()
-        print('  Installing latest data')
-        self.hist.install(new_data)
+        # ## Ensure we have the latest metrics.
+        # print('\nGetting latest data')
+        # new_data = self.coll.update()
+        # print('  Installing latest data')
+        # self.hist.install(new_data)
 
         ## Fetch the message appropriate to the client, and send it.
         print('  Forming message for %s' % auth)
@@ -102,7 +104,40 @@ perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag)
 partial_handler = functools.partial(MetricsSender, hist=methist, coll=perfcoll)
 webserver = HTTPServer((http_host, http_port), partial_handler)
 
+def check_delay(hist, start):
+    if not hist.check():
+        return False
+    now = int(time.time())
+    delay = start - now
+    return delay > 0
+    
+def keep_polling(hist, coll):
+    try:
+        while hist.check():
+            print('Getting latest data')
+            start = int(time.time()) + 30
+            new_data = coll.update()
+            hist.install(new_data)
+            print('Installed')
+            while check_delay(hist, start):
+                time.sleep(1)
+                pass
+            continue
+    except InterruptedError:
+        pass
+    except KeyboardInterrupt:
+        pass
+    print('Polling halted')
+    hist.halt()
+    pass
+
+poll_thrd = threading.Thread(target=keep_polling, args=(methist, perfcoll))
+poll_thrd.start()
+
 try:
     webserver.serve_forever()
 except KeyboardInterrupt:
     pass
+print('HTTP halted')
+
+methist.halt()
