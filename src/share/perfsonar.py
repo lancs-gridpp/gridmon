@@ -201,6 +201,7 @@ schema = [
             'src_name': ('%s', lambda t, d: d[t[0]]['input-source']),
             'dst_name': ('%s', lambda t, d: d[t[0]]['input-destination']),
             'agent_addr': ('%s', lambda t, d: d[t[0]]['measurement-agent']),
+            'peer_addr': ('%s', lambda t, d: d[t[0]]['measurement-peer']),
             'tool': ('%s', lambda t, d: d[t[0]]['tool-name']),
             'subj_type': ('%s', lambda t, d: d[t[0]]['subject-type']),
             'psched_type': ('%s', lambda t, d: d[t[0]]['pscheduler-test-type']),
@@ -278,6 +279,11 @@ class PerfsonarCollector:
                                'tool-name', 'subject-type',
                                'pscheduler-test-type',
                                'ip-transport-protocol') }
+            if meta['source'] == meta['measurement-agent']:
+                meta['measurement-peer'] = meta['destination']
+            else:
+                meta['measurement-peer'] = meta['source']
+                pass
 
             baseurl = mdent['url']
             for evt in mdent['event-types']:
