@@ -326,7 +326,7 @@ class MetricHistory:
 
             pass
 
-        return msg
+        return (msg, ts, latest)
 
     def check(self):
         """Check whether this history has been terminated."""
