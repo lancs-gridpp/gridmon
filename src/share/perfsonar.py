@@ -250,8 +250,9 @@ def _merge(a, b, pfx=()):
     pass
 
 class PerfsonarCollector:
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, lag=20):
         self.endpoint = endpoint
+        self.lag = lag
         self.last = int(time.time())
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
@@ -260,7 +261,9 @@ class PerfsonarCollector:
 
     def update(self):
         ## Determine the time range we are adding.
-        curr = int(time.time())
+        curr = int(time.time()) - self.lag
+        if curr <= self.last:
+            return ''
         interval = "time-start=%d&time-end=%d" % (self.last + 1, curr)
 
         ## Get the summary of measurements within the interval.

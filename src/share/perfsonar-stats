@@ -45,10 +45,13 @@ http_host = "localhost"
 http_port = 8732
 endpoint = None
 horizon = 60 * 30
-opts, args = getopt(sys.argv[1:], "h:t:T:E:S:")
+lag = 20
+opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:")
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val) * 60
+    elif opt == '-l':
+        lag = int(val)
     elif opt == '-T':
         http_host = val
     elif opt == '-t':
@@ -95,7 +98,7 @@ class MetricsSender(BaseHTTPRequestHandler):
     pass
 
 methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
-perfcoll = perfsonar.PerfsonarCollector(endpoint)
+perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag)
 partial_handler = functools.partial(MetricsSender, hist=methist, coll=perfcoll)
 webserver = HTTPServer((http_host, http_port), partial_handler)
 
