@@ -263,7 +263,7 @@ class PerfsonarCollector:
         ## Determine the time range we are adding.
         curr = int(time.time()) - self.lag
         if curr <= self.last:
-            return ''
+            return { }
         interval = "time-start=%d&time-end=%d" % (self.last + 1, curr)
 
         ## Get the summary of measurements within the interval.
