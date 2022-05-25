@@ -253,7 +253,7 @@ class PerfsonarCollector:
     def __init__(self, endpoint, lag=20):
         self.endpoint = endpoint
         self.lag = lag
-        self.last = int(time.time())
+        self.last = int(time.time()) - lag
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
