@@ -135,18 +135,6 @@ class MetricHistory:
             for k in [ k for k in self.entries if k < threshold ]:
                 del self.entries[k]
                 continue
-
-            ## Rewind clients back to the oldest of the new entries.
-            oldts = self.entries.keys()
-            if len(oldts) > 0:
-                nts = min(oldts)
-                for ident, ts in self.timestamps.items():
-                    if nts < ts:
-                        self.timestamps[ident] = nts
-                        pass
-                    continue
-                pass
-            pass
         pass
 
     def __sample(self, k, tup, mtr, fmt, func, attrs, gcount_name, gsum_name):
