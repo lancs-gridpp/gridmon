@@ -32,6 +32,7 @@
 
 import functools
 import time
+from datetime import datetime
 import ssl
 import urllib.request
 from urllib.parse import urljoin
@@ -264,7 +265,15 @@ class PerfsonarCollector:
         curr = int(time.time()) - self.lag
         if curr <= self.last:
             return { }
-        interval = "time-start=%d&time-end=%d" % (self.last + 1, curr)
+        assert curr > self.last
+        start = self.last + 1
+        interval = "time-start=%d&time-end=%d" % (start, curr)
+        print('%3ds from %10d (%s) to %10d (%s)' %
+              (curr - start,
+               start,
+               datetime.utcfromtimestamp(start).strftime('%Y-%m-%dT%H:%M:%SZ'),
+               curr,
+               datetime.utcfromtimestamp(curr).strftime('%Y-%m-%dT%H:%M:%SZ')))
 
         ## Get the summary of measurements within the interval.
         url = self.endpoint + "?" + interval
@@ -273,9 +282,12 @@ class PerfsonarCollector:
 
         ## Get data for mentioned events.
         data = { }
+        kc = 0
+        evc = 0
         for mdent in doc:
             ## Extract metadata.
             mdkey = mdent['metadata-key']
+            kc += 1
             meta = { k: mdent.get(k) or None
                      for k in ('source', 'destination', 'input-source',
                                'input-destination', 'measurement-agent',
@@ -294,6 +306,14 @@ class PerfsonarCollector:
                 upd = evt.get('time-updated')
                 if upd is None:
                     continue
+
+                ## The overview can contain event types that haven't
+                ## been updated in ages (because a different event
+                ## type for the same metadata key *has* been updated.
+                ## We have to skip over these.
+                if upd < start or upd > curr:
+                    continue
+                evc += 1
 
                 evtype = evt.get('event-type')
 
@@ -314,6 +334,7 @@ class PerfsonarCollector:
                     continue
                 continue
             continue
+        print("  %d keys; %d events" % (kc, evc))
 
         self.last = curr
         return data
