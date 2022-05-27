@@ -203,6 +203,9 @@ schema = [
             'dst_name': ('%s', lambda t, d: d[t[0]]['input-destination']),
             'agent_addr': ('%s', lambda t, d: d[t[0]]['measurement-agent']),
             'peer_addr': ('%s', lambda t, d: d[t[0]]['measurement-peer']),
+            'agent_name': ('%s',
+                           lambda t, d: d[t[0]]['input-measurement-agent']),
+            'peer_name': ('%s', lambda t, d: d[t[0]]['input-measurement-peer']),
             'tool': ('%s', lambda t, d: d[t[0]]['tool-name']),
             'subj_type': ('%s', lambda t, d: d[t[0]]['subject-type']),
             'psched_type': ('%s', lambda t, d: d[t[0]]['pscheduler-test-type']),
@@ -296,8 +299,12 @@ class PerfsonarCollector:
                                'ip-transport-protocol') }
             if meta['source'] == meta['measurement-agent']:
                 meta['measurement-peer'] = meta['destination']
+                meta['input-measurement-peer'] = meta['input-destination']
+                meta['input-measurement-agent'] = meta['input-source']
             else:
                 meta['measurement-peer'] = meta['source']
+                meta['input-measurement-peer'] = meta['input-source']
+                meta['input-measurement-agent'] = meta['input-destination']
                 pass
 
             baseurl = mdent['url']
