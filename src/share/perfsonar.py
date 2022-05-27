@@ -272,7 +272,7 @@ class PerfsonarCollector:
         start = self.last + 1
         interval = "time-start=%d&time-end=%d" % (start, curr)
         print('%3ds from %10d (%s) to %10d (%s)' %
-              (curr - start,
+              (curr - start + 1,
                start,
                datetime.utcfromtimestamp(start).strftime('%Y-%m-%dT%H:%M:%SZ'),
                curr,
