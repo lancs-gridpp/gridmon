@@ -326,6 +326,16 @@ def _merge(a, b, pfx=()):
     pass
 
 class PerfsonarCollector:
+    known_events = set([ 'throughput', 'packet-count-lost',
+                         'packet-count-sent', 'histogram-owdelay',
+                         'histogram-ttl' ])
+
+    unknown_events = set([ 'packet-retransmits-subintervals', 'failures',
+                           'packet-duplicates', 'packet-reorders',
+                           'packet-retransmits', 'packet-trace', 'path-mtu',
+                           'pscheduler-run-href', 'throughput-subintervals',
+                           'time-error-estimates' ])
+
     def __init__(self, endpoint, lag=20):
         self.endpoint = endpoint
         self.lag = lag
@@ -396,7 +406,10 @@ class PerfsonarCollector:
                     continue
                 evc += 1
 
+                ## Skip event types which we do not use.
                 evtype = evt.get('event-type')
+                if evtype not in PerfsonarCollector.known_events:
+                    continue
 
                 ## Ensure a counter exists for this event type and
                 ## metadata key.
