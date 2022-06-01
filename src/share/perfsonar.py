@@ -138,6 +138,24 @@ schema = [
     },
 
     {
+        'base': 'perfsonar_events_packets',
+        'type': 'counter',
+        'help': 'number of packet-loss measurements',
+        'select': lambda e : [ (t,) for t in e
+                               if 'counters' in e[t]
+                               and 'packet-count-sent' in e[t]['counters'] ],
+        'samples': {
+            '_total': ('%d',
+                       lambda t, d: d[t[0]]['counters']['packet-count-sent']),
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]]['counters']['start']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
         'base': 'perfsonar_throughput',
         'unit': 'bps',
         'type': 'gauge',
@@ -148,6 +166,24 @@ schema = [
         'samples': {
             '': ('%d',
                  lambda t, d: d[t[0]]['measurements']['throughput']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_events_throughput',
+        'type': 'counter',
+        'help': 'number of throughput measurements',
+        'select': lambda e : [ (t,) for t in e
+                               if 'counters' in e[t]
+                               and 'throughput' in e[t]['counters'] ],
+        'samples': {
+            '_total': ('%d',
+                       lambda t, d: d[t[0]]['counters']['throughput']),
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]]['counters']['start']),
         },
         'attrs': {
             'metadata_key': ('%s', lambda t, d: t[0]),
@@ -172,6 +208,24 @@ schema = [
     },
 
     {
+        'base': 'perfsonar_events_owdelay',
+        'type': 'counter',
+        'help': 'number of one-way delay measurements',
+        'select': lambda e : [ (t,) for t in e
+                               if 'counters' in e[t]
+                               and 'histogram-owdelay' in e[t]['counters'] ],
+        'samples': {
+            '_total': ('%d',
+                       lambda t, d: d[t[0]]['counters']['histogram-owdelay']),
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]]['counters']['start']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
         'base': 'perfsonar_ttl',
         'type': 'gaugehistogram',
         'help': 'remaining time-to-live',
@@ -181,6 +235,24 @@ schema = [
         'samples': {
             '': (functools.partial(_histo, mean=lambda a, b: a),
                  lambda t, d: d[t[0]]['measurements']['histogram-ttl']),
+        },
+        'attrs': {
+            'metadata_key': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'perfsonar_events_ttl',
+        'type': 'counter',
+        'help': 'number of TTL measurements',
+        'select': lambda e : [ (t,) for t in e
+                               if 'counters' in e[t]
+                               and 'histogram-ttl' in e[t]['counters'] ],
+        'samples': {
+            '_total': ('%d',
+                       lambda t, d: d[t[0]]['counters']['histogram-ttl']),
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]]['counters']['start']),
         },
         'attrs': {
             'metadata_key': ('%s', lambda t, d: t[0]),
@@ -258,9 +330,11 @@ class PerfsonarCollector:
         self.endpoint = endpoint
         self.lag = lag
         self.last = int(time.time()) - lag
+        self.start = self.last
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
+        self.counters = { }
         pass
 
     def update(self):
@@ -324,20 +398,40 @@ class PerfsonarCollector:
 
                 evtype = evt.get('event-type')
 
+                ## Ensure a counter exists for this event type and
+                ## metadata key.
+                self.counters.setdefault(mdkey, { }) \
+                    .setdefault(evtype, 0)
+
                 ## Fetch the event data.
                 evturl = urljoin(baseurl, evt['base-uri']) + '?' + interval
                 evtrsp = urllib.request.urlopen(evturl, context=self.ctx)
                 evtdoc = json.loads(evtrsp.read().decode("utf-8"))
 
-                for ev in evtdoc:
-                    ts = int(ev['ts'])
-                    val = ev['val']
+                ## Convert the event data to a dict indexed by
+                ## timestamp.
+                evdic = { int(ev['ts']): ev['val'] for ev in evtdoc }
+
+                ## Ensure we have the timestamps in order.
+                evtss = [ ts for ts in evdic ]
+                evtss.sort()
+
+                for ts in evtss:
+                    val = evdic[ts]
 
                     ## Install metadata and the value for this event.
                     tsdata = data.setdefault(ts, { })
                     evdata = tsdata.setdefault(mdkey, { })
                     _merge(evdata, meta)
                     evdata.setdefault('measurements', { })[evtype] = val
+
+                    ## Increase the relevant event counter, and store
+                    ## under this timestamp.
+                    self.counters[mdkey][evtype] += 1
+                    cnt = self.counters[mdkey][evtype]
+                    evdata.setdefault('counters', { })['start'] = self.start
+                    evdata['counters'][evtype] = cnt
+                    # print('%s:%s@%10d=%d' % (mdkey, evtype, ts, cnt))
                     continue
                 continue
             continue
