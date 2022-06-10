@@ -67,8 +67,7 @@ for opt, val in opts:
 
 methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
 perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag)
-partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                    hist=methist, coll=perfcoll)
+partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
 webserver = HTTPServer((http_host, http_port), partial_handler)
 
 def check_delay(hist, start):

@@ -335,9 +335,8 @@ class MetricHistory:
 
 
 class MetricsHTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, hist=None, coll=None, **kwargs):
+    def __init__(self, *args, hist=None, **kwargs):
         self.hist = hist
-        self.coll = coll
         super().__init__(*args, **kwargs)
         pass
 
