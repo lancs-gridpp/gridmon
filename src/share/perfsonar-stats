@@ -34,7 +34,7 @@
 
 import functools
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import HTTPServer
 from getopt import getopt
 import threading
 import time
@@ -65,43 +65,10 @@ for opt, val in opts:
         pass
     continue
 
-class MetricsSender(BaseHTTPRequestHandler):
-    def __init__(self, *args, hist=None, coll=None, **kwargs):
-        self.hist = hist
-        self.coll = coll
-        super().__init__(*args, **kwargs)
-        pass
-
-    def do_GET(self):
-        ## Identify the client by the authorization string.
-        auth = self.headers.get('Authorization')
-        if auth is None:
-            auth = 'anonymous'
-            pass
-
-        # ## Ensure we have the latest metrics.
-        # print('\nGetting latest data')
-        # new_data = self.coll.update()
-        # print('  Installing latest data')
-        # self.hist.install(new_data)
-
-        ## Fetch the message appropriate to the client, and send it.
-        print('  Forming message for %s' % auth)
-        body, ts0, ts1 = self.hist.get_message(auth)
-        self.send_response(200)
-        ct = 'application/openmetrics-text'
-        ct += '; version=1.0.0; charset=utf-8'
-        self.send_header('Content-Type', ct)
-        self.end_headers()
-        self.wfile.write(body.encode('UTF-8'))
-        print('  Complete %d-%d' % (ts1, ts1 - ts0))
-        pass
-
-    pass
-
 methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
 perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag)
-partial_handler = functools.partial(MetricsSender, hist=methist, coll=perfcoll)
+partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                    hist=methist, coll=perfcoll)
 webserver = HTTPServer((http_host, http_port), partial_handler)
 
 def check_delay(hist, start):

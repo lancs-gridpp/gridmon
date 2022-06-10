@@ -33,6 +33,8 @@
 import threading
 import time
 
+from http.server import BaseHTTPRequestHandler
+
 def _merge(a, b, pfx=()):
     for key, nv in b.items():
         ## Add a value if not already present.
@@ -327,6 +329,35 @@ class MetricHistory:
         with self.lock:
             self.running = False
             pass
+        pass
+
+    pass
+
+
+class MetricsHTTPHandler(BaseHTTPRequestHandler):
+    def __init__(self, *args, hist=None, coll=None, **kwargs):
+        self.hist = hist
+        self.coll = coll
+        super().__init__(*args, **kwargs)
+        pass
+
+    def do_GET(self):
+        ## Identify the client by the authorization string.
+        auth = self.headers.get('Authorization')
+        if auth is None:
+            auth = 'anonymous'
+            pass
+
+        ## Fetch the message appropriate to the client, and send it.
+        print('  Forming message for %s' % auth)
+        body, ts0, ts1 = self.hist.get_message(auth)
+        self.send_response(200)
+        ct = 'application/openmetrics-text'
+        ct += '; version=1.0.0; charset=utf-8'
+        self.send_header('Content-Type', ct)
+        self.end_headers()
+        self.wfile.write(body.encode('UTF-8'))
+        print('  Complete %d-%d' % (ts1, ts1 - ts0))
         pass
 
     pass
