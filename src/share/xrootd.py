@@ -30,6 +30,11 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import traceback
+import socket
+import xml
+from defusedxml import ElementTree
+
 schema = [
     {
         'base': 'xrootd_buff_mem',
@@ -1253,3 +1258,198 @@ schema = [
         }
     },
 ]
+
+
+
+class ReportReceiver:
+    def __init__(self, bindprop, hist):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.bind(bindprop)
+        self.hist = hist
+        self.running = True
+        pass
+
+    def keep_polling(self):
+        while self.hist.check():
+            try:
+                self.poll()
+                pass
+            except KeyboardInterrupt:
+                break
+            except:
+                traceback.print_exc()
+                pass
+            continue
+        pass
+
+    def halt(self):
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        self.sock.close()
+
+    def poll(self):
+        ## Receive XML in a UDP packet.
+        try:
+            (msg, addr) = self.sock.recvfrom(65536)
+        except OSError:
+            return
+        try:
+            tree = ElementTree.fromstring(msg)
+        except xml.etree.ElementTree.ParseError:
+            return
+        print('\nFrom %s:%d:' % addr)
+        if tree.tag != 'statistics':
+            print('  not statistics')
+            return
+
+        ## Extract timestamp data.
+        timestamp = int(tree.attrib['tod'])
+        start = int(tree.attrib['tos'])
+
+        ## Index all the <stats> elements by id.
+        stats = { }
+        for stat in tree.findall('stats'):
+            kind = stat.attrib.get('id')
+            if kind is None:
+                continue
+            stats[kind] = stat
+            continue
+
+        ## Get an instance identifier.
+        blk = stats.get('info')
+        if blk is None:
+            print('  no info element')
+            return
+        host = blk.find('host').text
+        name = blk.find('name').text
+        inst = (host, name)
+        print('  instance %s@%s' % (name, host))
+
+        ## Extract the fields we're interested in.
+        data = { }
+        data['start'] = start
+
+        blk = stats.get('buff')
+        if blk is not None:
+            sub = data.setdefault('buff', { })
+            for key in [ 'reqs', 'mem', 'buffs', 'adj' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('link')
+        if blk is not None:
+            sub = data.setdefault('link', { })
+            for key in [ 'num', 'maxn', 'tot', 'in', 'out',
+                         'ctime', 'tmo', 'stall', 'sfps' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+        blk = stats.get('poll')
+        if blk is not None:
+            sub = data.setdefault('poll', { })
+            for key in [ 'att', 'ev', 'en', 'int' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('sched')
+        if blk is not None:
+            sub = data.setdefault('sched', { })
+            for key in [ 'jobs', 'inq', 'maxinq', 'threads',
+                         'idle', 'tcr', 'tde', 'tlimr' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('sgen')
+        if blk is not None:
+            sub = data.setdefault('sgen', { })
+            for key in [ 'as', 'et', 'toe' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('oss')
+        if blk is not None:
+            sub = data.setdefault('oss', { })
+            for i in range(int(blk.find('./paths').text)):
+                print('  Searching for path %d' % i)
+                elem = blk.find('./paths/stats[@id="%d"]' % i)
+                print(ElementTree.tostring(blk, encoding="unicode"))
+                name = elem.find('./rp').text[1:-1]
+                psub = sub.setdefault('paths', { }).setdefault(name, { })
+                psub['lp'] = elem.find('./lp').text[1:-1]
+                for key in [ 'free', 'ifr', 'ino', 'tot' ]:
+                    psub[key] = int(elem.find('./' + key).text)
+                continue
+            for i in range(int(blk.find('./space').text)):
+                print('  Searching for space %d' % i)
+                elem = blk.find('./space/stats[@id="%d"]' % i)
+                name = elem.find('./name').text
+                psub = sub.setdefault('spaces', { }).setdefault(name, { })
+                for key in [ 'free', 'fsn', 'maxf', 'qta', 'tot', 'usg' ]:
+                    psub[key] = int(elem.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('ofs')
+        if blk is not None:
+            sub = data.setdefault('ofs', { })
+            for key in [ 'opr', 'opw', 'opp', 'ups', 'han', 'rdr',
+                         'bxq', 'rep', 'err', 'dly', 'sok', 'ser' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            sub['role'] = blk.find('./role').text
+            psub = sub.setdefault('tpc', { })
+            for key in [ 'grnt', 'deny', 'err', 'exp' ]:
+                psub[key] = int(blk.find('./tpc/' + key).text)
+                continue
+            pass
+
+        blk = stats.get('xrootd')
+        if blk is not None:
+            sub = data.setdefault('xrootd', { })
+            for key in [ 'num', 'err', 'rdr', 'dly' ]:
+                sub[key] = int(blk.find('./' + key).text)
+                continue
+            psub = sub.setdefault('ops', { })
+            elem = blk.find('./ops')
+            for key in [ 'open', 'rf', 'rd', 'pr', 'rv', 'rs', 'wv', 'ws',
+                         'wr', 'sync', 'getf', 'putf', 'misc' ]:
+                psub[key] = int(elem.find('./' + key).text)
+                continue
+            psub = sub.setdefault('sig', { })
+            elem = blk.find('./sig')
+            for key in [ 'ok', 'bad', 'ign' ]:
+                psub[key] = int(elem.find('./' + key).text)
+                continue
+            psub = sub.setdefault('aio', { })
+            elem = blk.find('./aio')
+            for key in [ 'num', 'max', 'rej' ]:
+                psub[key] = int(elem.find('./' + key).text)
+                continue
+            psub = sub.setdefault('lgn', { })
+            elem = blk.find('./lgn')
+            for key in [ 'num', 'af', 'au', 'ua' ]:
+                psub[key] = int(elem.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('proc')
+        if blk is not None:
+            sub = data.setdefault('proc', { })
+            sub['sys'] = int(blk.find('./sys/s').text) \
+                + int(blk.find('./sys/u').text) / 1000000.0
+            sub['usr'] = int(blk.find('./usr/s').text) \
+                + int(blk.find('./usr/u').text) / 1000000.0
+            pass
+
+        ## Get the entry we want to populate, indexed by timestamp and
+        ## by (host, name).
+        self.hist.install( { timestamp: { inst: data } } )
+        return
+
+    pass
