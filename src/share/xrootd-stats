@@ -44,6 +44,9 @@ import xml
 import sys
 from getopt import getopt
 
+## Local libraries
+import xrootd
+
 ## This is a sample to populate the history with for test purposes.
 sample_now = time.time()
 sample = {

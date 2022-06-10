@@ -18,6 +18,7 @@ hidden_scripts += static-metrics
 hidden_scripts += xrootd-stats
 datafiles += metrics.py
 datafiles += perfsonar.py
+datafiles += xrootd.py
 
 BINODEPS_SHAREDIR=src/share
 BINODEPS_SCRIPTDIR=$(BINODEPS_SCRIPTDIR)
