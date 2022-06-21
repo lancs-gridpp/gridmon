@@ -54,7 +54,7 @@ class QStatParser(BaseHTTPRequestHandler):
         proc = subprocess.Popen(['qstat', '-f', '-urg', '-u', '*', '-xml'],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-        out, err = subprocess.communicate()
+        out, err = proc.communicate()
 
         ## Parse the output as XML, and populate the structure.
         tree = ElementTree.fromstring(out)
