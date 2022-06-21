@@ -266,7 +266,7 @@ class QStatParser(BaseHTTPRequestHandler):
 
 http_host = ''
 http_port = 9373
-opts, args = getopt(sys.argv[1:], "h:u:U:t:T:X")
+opts, args = getopt(sys.argv[1:], "t:T:")
 for opt, val in opts:
     if opt == '-t':
         http_port = int(val)
