@@ -266,6 +266,14 @@ class QStatParser(BaseHTTPRequestHandler):
 
 http_host = ''
 http_port = 9373
+opts, args = getopt(sys.argv[1:], "h:u:U:t:T:X")
+for opt, val in opts:
+    if opt == '-t':
+        http_port = int(val)
+    elif opt == '-T':
+        http_host = val
+        pass
+    continue
 
 webserver = HTTPServer((http_host, http_port), QStatParser)
 print('Started on http://%s:%s' % (http_host, http_port))
