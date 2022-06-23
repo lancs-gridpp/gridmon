@@ -4,7 +4,7 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 
 ## Installation
 
-[https://github.com/simpsonst/binodeps](Binodeps) is required to use the `Makefile`.
+[Binodeps](https://github.com/simpsonst/binodeps) is required to use the `Makefile`.
 To install to the default location `/usr/local`:
 
 ```
