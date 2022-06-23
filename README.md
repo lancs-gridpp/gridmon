@@ -14,9 +14,9 @@ sudo make install
 
 Python/Bash sources and executables are then installed in `/usr/local/share/gridmon/`:
 
-- `static-metrics` -- Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
-- `xrootd-stats` -- Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves them to Prometheus.
-- `perfsonar-stats` -- Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
+- `static-metrics` &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
+- `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves them to Prometheus.
+- `perfsonar-stats` &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
 
 (If you want to by-pass Binodeps, you could probably just copy `src/share/` to `/usr/local/share/gridmon/`.)
 
