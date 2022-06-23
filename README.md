@@ -56,10 +56,10 @@ The following attributes are also optional, and must be named if used:
 
 `function` may be any of the following, with their `roles` equivalents:
 
-- `storage-data` &#21d2; `storage`, `ceph_data`
-- `storage-monitor` &#21d2; `storage`, `ceph_monitor`, `ceph_manager`
-- `storage-metadata` &#21d2; `storage`, `ceph_metadata`
-- `storage-gateway` &#21d2; `storage`, `storage_gateway`
+- `storage-data` &rArr; `storage`, `ceph_data`
+- `storage-monitor` &rArr; `storage`, `ceph_monitor`, `ceph_manager`
+- `storage-metadata` &rArr; `storage`, `ceph_metadata`
+- `storage-gateway` &rArr; `storage`, `storage_gateway`
 
 Anything else is mapped to itself as a role.
 
