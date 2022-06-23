@@ -168,7 +168,45 @@ In addition to `host` and `name`, the following are defined to have `lp` and `rp
 
 ## PerfSONAR statistics
 
-The script `perfsonar-stats` is supposed to pull data from the `esmond` service of a PerfSONAR instance, and turn it into Prometheus-compatible metrics.
-However, it still needs a lot of work, as the data it currently fetches is not meaningful.
-For example, doubling the scraping rate scales up the values of the metrics, which shouldn't happen if the metrics are genuine; changes to the rate should only affect the granularity of the metrics, not their values.
-The script also needs work to accept configuration options.
+The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR instance, and turns it into Prometheus-compatible metrics.
+
+The following arguments are accepted:
+
+- `-h *int*` &#8211; minutes of horizon, beyond which metrics are discarded; 30 is the default
+- `-l *lag*` &#8211; the number of seconds of lag; default 20
+- `-t *port*` &#8211; port number to bind to (HTTP/TCP); 8732 is the default
+- `-T *host*` &#8211; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-E *endpoint*` &#8211; the `esmond` endpoint to fetch metrics from
+- `-S *host*` &#8211; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
+
+One of `-E` or `-S` is required.
+The specified endpoint is scraped every 30 seconds.
+Referenced measurements are then fetched, stored locally as timestamped metrics, and served on demand to scraping clients such as Prometheus.
+The additional fetches can take some time, and even over-run.
+In that case, the next top-level scrape is delayed until the current additional fetches are complete.
+Regardless of when a top-level scrape is performed, its time range always abuts with the previous scrape's range.
+
+To deal with some measurements arriving out of order, or being timestamped by start rather than end, the requested time range is for some seconds into the past.
+This 'lag' period is set by `-l`, and defaults to 20s.
+So, if a measurement that starts at `t0` and completes at `t1 = t0 + 10` is timestamped `t0`, but cannot be known until `t1`, the upper bound of any requested range will be `r1 < t1 - 20 < t0`, so the measurement will be picked up in the next scrape, and not be missed or regarded out-of-order by prometheus.
+
+The following metrics are defined:
+
+- `perfsonar_packets_lost` &#8211; the number of packets lost
+- `perfsonar_packets_sent` &#8211; the number of packets sent
+- `perfsonar_events_packets_total` &#8211; the number of packet-loss measurements
+- `perfsonar_throughput` &#8211; a throughput measurement
+- `perfsonar_events_throughput_total` &#8211; the number of throughput measurements
+- `perfsonar_owdelay` &#8211; a one-way delay measurement
+- `perfsonar_events_owdelay_total` &#8211; the number of one-way-delay measurements
+- `perfsonar_ttl` &#8211; a TTL measurement
+- `perfsonar_events_ttl_total` &#8211; the number of TTL measurements
+- `perfsonar_metadata` &#8211; metadata for an ongoing measurement something something
+- `perfsonar_ip_metadata` &#8211; additional IP metadata for an ongoing measurement something something
+
+All measurements have a label `metadata_key` which can be cross-referenced with the metadata.
+The metadata itself provides source and destination addresses (`src_addr` and `dst_addr`), and corresponding names as submitted (`src_name` and `dst_name`).
+`agent_addr` and `agent_name` are copies either of `src_addr` and `src_name` if the source matches the measurement agent, or of `dst_addr` and `dst_name` otherwise.
+In either case, the other pair of fields are copied to `peer_addr` and `peer_name`.
+The `tool` label is a copy of the `tool-name` field, `subj_type` is a copy of `subject-type`, and `psched_type` is a copy of `pscheduler-test-type`.
+The IP metadata additionally provides `ip_transport_protocol`.
