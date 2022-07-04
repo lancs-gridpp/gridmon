@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/bin/env python2
 
 
 ## Copyright (c) 2022, Lancaster University
@@ -34,20 +34,17 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import subprocess
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+import SocketServer
 import xml
-from defusedxml import ElementTree
+from xml.etree import ElementTree
 from datetime import datetime
 import time
 from pprint import pprint
 from getopt import getopt
 import sys
 
-class QStatParser(BaseHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        pass
-
+class QStatParser(SimpleHTTPRequestHandler):
     def do_GET(self):
         ## Initialize a structure to hold the data.
         data = { 'jobs': { }, 'queues': { } }
@@ -277,7 +274,7 @@ for opt, val in opts:
         pass
     continue
 
-webserver = HTTPServer((http_host, http_port), QStatParser)
+webserver = SocketServer.TCPServer((http_host, http_port), QStatParser)
 print('Started on http://%s:%s' % (http_host, http_port))
 
 try:
