@@ -40,6 +40,8 @@ from defusedxml import ElementTree
 from datetime import datetime
 import time
 from pprint import pprint
+from getopt import getopt
+import sys
 
 class QStatParser(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
