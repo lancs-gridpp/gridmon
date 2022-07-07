@@ -106,7 +106,7 @@ class MetricHistory:
         then give the total number of events, and a 'sum' entry should
         give the sum of all event values.  The total number of events
         can be greater than the last real entry, if the last bucket
-        has an upper bound of infinity.
+        has no upper bound.
 
         """
         self.timestamps = { }
@@ -120,10 +120,7 @@ class MetricHistory:
     def install(self, samples):
         """Install new timestamped data, and flush out data beyond the
         horizon.  'samples' is a dict indexed by Unix timestamp, and
-        will be merged with existing data.  If new data are older than
-        the thresholds for some clients, rewind those clients to
-        ensure they receive the new data, at the risk of
-        retransmitting some later data.
+        will be merged with existing data.
 
         """
         with self.lock:
@@ -280,10 +277,7 @@ class MetricHistory:
         timestamp is recorded for each client, and only data newer
         than this timestamp is returned.  The timestamp is then
         updated to the most recent metric point just delivered,
-        preventing metrics from being retransmitted.  The timestamp is
-        only rewound in calls to 'install', if the data contains
-        earlier timestamps, which risks retransmission of some
-        metrics.
+        preventing metrics from being retransmitted.
 
         """
         msg = ''
