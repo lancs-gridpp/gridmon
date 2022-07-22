@@ -334,7 +334,7 @@ class PerfsonarCollector:
                            'packet-duplicates', 'packet-reorders',
                            'packet-retransmits', 'packet-trace', 'path-mtu',
                            'pscheduler-run-href', 'throughput-subintervals',
-                           'time-error-estimates' ])
+                           'time-error-estimates', 'packet-loss-rate' ])
 
     def __init__(self, endpoint, lag=20):
         self.endpoint = endpoint
@@ -409,6 +409,9 @@ class PerfsonarCollector:
                 ## Skip event types which we do not use.
                 evtype = evt.get('event-type')
                 if evtype not in PerfsonarCollector.known_events:
+                    if evtype not in PerfsonarCollector.unknown_events:
+                        print('%s %s: skipped' % (mdkey, evtype))
+                        pass
                     continue
 
                 ## Ensure a counter exists for this event type and

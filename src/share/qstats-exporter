@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/bin/env python2
 
 
 ## Copyright (c) 2022, Lancaster University
@@ -34,18 +34,24 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import subprocess
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+import SocketServer
 import xml
-from defusedxml import ElementTree
+from xml.etree import ElementTree
 from datetime import datetime
 import time
 from pprint import pprint
+from getopt import getopt
+import sys
 
-class QStatParser(BaseHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        pass
+def copyfield(dest, dkey, elem, ekey, func=lambda x: x):
+    sub = elem.find(ekey)
+    if sub is None:
+        return False
+    dest[dkey] = func(sub.text)
+    return True
 
+class QStatParser(SimpleHTTPRequestHandler):
     def do_GET(self):
         ## Initialize a structure to hold the data.
         data = { 'jobs': { }, 'queues': { } }
@@ -64,14 +70,14 @@ class QStatParser(BaseHTTPRequestHandler):
             jnum = int(elem.find('JB_job_number').text)
             ent = data['jobs'].setdefault(jnum, { })
             ent['state0'] = elem.attrib.get('state')
-            ent['state1'] = elem.find('state').text
-            ent['prio'] = float(elem.find('JAT_prio').text)
-            ent['name'] = elem.find('JB_name').text
-            ent['owner'] = elem.find('JB_owner').text
-            ent['slots'] = int(elem.find('slots').text)
-            ent['rrcontr'] = int(elem.find('JB_rrcontr').text)
-            ent['wtcontr'] = int(elem.find('JB_wtcontr').text)
-            ent['dlcontr'] = int(elem.find('JB_dlcontr').text)
+            copyfield(ent, 'state1', elem, 'state')
+            copyfield(ent, 'prio', elem, 'JAT_prio', float)
+            copyfield(ent, 'name', elem, 'JB_name')
+            copyfield(ent, 'owner', elem, 'JB_owner')
+            copyfield(ent, 'slots', elem, 'slots', int)
+            copyfield(ent, 'rrcontr', elem, 'JB_rrcontr', int)
+            copyfield(ent, 'wtcontr', elem, 'JB_wtcontr', int)
+            copyfield(ent, 'dlcontr', elem, 'JB_dlcontr', int)
             dto = datetime.strptime(elem.find('JB_submission_time').text,
                                     '%Y-%m-%dT%H:%M:%S')
             ent['submission_time'] = time.mktime(dto.timetuple())
@@ -80,12 +86,13 @@ class QStatParser(BaseHTTPRequestHandler):
         for elem in qinfo.findall('Queue-List'):
             queue = elem.find('name').text
             ent = data['queues'].setdefault(queue, { })
-            ent['qtype'] = elem.find('qtype').text
-            ent['arch'] = elem.find('arch').text
-            ent['slots_used'] = int(elem.find('slots_used').text)
-            ent['slots_resv'] = int(elem.find('slots_resv').text)
-            ent['slots_total'] = int(elem.find('slots_total').text)
-            ent['load_avg'] = float(elem.find('load_avg').text)
+            copyfield(ent, 'qtype', elem, 'qtype')
+            copyfield(ent, 'arch', elem, 'arch')
+            copyfield(ent, 'slots_used', elem, 'slots_used', int)
+            copyfield(ent, 'slots_resv', elem, 'slots_resv', int)
+            copyfield(ent, 'slots_total', elem, 'slots_total', int)
+            copyfield(ent, 'load_avg', elem, 'load_avg', float)
+            #ent['load_avg'] = float(elem.find('load_avg').text)
             state_elem = elem.find('state')
             if state_elem is not None:
                 ent['state'] = state_elem.text
@@ -97,19 +104,19 @@ class QStatParser(BaseHTTPRequestHandler):
                 ent['pos'] = pos
                 pos += 1
                 ent['state0'] = selem.attrib.get('state')
-                ent['state1'] = selem.find('state').text
-                ent['prio'] = float(selem.find('JAT_prio').text)
-                ent['nurg'] = float(selem.find('JB_nurg').text)
-                ent['name'] = selem.find('JB_name').text
-                ent['owner'] = selem.find('JB_owner').text
-                ent['slots'] = int(selem.find('slots').text)
+                copyfield(ent, 'state1', selem, 'state')
+                copyfield(ent, 'prio', selem, 'JAT_prio', float)
+                copyfield(ent, 'nurg', selem, 'JB_nurg', float)
+                copyfield(ent, 'name', selem, 'JB_name')
+                copyfield(ent, 'owner', selem, 'JB_owner')
+                copyfield(ent, 'slots', selem, 'slots', int)
                 telem = selem.find('tasks')
                 if telem is not None:
                     ent['tasks'] = int(telem.text)
                     pass
-                ent['rrcontr'] = int(selem.find('JB_rrcontr').text)
-                ent['wtcontr'] = int(selem.find('JB_wtcontr').text)
-                ent['dlcontr'] = int(selem.find('JB_dlcontr').text)
+                copyfield(ent, 'rrcontr', selem, 'JB_rrcontr', int)
+                copyfield(ent, 'wtcontr', selem, 'JB_wtcontr', int)
+                copyfield(ent, 'dlcontr', selem, 'JB_dlcontr', int)
                 ent['queue'] = queue
                 dto = datetime.strptime(selem.find('JAT_start_time').text,
                                         '%Y-%m-%dT%H:%M:%S')
@@ -153,8 +160,10 @@ class QStatParser(BaseHTTPRequestHandler):
         body += "# TYPE sge_queue_load_avg gauge\n"
         body += "# HELP sge_queue_load_avg load average\n"
         for queue, ent in data['queues'].items():
-            body += 'sge_queue_load_avg'
-            body += '{qname="%s"} %.5f\n' % (queue, ent['load_avg'])
+            if 'load_avg' in ent:
+                body += 'sge_queue_load_avg'
+                body += '{qname="%s"} %.5f\n' % (queue, ent['load_avg'])
+                pass
             continue
 
         body += "# TYPE sge_queue_state info\n"
@@ -275,7 +284,7 @@ for opt, val in opts:
         pass
     continue
 
-webserver = HTTPServer((http_host, http_port), QStatParser)
+webserver = SocketServer.TCPServer((http_host, http_port), QStatParser)
 print('Started on http://%s:%s' % (http_host, http_port))
 
 try:
