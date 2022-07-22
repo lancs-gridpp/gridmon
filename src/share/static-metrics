@@ -225,7 +225,7 @@ function doit () {
             roles["$role"]=yes
         done
         for role in "${!roles[@]}" ; do
-            printf ',role_%s="yes"' "$role"
+            printf ',role_%s="yes"' "${role//-/_}"
         done
         if [ "${#roles[@]}" -gt 0 ] ; then
             printf ',roles="/'
