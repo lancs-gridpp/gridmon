@@ -53,6 +53,20 @@ schema = [
     },
 
     {
+        'base': 'xrootd_up',
+        'type': 'gauge',
+        'help': 'whether an XRootD instance has reported',
+        'select': lambda e: [ t for t in e ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
         'base': 'xrootd_buff_buffs',
         'type': 'gauge',
         'help': 'number of allocated buffers',
