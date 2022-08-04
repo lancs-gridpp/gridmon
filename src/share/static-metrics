@@ -196,6 +196,13 @@ function doit () {
         printf '} %.3f\n' "${PING["$host"]}"
     done
 
+    ## Ensure the user can detect if we've stopped running.
+    printf '# HELP ip_heartbeat time connectivity was last tested\n'
+    printf '# TYPE ip_heartbeat counter\n'
+    printf '# UNIT ip_heartbeat s\n'
+    printf 'ip_heartbeat_total %.3f\n' "$(date '+%s.%N')"
+    printf 'ip_heartbeat_created %.4f\n' 0
+
     printf '# HELP ip_metadata extra info about an IP address\n'
     for host in "${!NODE[@]}" ; do
         printf 'ip_metadata{iface="%s",node="%s"' "$host" "${NODE["$host"]}"
