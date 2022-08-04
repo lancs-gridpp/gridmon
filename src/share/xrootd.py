@@ -1189,6 +1189,8 @@ schema = [
         'help': 'available capacity',
         'select': lambda e: [ t + (rp,)
                               for t in e
+                              if 'oss' in e[t]
+                              and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['free']),
@@ -1208,6 +1210,8 @@ schema = [
         'help': 'total capacity',
         'select': lambda e: [ t + (rp,)
                               for t in e
+                              if 'oss' in e[t]
+                              and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['tot']),
@@ -1227,6 +1231,8 @@ schema = [
         'help': 'available capacity',
         'select': lambda e: [ t + (rp,)
                               for t in e
+                              if 'oss' in e[t]
+                              and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ifr']),
@@ -1246,6 +1252,8 @@ schema = [
         'help': 'total capacity',
         'select': lambda e: [ t + (rp,)
                               for t in e
+                              if 'oss' in e[t]
+                              and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ino']),
