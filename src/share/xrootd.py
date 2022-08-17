@@ -49,6 +49,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -63,6 +64,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -78,6 +80,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -94,6 +97,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -110,6 +114,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -125,6 +130,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -142,6 +148,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -158,6 +165,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -174,6 +182,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -190,6 +199,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -206,6 +216,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -222,6 +233,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -239,6 +251,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -256,6 +269,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -272,6 +286,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -288,6 +303,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -303,6 +319,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -318,6 +335,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -333,6 +351,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -349,6 +368,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -365,6 +385,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -381,6 +402,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -397,6 +419,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -412,6 +435,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -428,6 +452,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -443,6 +468,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -459,6 +485,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -475,6 +502,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -491,6 +519,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -508,6 +537,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -525,6 +555,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -540,6 +571,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'role': ('%s', lambda t, d: d[t[0:2]]['ofs']['role']),
         }
     },
@@ -556,6 +588,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -571,6 +604,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -586,6 +620,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -601,6 +636,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -617,6 +653,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -633,6 +670,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -649,6 +687,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -665,6 +704,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -681,6 +721,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -697,6 +738,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -713,6 +755,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -729,6 +772,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -747,6 +791,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -765,6 +810,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -783,6 +829,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -801,6 +848,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -818,6 +866,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -835,6 +884,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -852,6 +902,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -869,6 +920,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -887,6 +939,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -905,6 +958,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -923,6 +977,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -941,6 +996,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -959,6 +1015,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -977,6 +1034,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -995,6 +1053,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1013,6 +1072,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1031,6 +1091,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1049,6 +1110,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1067,6 +1129,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1085,6 +1148,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1103,6 +1167,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1121,6 +1186,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1139,6 +1205,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1157,6 +1224,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1175,6 +1243,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1193,6 +1262,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1212,6 +1282,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'rp': ('%s', lambda t, d: t[2]),
             'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
         }
@@ -1233,6 +1304,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'rp': ('%s', lambda t, d: t[2]),
             'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
         }
@@ -1254,6 +1326,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'rp': ('%s', lambda t, d: t[2]),
             'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
         }
@@ -1275,6 +1348,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'rp': ('%s', lambda t, d: t[2]),
             'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
         }
