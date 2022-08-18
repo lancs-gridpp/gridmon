@@ -577,6 +577,23 @@ schema = [
     },
 
     {
+        'base': 'xrootd_meta',
+        'type': 'info',
+        'help': 'server metadata',
+        'select': lambda e: [ t for t in e ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
+            'site': ('%s', lambda t, d: d[t[0:2]].get('site')),
+            'port': ('%s', lambda t, d: d[t[0:2]]['port']),
+        }
+    },
+
+    {
         'base': 'xrootd_ofs_han',
         'type': 'gauge',
         'help': 'active file handles',
@@ -1428,9 +1445,17 @@ class ReportReceiver:
         inst = (host, name)
         print('  instance %s@%s' % (name, host))
 
+        ## Extract other metadata.
+        port = int(blk.find('port').text)
+        site = tree.attrib['site']
+
         ## Extract the fields we're interested in.
         data = { }
         data['start'] = start
+        data['port'] = port
+        if site is not None:
+            data['site'] = site
+            pass
 
         blk = stats.get('buff')
         if blk is not None:
