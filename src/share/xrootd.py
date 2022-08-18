@@ -1400,6 +1400,11 @@ class ReportReceiver:
             print('  not statistics')
             return
 
+        pgm = tree.attrib['pgm']
+        if pgm != 'xrootd':
+            print('  not xrootd but %s' % pgm)
+            return
+
         ## Extract timestamp data.
         timestamp = int(tree.attrib['tod'])
         start = int(tree.attrib['tos'])
