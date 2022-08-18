@@ -1502,9 +1502,9 @@ class ReportReceiver:
         if blk is not None:
             sub = data.setdefault('oss', { })
             for i in range(int(blk.find('./paths').text)):
-                print('  Searching for path %d' % i)
+                # print('  Searching for path %d' % i)
                 elem = blk.find('./paths/stats[@id="%d"]' % i)
-                print(ElementTree.tostring(blk, encoding="unicode"))
+                # print(ElementTree.tostring(blk, encoding="unicode"))
                 name = elem.find('./rp').text[1:-1]
                 psub = sub.setdefault('paths', { }).setdefault(name, { })
                 psub['lp'] = elem.find('./lp').text[1:-1]
@@ -1512,7 +1512,7 @@ class ReportReceiver:
                     psub[key] = int(elem.find('./' + key).text)
                 continue
             for i in range(int(blk.find('./space').text)):
-                print('  Searching for space %d' % i)
+                # print('  Searching for space %d' % i)
                 elem = blk.find('./space/stats[@id="%d"]' % i)
                 name = elem.find('./name').text
                 psub = sub.setdefault('spaces', { }).setdefault(name, { })
