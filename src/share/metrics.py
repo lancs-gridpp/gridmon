@@ -148,9 +148,17 @@ class MetricHistory:
         if attrs is None:
             attrs = { }
             pass
-        for an, (afmt, af) in attrs.items():
-            av = af(tup, entry)
-            labels.append(('%s="' + afmt + '"') % (an, av))
+        for an, vspec in attrs.items():
+            ## The first element of vspec is a format string,
+            ## containing len(vspec)-1 format specifiers.  The
+            ## remaining elements are functions to be supplied with
+            ## details of the entry being rendered.  The functions'
+            ## values are used to fulfil the format specifiers.
+            lval = vspec[0] % tuple([ af(tup, entry) for af in vspec[1:] ])
+
+            ## Create a name-value pair to form a label.  TODO: Escape
+            ## the value.  TODO: Sanity-check the name.
+            labels.append(('%s="%s"') % (an, lval))
             continue
 
         msg = ''
