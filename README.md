@@ -38,34 +38,108 @@ Finally, the metrics are written out.
 ### Source format
 
 Each line identifies a host, and defines several attributes to be presented as metrics.
-Attributes are space-separated, and follow the host identifier (an IP address or DNS name).
-The default order of attributes is:
+Each attribute has the form `name=value`, and attributes are separated by spaces.
+The following are recognized:
 
-1. `exported_instance` &#8211; the key field identifying the host in the metric, defaulting to the host identifier
-1. `function` &#8211; a deprecated field acting as a shorthand for `roles` (below)
-1. `building` &#8211; the building housing the physical device
-1. `room` &#8211; the machine room or laboratory housing the physical device
-1. `rack` &#8211; the rack identifier housing the physical device
-1. `level` &#8211; the position within the rack housing the physical device
+- `addrs` specifies a comma-separated list of interfaces by their hostnames or IP addresses.
+  Each element may optionally identify the device by suffixing `#device`.
+  Each element may optionally identify the connected network by suffixing `/network`.
 
-Trailing attributes are optional, and most can be named, e.g., `rack=21`, in defiance of the default order.
-The following attributes are also optional, and must be named if used:
+- `building` specifies the building housing the physical device.
 
-- `osds` &#8211; the number of Ceph OSDs expected to be 'up' on the host
-- `roles` &#8211; a comma-separated list of roles (e.g., `storage`, `ceph_data`, `ceph_monitor`, `ceph_manager`, `ceph_metadata`, `storage_gateway`, etc
+- `room` specifies the machine room or laboratory housing the physical device.
 
-`function` may be any of the following, with their `roles` equivalents:
+- `rack` specifies the rack identifier housing the physical device.
 
-- `storage-data` &rArr; `storage`, `ceph_data`
-- `storage-monitor` &rArr; `storage`, `ceph_monitor`, `ceph_manager`
-- `storage-metadata` &rArr; `storage`, `ceph_metadata`
-- `storage-gateway` &rArr; `storage`, `storage_gateway`
+- `level` specifies the position within the rack housing the physical device.
 
-Anything else is mapped to itself as a role.
+- `osds` specifies the number of Ceph OSDs expected to be 'up' on the host.
+
+- `roles` specifies a comma-separated list of roles that the host fulfils (e.g., `storage`, `ceph_data`, `ceph_monitor`, `ceph_manager`, `ceph_metadata`, `storage_gateway`, etc.
+
+- `func` is a deprecated field acting as a shorthand for `roles`:
+
+  - `storage-data` &rArr; `storage`, `ceph_data`
+  - `storage-monitor` &rArr; `storage`, `ceph_monitor`, `ceph_manager`
+  - `storage-metadata` &rArr; `storage`, `ceph_metadata`
+  - `storage-gateway` &rArr; `storage`, `storage_gateway`
+
+  Anything else is mapped to itself as a role.
 
 ### Generated metrics
 
-All metrics include `exported_instance` as an attribute.
+Three groups of metrics are generated, with the following prefixes:
+
+- `machine_` metrics with the same `node` label describe a physical or virtual machine.
+
+- `ip_` metrics with the same `iface` label describe an IP interface of a machine (which may have several such interfaces).
+
+- `xrootd_` metrics with the same `xrdid` label describe an XRootD instance.
+
+#### Machine metrics
+
+These metrics include `node` as a key label, identifying the host:
+
+- `machine_osd_drives` specifies the number of block storage devices on the host that should be under Ceph management as OSDs.
+  An `exported_instance` label is included, but is deprecated in favour of `node`.
+
+- `machine_location` is always 1, and includes the optional labels `building`, `room`, `rack`, `level`, as specified by the attributes provided as input.
+  An `exported_instance` label is included, but is deprecated in favour of `node`.
+
+- `machine_role` is always 1, and includes the label `role`, with one metric point for each role specified by the `roles` attribute on input.
+  An `exported_instance` label is included, but is deprecated in favour of `node`.
+
+- `machine_roles` is always 1, and includes the label `roles`, which includes each of the roles specified by the `roles` attribute on input, and separated/surrounded by `\`.
+  The intention is to be able to match a role with a regular expression such as `.*/storage/.*`.
+
+It's not yet clear whether to favour one of `machine_role` and `machine_roles`, and then deprecate the other.
+One of the problems with `machine_roles` is that the ordering of roles is undefined.
+If it should change arbitrarily at some point, the same data could appear as two distinct time series, even though they are meant to be the same one.
+For that reason, it's more probably that `machine_roles` will be deprecated.
+
+#### IP interface metrics
+
+Most of these metrics include `iface` as a key label, which is an IP address or a resolvable host name:
+
+- `ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise.
+  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
+
+- `ip_ping` is the last RTT to the interface in milliseconds.
+  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
+
+- `ip_metadata` is always 1, and includes the following additional labels:
+
+  - `node` &#8211; the machine to which the interface belongs
+  
+  - `device` (optional) &#8211; the name of the interface within the host, e.g., `eth0`
+  
+  - `network` (optional) &#8211; the name of the network that the interface connects to
+  
+  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
+  The `hostname` label is deprecated in favour of `iface`.
+  The labels `building`, `room`, `rack` and `level` are deprecated in favour of the metric `machine_location`.
+  `func`, `role_*` and `roles` are deprecated in favour of metrics `machine_role(s)`.
+  
+- `ip_osd_drives` is deprecated in favour of `machine_osd_drives`.
+
+- `ip_heartbeat` is a counter in seconds giving the time when the script was invoked.
+  It can be used to detect whether the script is properly running and updating its output metrics.
+  Exceptionally, it has no `iface` label.
+
+#### XRootD metrics
+
+These metrics include `xrdid` as a key label of the form `instance@hostname`, as an XRootD instance identifies itself.
+Only one metric is actually defined:
+
+- `xrootd_expect` always has the value 1, and the following additional labels:
+
+  - `host` (deprecated) &#8211; the hostname that the XRootD instance deduced by scanning local interfaces
+
+  - `name` (deprecated) &#8211; the name of the XRootD instance within its host
+  
+  - `node` &#8211; the name of the machine on which the XRootD instance runs
+
+Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
 
 `ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise.
 `ip_ping` is the RTT in milliseconds.
