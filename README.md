@@ -141,16 +141,6 @@ Only one metric is actually defined:
 
 Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
 
-`ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise.
-`ip_ping` is the RTT in milliseconds.
-
-`ip_osd_drives` is the number of OSDs expected to be up on a host.
-It normally corresponds to the number of discs installed.
-
-`ip_metadata` is always 1, but includes other attributes such as `hostname` (the host identifier), along with `building`, `room`, `rack`, `level` if specified.
-It also includes an attribute `roles`, which is a slash-separated and slash-surrounded concatenation of the roles for the host, e.g., `/storage/ceph_data/`.
-This should be relatively easy to select host sets with certain roles using regular expressions.
-
 ## XRootD-Prometheus bridge
 
 The script `xrootd-stats` allows metrics emitted by XRootD to be absorbed by Prometheus.
