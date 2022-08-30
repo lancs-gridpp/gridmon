@@ -89,13 +89,13 @@ These metrics include `node` as a key label, identifying the host:
 - `machine_role` is always 1, and includes the label `role`, with one metric point for each role specified by the `roles` attribute on input.
   An `exported_instance` label is included, but is deprecated in favour of `node`.
 
-- `machine_roles` is always 1, and includes the label `roles`, which includes each of the roles specified by the `roles` attribute on input, and separated/surrounded by `\`.
+- `machine_roles` is always 1, and includes the label `roles`, which includes each of the roles specified by the `roles` attribute on input, and separated/surrounded by `/`.
   The intention is to be able to match a role with a regular expression such as `.*/storage/.*`.
 
 It's not yet clear whether to favour one of `machine_role` and `machine_roles`, and then deprecate the other.
 One of the problems with `machine_roles` is that the ordering of roles is undefined.
 If it should change arbitrarily at some point, the same data could appear as two distinct time series, even though they are meant to be the same one.
-For that reason, it's more probably that `machine_roles` will be deprecated.
+For that reason, it's more probable that `machine_roles` will be deprecated.
 
 #### IP interface metrics
 
