@@ -28,8 +28,8 @@ The script is to be run as a cronjob to generate a file served statically throug
 
 The following options are accepted:
 
-- `-o *file*` &#8211; Atomically write output to the file.  An adjacent file is created, and then moved into place.
-- `+o` &#8211; Write to standard output.
+- `-o *file*` &ndash; Atomically write output to the file.  An adjacent file is created, and then moved into place.
+- `+o` &ndash; Write to standard output.
 
 Other arguments are taken as source filenames.
 Each is read in turn, and then listed hosts are `ping`ed, and their RTTs are recorded.
@@ -109,11 +109,11 @@ Most of these metrics include `iface` as a key label, which is an IP address or 
 
 - `ip_metadata` is always 1, and includes the following additional labels:
 
-  - `node` &#8211; the machine to which the interface belongs
+  - `node` &ndash; the machine to which the interface belongs
   
-  - `device` (optional) &#8211; the name of the interface within the host, e.g., `eth0`
+  - `device` (optional) &ndash; the name of the interface within the host, e.g., `eth0`
   
-  - `network` (optional) &#8211; the name of the network that the interface connects to
+  - `network` (optional) &ndash; the name of the network that the interface connects to
   
   An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
   The `hostname` label is deprecated in favour of `iface`.
@@ -133,11 +133,11 @@ Only one metric is actually defined:
 
 - `xrootd_expect` always has the value 1, and the following additional labels:
 
-  - `host` (deprecated) &#8211; the hostname that the XRootD instance deduced by scanning local interfaces
+  - `host` (deprecated) &ndash; the hostname that the XRootD instance deduced by scanning local interfaces
 
-  - `name` (deprecated) &#8211; the name of the XRootD instance within its host
+  - `name` (deprecated) &ndash; the name of the XRootD instance within its host
   
-  - `node` &#8211; the name of the machine on which the XRootD instance runs
+  - `node` &ndash; the name of the machine on which the XRootD instance runs
 
 Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
 
@@ -161,11 +161,11 @@ The script distinguishes HTTP clients by `Authorization` header, and remembers t
 
 The following arguments are accepted:
 
-- `-h *int*` &#8211; minutes of horizon, beyond which metrics are discarded; 30 is the default
-- `-u *port*` &#8211; port number to bind to (UDP); 9485 is the default
-- `-U *host*` &#8211; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
-- `-t *port*` &#8211; port number to bind to (HTTP/TCP); 8744 is the default
-- `-T *host*` &#8211; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-h *int*` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
+- `-u *port*` &ndash; port number to bind to (UDP); 9485 is the default
+- `-U *host*` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
+- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8744 is the default
+- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 
 Each variable specified by the XRootD format is represented by an OpenMetrics metric family by converting dots to underscores, prefixing with `xrootd_`, and suffixing with additional terms as expected by OpenMetrics.
 
@@ -176,85 +176,85 @@ In contrast, the variable `buff.reqs` lacks this (or any) mark, so it is treated
 Note that the translation of many metrics has not yet been implemented.
 The following have been implemented, and are indexed by the properties `host` and `name` (taken from the `<stats id="info">` element):
 
-- `xrootd_buff_adj_total` &#8211; adjustments to the buffer profile
-- `xrootd_buff_buffs` &#8211; number of allocated buffers
-- `xrootd_buff_mem_bytes` &#8211; memory allocated to buffers
-- `xrootd_buff_reqs_total` &#8211; requests for a buffer
-- `xrootd_link_ctime_seconds_total` &#8211; session time in connections
-- `xrootd_link_in_bytes_total` &#8211; data received
-- `xrootd_link_maxn_total` &#8211; maximum concurrent connections
-- `xrootd_link_num` &#8211; concurrent connections
-- `xrootd_link_out_bytes_total` &#8211; data sent
-- `xrootd_link_sfps_total` &#8211; occurrences of partial sendfile operations
-- `xrootd_link_stall_total` &#8211; occurrences of partial data
-- `xrootd_link_tmo_total` &#8211; read request timeouts
-- `xrootd_link_tot_total` &#8211; connections
-- `xrootd_ofs_bxq_total` &#8211; background tasks processed
-- `xrootd_ofs_dly_total` &#8211; delays imposed
-- `xrootd_ofs_err_total` &#8211; errors encountered
-- `xrootd_ofs_han` &#8211; active file handles
-- `xrootd_ofs_opp` &#8211; files open in read-write POSC mode
-- `xrootd_ofs_opr` &#8211; files open in read mode
-- `xrootd_ofs_opw` &#8211; files open in read-write mode
-- `xrootd_ofs_rdr_total` &#8211; redirects processed
-- `xrootd_ofs_rep_total` &#8211; background replies processed
-- `xrootd_ofs_ser_total` &#8211; received events indicating failure
-- `xrootd_ofs_sok_total` &#8211; received events indicating success
-- `xrootd_ofs_ups_total` &#8211; occurrences of POSC-mode file unpersisted
-- `xrootd_ofs_tpc_grnt_total` &#8211; TPCs allowed
-- `xrootd_ofs_tpc_deny_total` &#8211; TPCs denied
-- `xrootd_ofs_tpc_err_total` &#8211; TPCs that failed
-- `xrootd_poll_att` &#8211; file descriptors attached for polling
-- `xrootd_poll_en_total` &#8211; poll-enable operations
-- `xrootd_poll_ev_total` &#8211; polling events
-- `xrootd_poll_int_total` &#8211; unsolicited polling operations
-- `xrootd_proc_sys_seconds_total` &#8211; system time
-- `xrootd_proc_usr_seconds_total` &#8211; user time
-- `xrootd_sched_idle` &#8211; number of scheduler threads waiting for work
-- `xrootd_sched_inq` &#8211; number of jobs in run queue
-- `xrootd_sched_jobs_total` &#8211; jobs requiring a thread
-- `xrootd_sched_maxinq_total` &#8211; longest run-queue length
-- `xrootd_sched_tcr_total` &#8211; thread creations
-- `xrootd_sched_tde_total` &#8211; thread destructions
-- `xrootd_sched_threads_total` &#8211; current scheduler threads
-- `xrootd_sched_tlimr_total` &#8211; occurrences of reaching thread limit
-- `xrootd_sgen_as` &#8211; asynchronous flag
-- `xrootd_sgen_et_seconds` &#8211; time to complete statistics
-- `xrootd_sgen_toe_seconds_total` &#8211; Unix time when statistics gathering ended
-- `xrootd_xrootd_dly_total` &#8211; requests ending with delay
-- `xrootd_xrootd_err_total` &#8211; requests ending with error
-- `xrootd_xrootd_num_total` &#8211; requests selecting `xrootd` protocol
-- `xrootd_xrootd_rdr_total` &#8211; requests redirected
-- `xrootd_xrootd_aio_max_total` &#8211; maximum concurrent asynchronous requests
-- `xrootd_xrootd_aio_num_total` &#8211; asynchronous requests processed
-- `xrootd_xrootd_aio_rej_total` &#8211; asynchronous requests converted to synchronous
-- `xrootd_xrootd_lgn_af_total` &#8211; authentication failkures
-- `xrootd_xrootd_lgn_au_total` &#8211; successful authenticated logins
-- `xrootd_xrootd_lgn_num_total` &#8211; login attempts
-- `xrootd_xrootd_lgn_ua_total` &#8211; successful unauthenticated logins
-- `xrootd_xrootd_ops_getf_total` &#8211; `getfile` requests
-- `xrootd_xrootd_ops_misc_total` &#8211; 'other' requests
-- `xrootd_xrootd_ops_open_total` &#8211; file-open requests
-- `xrootd_xrootd_ops_pr_total` &#8211; pre-read requests
-- `xrootd_xrootd_ops_putf_total` &#8211; `putfile` requests
-- `xrootd_xrootd_ops_rd_total` &#8211; read requests
-- `xrootd_xrootd_ops_rf_total` &#8211; cache-refresh requests
-- `xrootd_xrootd_ops_rs_total` &#8211; readv segments
-- `xrootd_xrootd_ops_rv_total` &#8211; readv requests
-- `xrootd_xrootd_ops_sync_total` &#8211; sync requests
-- `xrootd_xrootd_ops_wr_total` &#8211; write requests
+- `xrootd_buff_adj_total` &ndash; adjustments to the buffer profile
+- `xrootd_buff_buffs` &ndash; number of allocated buffers
+- `xrootd_buff_mem_bytes` &ndash; memory allocated to buffers
+- `xrootd_buff_reqs_total` &ndash; requests for a buffer
+- `xrootd_link_ctime_seconds_total` &ndash; session time in connections
+- `xrootd_link_in_bytes_total` &ndash; data received
+- `xrootd_link_maxn_total` &ndash; maximum concurrent connections
+- `xrootd_link_num` &ndash; concurrent connections
+- `xrootd_link_out_bytes_total` &ndash; data sent
+- `xrootd_link_sfps_total` &ndash; occurrences of partial sendfile operations
+- `xrootd_link_stall_total` &ndash; occurrences of partial data
+- `xrootd_link_tmo_total` &ndash; read request timeouts
+- `xrootd_link_tot_total` &ndash; connections
+- `xrootd_ofs_bxq_total` &ndash; background tasks processed
+- `xrootd_ofs_dly_total` &ndash; delays imposed
+- `xrootd_ofs_err_total` &ndash; errors encountered
+- `xrootd_ofs_han` &ndash; active file handles
+- `xrootd_ofs_opp` &ndash; files open in read-write POSC mode
+- `xrootd_ofs_opr` &ndash; files open in read mode
+- `xrootd_ofs_opw` &ndash; files open in read-write mode
+- `xrootd_ofs_rdr_total` &ndash; redirects processed
+- `xrootd_ofs_rep_total` &ndash; background replies processed
+- `xrootd_ofs_ser_total` &ndash; received events indicating failure
+- `xrootd_ofs_sok_total` &ndash; received events indicating success
+- `xrootd_ofs_ups_total` &ndash; occurrences of POSC-mode file unpersisted
+- `xrootd_ofs_tpc_grnt_total` &ndash; TPCs allowed
+- `xrootd_ofs_tpc_deny_total` &ndash; TPCs denied
+- `xrootd_ofs_tpc_err_total` &ndash; TPCs that failed
+- `xrootd_poll_att` &ndash; file descriptors attached for polling
+- `xrootd_poll_en_total` &ndash; poll-enable operations
+- `xrootd_poll_ev_total` &ndash; polling events
+- `xrootd_poll_int_total` &ndash; unsolicited polling operations
+- `xrootd_proc_sys_seconds_total` &ndash; system time
+- `xrootd_proc_usr_seconds_total` &ndash; user time
+- `xrootd_sched_idle` &ndash; number of scheduler threads waiting for work
+- `xrootd_sched_inq` &ndash; number of jobs in run queue
+- `xrootd_sched_jobs_total` &ndash; jobs requiring a thread
+- `xrootd_sched_maxinq_total` &ndash; longest run-queue length
+- `xrootd_sched_tcr_total` &ndash; thread creations
+- `xrootd_sched_tde_total` &ndash; thread destructions
+- `xrootd_sched_threads_total` &ndash; current scheduler threads
+- `xrootd_sched_tlimr_total` &ndash; occurrences of reaching thread limit
+- `xrootd_sgen_as` &ndash; asynchronous flag
+- `xrootd_sgen_et_seconds` &ndash; time to complete statistics
+- `xrootd_sgen_toe_seconds_total` &ndash; Unix time when statistics gathering ended
+- `xrootd_xrootd_dly_total` &ndash; requests ending with delay
+- `xrootd_xrootd_err_total` &ndash; requests ending with error
+- `xrootd_xrootd_num_total` &ndash; requests selecting `xrootd` protocol
+- `xrootd_xrootd_rdr_total` &ndash; requests redirected
+- `xrootd_xrootd_aio_max_total` &ndash; maximum concurrent asynchronous requests
+- `xrootd_xrootd_aio_num_total` &ndash; asynchronous requests processed
+- `xrootd_xrootd_aio_rej_total` &ndash; asynchronous requests converted to synchronous
+- `xrootd_xrootd_lgn_af_total` &ndash; authentication failkures
+- `xrootd_xrootd_lgn_au_total` &ndash; successful authenticated logins
+- `xrootd_xrootd_lgn_num_total` &ndash; login attempts
+- `xrootd_xrootd_lgn_ua_total` &ndash; successful unauthenticated logins
+- `xrootd_xrootd_ops_getf_total` &ndash; `getfile` requests
+- `xrootd_xrootd_ops_misc_total` &ndash; 'other' requests
+- `xrootd_xrootd_ops_open_total` &ndash; file-open requests
+- `xrootd_xrootd_ops_pr_total` &ndash; pre-read requests
+- `xrootd_xrootd_ops_putf_total` &ndash; `putfile` requests
+- `xrootd_xrootd_ops_rd_total` &ndash; read requests
+- `xrootd_xrootd_ops_rf_total` &ndash; cache-refresh requests
+- `xrootd_xrootd_ops_rs_total` &ndash; readv segments
+- `xrootd_xrootd_ops_rv_total` &ndash; readv requests
+- `xrootd_xrootd_ops_sync_total` &ndash; sync requests
+- `xrootd_xrootd_ops_wr_total` &ndash; write requests
 
 
 The following metrics offer metadata:
 
-- `xrootd_ofs_meta_info` &#8211; holds reporter's role as property `role`
+- `xrootd_ofs_meta_info` &ndash; holds reporter's role as property `role`
 
 In addition to `host` and `name`, the following are defined to have `lp` and `rp` properties:
 
-- `xrootd_oss_paths_free_bytes` &#8211; free space
-- `xrootd_oss_paths_tot_bytes` &#8211; capacity
-- `xrootd_oss_paths_ifr_inodes` &#8211; free inodes (TODO: This comes up as -1, probably meaning the information isn't available.  It should therefore not exist as a metric.)
-- `xrootd_oss_paths_ino_inodes` &#8211; total inodes
+- `xrootd_oss_paths_free_bytes` &ndash; free space
+- `xrootd_oss_paths_tot_bytes` &ndash; capacity
+- `xrootd_oss_paths_ifr_inodes` &ndash; free inodes (TODO: This comes up as -1, probably meaning the information isn't available.  It should therefore not exist as a metric.)
+- `xrootd_oss_paths_ino_inodes` &ndash; total inodes
 
 (It's not clear which of `lp` and `rp` should be considered 'key fields', so both are included for now.  A future version might drop one, and provide it as metadata.)
 
@@ -264,12 +264,12 @@ The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR
 
 The following arguments are accepted:
 
-- `-h *int*` &#8211; minutes of horizon, beyond which metrics are discarded; 30 is the default
-- `-l *lag*` &#8211; the number of seconds of lag; default 20
-- `-t *port*` &#8211; port number to bind to (HTTP/TCP); 8732 is the default
-- `-T *host*` &#8211; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
-- `-E *endpoint*` &#8211; the `esmond` endpoint to fetch metrics from
-- `-S *host*` &#8211; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
+- `-h *int*` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
+- `-l *lag*` &ndash; the number of seconds of lag; default 20
+- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8732 is the default
+- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-E *endpoint*` &ndash; the `esmond` endpoint to fetch metrics from
+- `-S *host*` &ndash; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
 
 One of `-E` or `-S` is required.
 The specified endpoint is scraped every 30 seconds.
@@ -284,17 +284,17 @@ So, if a measurement that starts at `t0` and completes at `t1 = t0 + 10` is time
 
 The following metrics are defined:
 
-- `perfsonar_packets_lost` &#8211; the number of packets lost
-- `perfsonar_packets_sent` &#8211; the number of packets sent
-- `perfsonar_events_packets_total` &#8211; the number of packet-loss measurements
-- `perfsonar_throughput` &#8211; a throughput measurement
-- `perfsonar_events_throughput_total` &#8211; the number of throughput measurements
-- `perfsonar_owdelay` &#8211; a one-way delay measurement
-- `perfsonar_events_owdelay_total` &#8211; the number of one-way-delay measurements
-- `perfsonar_ttl` &#8211; a TTL measurement
-- `perfsonar_events_ttl_total` &#8211; the number of TTL measurements
-- `perfsonar_metadata` &#8211; metadata for an ongoing measurement something something
-- `perfsonar_ip_metadata` &#8211; additional IP metadata for an ongoing measurement something something
+- `perfsonar_packets_lost` &ndash; the number of packets lost
+- `perfsonar_packets_sent` &ndash; the number of packets sent
+- `perfsonar_events_packets_total` &ndash; the number of packet-loss measurements
+- `perfsonar_throughput` &ndash; a throughput measurement
+- `perfsonar_events_throughput_total` &ndash; the number of throughput measurements
+- `perfsonar_owdelay` &ndash; a one-way delay measurement
+- `perfsonar_events_owdelay_total` &ndash; the number of one-way-delay measurements
+- `perfsonar_ttl` &ndash; a TTL measurement
+- `perfsonar_events_ttl_total` &ndash; the number of TTL measurements
+- `perfsonar_metadata` &ndash; metadata for an ongoing measurement something something
+- `perfsonar_ip_metadata` &ndash; additional IP metadata for an ongoing measurement something something
 
 All measurements have a label `metadata_key` which can be cross-referenced with the metadata.
 The metadata itself provides source and destination addresses (`src_addr` and `dst_addr`), and corresponding names as submitted (`src_name` and `dst_name`).
