@@ -119,7 +119,28 @@ function parse_attrs () {
     if [ -n "${ADDRS["$key"]}" ] ; then
         local hosts=()
         IFS=',' read -ra hosts <<< "${ADDRS["$key"]}" ; shift
+        local host
         for host in "${hosts[@]}" ; do
+            ## Extract additional attributes from the host, which can
+            ## have the form host#ifname/network.
+            local prehash posthash preslash postslash
+            prehash="${host%#*}"
+            posthash="${host#"$prehash"}"
+            preslash="${host%/*}"
+            postslash="${host#"$preslash"}"
+            host="${host%"$posthash"}"
+            host="${host%"$postslash"}"
+            postslash="${postslash%"$posthash"}"
+            posthash="${posthash%"$postslash"}"
+            postslash="${postslash#/}"
+            posthash="${posthash#"#"}"
+            if [ "$postslash" ] ; then
+                NETWORK["$host"]="$postslash"
+            fi
+            if [ "$posthash" ] ; then
+                IFACE["$host"]="$posthash"
+            fi
+
             NODE["$host"]="$key"
         done
     fi
@@ -137,7 +158,7 @@ function parse_attrs () {
 
 ## Parse inputs and build up data.
 declare -A FUNC
-declare -A XROOTS XROOTNODE NODES
+declare -A XROOTS XROOTNODE NODES NETWORK IFACE
 declare -A NODE ADDRS PING UP BUILDING ROOM CABINET LEVEL ROLES OSDS
 for input in "${INPUTS[@]}" ; do
     while read -a words ; do
@@ -207,6 +228,15 @@ function doit () {
     printf '# HELP ip_metadata extra info about an IP address\n'
     for host in "${!NODE[@]}" ; do
         printf 'ip_metadata{iface="%s",node="%s"' "$host" "${NODE["$host"]}"
+
+        ## Explain how this interface is connected to its network, if
+        ## specified.
+        if [ "${IFACE["$host"]}" ] ; then
+            printf ',device="%s"' "${IFACE["$host"]}"
+        fi
+        if [ "${NETWORK["$host"]}" ] ; then
+            printf ',network="%s"' "${NETWORK["$host"]}"
+        fi
 
         ## TODO: Disable these labels.
         node="${NODE["$host"]}"
