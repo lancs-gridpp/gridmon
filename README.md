@@ -255,22 +255,33 @@ The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR
 The following arguments are accepted:
 
 - `-h *int*` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
-- `-l *lag*` &ndash; the number of seconds of lag; default 20
+- `-l *int*` &ndash; the number of seconds of lag; default 20
+- `-f *int*` &ndash; seconds before the scraped period to look for metadata keys; default 0
+- `-a *int*` &ndash; seconds before the scraped period to look for metadata keys; default 60
 - `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8732 is the default
 - `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-E *endpoint*` &ndash; the `esmond` endpoint to fetch metrics from
 - `-S *host*` &ndash; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
 
 One of `-E` or `-S` is required.
-The specified endpoint is scraped every 30 seconds.
-Referenced measurements are then fetched, stored locally as timestamped metrics, and served on demand to scraping clients such as Prometheus.
-The additional fetches can take some time, and even over-run.
-In that case, the next top-level scrape is delayed until the current additional fetches are complete.
-Regardless of when a top-level scrape is performed, its time range always abuts with the previous scrape's range.
+The specified endpoint is consulted periodically to obtain timestamped metric points, which can then be scraped by Prometheus.
+A consultation considers two intervals, *scan* and *scrape*, each of which is passed as `time-start` and `time-end` parameters specified in the call to the endpoint (the scan interval) and its derivatives (the scrape interval).
+Consultations are approximately 30s apart.
 
-To deal with some measurements arriving out of order, or being timestamped by start rather than end, the requested time range is for some seconds into the past.
-This 'lag' period is set by `-l`, and defaults to 20s.
-So, if a measurement that starts at `t0` and completes at `t1 = t0 + 10` is timestamped `t0`, but cannot be known until `t1`, the upper bound of any requested range will be `r1 < t1 - 20 < t0`, so the measurement will be picked up in the next scrape, and not be missed or regarded out-of-order by prometheus.
+For a consultation at time `T`, the scan interval ends at `T-20` (as set by `-l`).
+The scrape interval ends no later than `T-20-60` (as set by `-a`).
+It begins wherever the previous scrape interval ended, so if that was 30s earlier, that's at `T-20-60-30`.
+The scan interval begins no later than `T-20-60-30-0` (as set by `-f`).
+
+The extra 20s is the lag, and is intended to deal with measurements recorded up to 20s later than they are stamped.
+This might happen if (say) a measurement takes several seconds to make, but is given a timestamp based on when it started, rather than when it ended.
+
+The scrape interval is used when obtaining actual measurements.
+Because it always abuts with previous and next scrapes, no measurement is ever read more than once, and none should be missed.
+
+Several calls to derivatives of the configured endpoint are required to get all measurements of interest within the scrape interval, and these derivatives vary by metadata key (identifying the measurement task) and event type (the metric, e.g., `throughput`).
+The derivates are obtained through a single call to the configured endpoint, using the *scan* interval, which is wider than the scrape interval.
+This is because the timestamps from the scan lag behind the measurements by a few to tens of seconds, and might not fall within the same scrape interval.
 
 The following metrics are defined:
 
