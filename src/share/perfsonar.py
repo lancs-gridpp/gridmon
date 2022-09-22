@@ -42,6 +42,9 @@ import re
 
 _tozero = re.compile(r"[0-9]")
 
+def _nicetime(t):
+    return datetime.utcfromtimestamp(t).strftime('%Y-%m-%dT%H:%M:%SZ')
+
 def _bucket(thr, cnt):
     ## Make all the digits '0', but the last '1'.
     global _tozero
@@ -336,10 +339,12 @@ class PerfsonarCollector:
                            'pscheduler-run-href', 'throughput-subintervals',
                            'time-error-estimates', 'packet-loss-rate' ])
 
-    def __init__(self, endpoint, lag=20):
+    def __init__(self, endpoint, lag=20, fore=0, aft=60):
         self.endpoint = endpoint
         self.lag = lag
-        self.last = int(time.time()) - lag
+        self.fore = fore
+        self.aft = aft
+        self.last = int(time.time()) - lag - aft
         self.start = self.last
         self.ctx = ssl.create_default_context()
         self.ctx.check_hostname = False
@@ -349,21 +354,27 @@ class PerfsonarCollector:
 
     def update(self):
         ## Determine the time range we are adding.
-        curr = int(time.time()) - self.lag
+        curr = int(time.time()) - self.lag - self.aft
         if curr <= self.last:
             return { }
         assert curr > self.last
         start = self.last + 1
         interval = "time-start=%d&time-end=%d" % (start, curr)
-        print('%3ds from %10d (%s) to %10d (%s)' %
-              (curr - start + 1,
-               start,
-               datetime.utcfromtimestamp(start).strftime('%Y-%m-%dT%H:%M:%SZ'),
-               curr,
-               datetime.utcfromtimestamp(curr).strftime('%Y-%m-%dT%H:%M:%SZ')))
+
+        ## Consider a wider range for identifying (metadata-key,
+        ## event-type) tuples that might provide data in the smaller
+        ## range, even if no summary data is present.
+        scan_start = start - self.fore
+        scan_end = curr + self.aft
+        scan = "time-start=%d&time-end=%d" % (scan_start, scan_end)
+
+        print('scan0: %10d (%s)' % (scan_start, _nicetime(scan_start)))
+        print('read0: %10d (%s)' % (start, _nicetime(start)))
+        print('read1: %10d (%s)' % (curr, _nicetime(curr)))
+        print('scan1: %10d (%s)' % (scan_end, _nicetime(scan_end)))
 
         ## Get the summary of measurements within the interval.
-        url = self.endpoint + "?" + interval
+        url = self.endpoint + "?" + scan
         rsp = urllib.request.urlopen(url, context=self.ctx)
         doc = json.loads(rsp.read().decode("utf-8"))
 
@@ -393,19 +404,6 @@ class PerfsonarCollector:
 
             baseurl = mdent['url']
             for evt in mdent['event-types']:
-                ## Skip events that haven't happened yet.
-                upd = evt.get('time-updated')
-                if upd is None:
-                    continue
-
-                ## The overview can contain event types that haven't
-                ## been updated in ages (because a different event
-                ## type for the same metadata key *has* been updated.
-                ## We have to skip over these.
-                if upd < start or upd > curr:
-                    continue
-                evc += 1
-
                 ## Skip event types which we do not use.
                 evtype = evt.get('event-type')
                 if evtype not in PerfsonarCollector.known_events:
@@ -419,7 +417,9 @@ class PerfsonarCollector:
                 self.counters.setdefault(mdkey, { }) \
                     .setdefault(evtype, 0)
 
-                ## Fetch the event data.
+                ## Fetch the event data, using the narrower interval
+                ## that doesn't overlap with the previous or
+                ## subsequent interval.
                 evturl = urljoin(baseurl, evt['base-uri']) + '?' + interval
                 evtrsp = urllib.request.urlopen(evturl, context=self.ctx)
                 evtdoc = json.loads(evtrsp.read().decode("utf-8"))
@@ -435,6 +435,11 @@ class PerfsonarCollector:
                 for ts in evtss:
                     val = evdic[ts]
 
+                    print('%+3d %+3d %s/%s' %
+                          (ts - scan_start,
+                           ts - start,
+                           mdkey, evtype))
+
                     ## Install metadata and the value for this event.
                     tsdata = data.setdefault(ts, { })
                     evdata = tsdata.setdefault(mdkey, { })
@@ -444,6 +449,7 @@ class PerfsonarCollector:
                     ## Increase the relevant event counter, and store
                     ## under this timestamp.
                     self.counters[mdkey][evtype] += 1
+                    evc += 1
                     cnt = self.counters[mdkey][evtype]
                     evdata.setdefault('counters', { })['start'] = self.start
                     evdata['counters'][evtype] = cnt
