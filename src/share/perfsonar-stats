@@ -48,12 +48,18 @@ http_port = 8732
 endpoint = None
 horizon = 60 * 30
 lag = 20
-opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:")
+fore = 0
+aft = 60
+opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:f:a:")
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val) * 60
     elif opt == '-l':
         lag = int(val)
+    elif opt == '-f':
+        fore = int(val)
+    elif opt == '-a':
+        aft = int(val)
     elif opt == '-T':
         http_host = val
     elif opt == '-t':
@@ -66,7 +72,7 @@ for opt, val in opts:
     continue
 
 methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
-perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag)
+perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
 partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
 webserver = HTTPServer((http_host, http_port), partial_handler)
 
