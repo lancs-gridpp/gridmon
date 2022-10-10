@@ -1,0 +1,153 @@
+#!/bin/env python3
+
+## Copyright (c) 2022, Lancaster University
+## All rights reserved.
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions
+## are met:
+##
+## 1. Redistributions of source code must retain the above copyright
+##    notice, this list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above
+##    copyright notice, this list of conditions and the following
+##    disclaimer in the documentation and/or other materials provided
+##    with the distribution.
+##
+## 3. Neither the name of the copyright holder nor the names of its
+##    contributors may be used to endorse or promote products derived
+##    from this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+## LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+## FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+## COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+## INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+## (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+## SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+## STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+## OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import pprint
+import subprocess
+import sys
+import json
+from getopt import getopt
+
+## Parse command-line arguments.
+mode = "pools"
+opts, args = getopt(sys.argv[1:], "pgd")
+for opt, val in opts:
+    if opt == '-p':
+        mode = "pools"
+    elif opt == '-g':
+        mode = "groups"
+    elif opt == '-d':
+        mode = "osds"
+    continue
+
+def get_pools():
+    global mode
+    global args
+    if mode == "pools":
+        ## Get the set of pools to check from the command line.  If
+        ## none are specified, call [rados lspools] to get the full
+        ## set.
+        if len(args) == 0:
+            ## TODO: Is there a Python library that will do this more
+            ## directly?
+            proc = subprocess.Popen([ 'rados', 'lspools' ],
+                                    stdout=subprocess.PIPE,
+                                    universal_newlines=True)
+            pools = set([ i.strip() for i in proc.stdout.readlines() ])
+        else:
+            pools = set(args)
+        sys.stderr.write('Pools: %s\n' % ', '.join(pools))
+        return pools
+    return set()
+
+def get_groups():
+    global mode
+    global args
+    if mode == "groups":
+        return set(args)
+
+    ## For each pool, get the set of PG ids for inconsistent PGs.
+    groups = set()
+    for pool in get_pools():
+        cmd = [ 'rados', 'list-inconsistent-pg', pool ]
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            #out, err = proc.communicate()
+            doc = json.loads(proc.stdout.read().decode("utf-8"))
+            for pgid in doc:
+                groups.add(pgid)
+                continue
+        except:
+            sys.stderr.write('Failed to execute %s\n' % cmd)
+            pass
+        continue
+    sys.stderr.write('PGs: %s\n' % ', '.join(groups))
+    return groups
+
+def get_osds():
+    global mode
+    global args
+    if mode == "osds":
+        return set([ int(i) for i in args ])
+
+    ## For each inconsistent PG, find out which of the OSDs it uses
+    ## have errors.
+    osds = set()
+    for pgid in get_groups():
+        cmd = [ 'rados', 'list-inconsistent-obj', pgid ]
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            doc = json.loads(proc.stdout.read().decode("utf-8"))
+            for incons in doc['inconsistents']:
+                for shard in incons['shards']:
+                    if len(shard['errors']) > 0:
+                        osds.add(shard['osd'])
+                        continue
+                    continue
+                continue
+        except:
+            sys.stderr.write('Failed to execute %s\n' % cmd)
+            pass
+        continue
+    sys.stderr.write('OSDs: %s\n' % ', '.join([ str(x) for x in osds ]))
+    return osds
+
+## For each OSD reporting an error, get health metrics, and pick out
+## the size of the defect list, and other error-related metrics.
+result = { }
+for osdid in get_osds():
+    cmd = [ 'ceph', 'device', 'query-daemon-health-metrics', 'osd.%d' % osdid ]
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        doc = json.loads(proc.stdout.read().decode("utf-8"))
+        for devid in doc:
+            dmets = doc[devid]
+            sys.stderr.write('Checking %s...\n' % devid)
+            if dmets['device']['type'] != 'scsi':
+                continue
+            name = dmets['device']['name']
+            entry = result.setdefault(name, {})
+            for key in dmets['scsi_error_counter_log']:
+                log = dmets['scsi_error_counter_log'][key]
+                entry.setdefault('log', {})[key] = log['total_uncorrected_errors']
+                continue
+            entry['defect'] = dmets['scsi_grown_defect_list']
+            continue
+    except FileNotFoundError:
+        sys.stderr.write('Failed to execute %s\n' % cmd)
+        pass
+    continue
+
+## Report all metrics.
+json.dump(result, sys.stdout)
+#pprint.pprint(result)
