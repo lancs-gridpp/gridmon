@@ -138,9 +138,10 @@ for osdid in get_osds():
             name = dmets['device']['name']
             entry = result.setdefault(osdid, {})
             entry['drive'] = name
+            entry['log'] = {}
             for key in dmets['scsi_error_counter_log']:
                 log = dmets['scsi_error_counter_log'][key]
-                entry.setdefault('log', {})[key] = log['total_uncorrected_errors']
+                entry['log'][key] = log['total_uncorrected_errors']
                 continue
             entry['defect'] = dmets['scsi_grown_defect_list']
             continue
