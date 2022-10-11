@@ -41,7 +41,7 @@ import re
 
 ## Parse command-line arguments.
 mode = "pools"
-fmt = "json"
+fmt = "pretty"
 opts, args = gnu_getopt(sys.argv[1:], "pgd", [ "format=" ])
 for opt, val in opts:
     if opt == '-p':
