@@ -36,11 +36,13 @@ import pprint
 import subprocess
 import sys
 import json
-from getopt import getopt
+from getopt import gnu_getopt
+import re
 
 ## Parse command-line arguments.
 mode = "pools"
-opts, args = getopt(sys.argv[1:], "pgd")
+fmt = "json"
+opts, args = gnu_getopt(sys.argv[1:], "pgd", [ "format=" ])
 for opt, val in opts:
     if opt == '-p':
         mode = "pools"
@@ -48,7 +50,13 @@ for opt, val in opts:
         mode = "groups"
     elif opt == '-d':
         mode = "osds"
+    elif opt == '--format':
+        fmt = val
     continue
+
+if fmt not in [ 'json', 'pretty', 'openmetrics' ]:
+    sys.stderr.write('unknown format [%s]\n' % fmt)
+    sys.exit(1)
 
 def get_pools():
     global mode
@@ -152,6 +160,64 @@ for osdid in osds:
         pass
     continue
 
+pgidfmt = re.compile(r'([0-9]+)\.(.+)')
+for osdid in result:
+    pools = set()
+    for pgid in result[osdid]['cause']:
+        poolid, subid = pgidfmt.match(pgid).groups()
+        pools.add(int(poolid))
+        continue
+    result[osdid]['poolcause'] = list(pools)
+    continue
+
+
 ## Report all metrics.
-json.dump(result, sys.stdout)
-#pprint.pprint(result)
+if fmt == 'openmetrics':
+    print('# TYPE cephx_osd_pg_complaint info')
+    print('# HELP cephx_osd_pg_complaint PGs referencing OSDs with errors')
+    for osdid in result:
+        for pgid in result[osdid]['cause']:
+            print(('cephx_osd_pg_complaint{ceph_daemon="osd.%d"' +
+                   ',pg_id="%s"} 1') % (osdid, pgid))
+            continue
+        continue
+    print('# TYPE cephx_osd_pool_complaint info')
+    print('# HELP cephx_osd_pool_complaint pools referencing OSDs with errors')
+    for osdid in result:
+        for pgid in result[osdid]['poolcause']:
+            print(('cephx_osd_pool_complaint{ceph_daemon="osd.%d"' +
+                   ',pool_id="%d"} 1') % (osdid, pgid))
+            continue
+        continue
+    print('# TYPE cephx_osd_scsi_defects counter')
+    print('# HELP cephx_osd_scsi_defects defect list size')
+    for osdid in result:
+        for drive in result[osdid]['drive']:
+            print(('cephx_osd_scsi_defects_total{ceph_daemon="osd.%d"' +
+                   ',drive="%s"} %d') %
+                  (osdid, drive, result[osdid]['drive'][drive]['defect']))
+            print(('cephx_osd_scsi_defects_created{ceph_daemon="osd.%d"' +
+                   ',drive="%s"} 0') % (osdid, drive))
+            continue
+        continue
+    print('# TYPE cephx_osd_scsi_error_log counter')
+    print('# HELP cephx_osd_scsi_error_log uncorrected errors')
+    for osdid in result:
+        for drive in result[osdid]['drive']:
+            for log in result[osdid]['drive'][drive]['log']:
+                print(('cephx_osd_scsi_error_log_total{ceph_daemon="osd.%d"' +
+                       ',drive="%s",log="%s"} %d') %
+                      (osdid, drive, log,
+                       result[osdid]['drive'][drive]['log'][log]))
+                print(('cephx_osd_scsi_error_log_created{ceph_daemon="osd.%d"' +
+                       ',drive="%s",log="%s"} 0') % (osdid, drive, log))
+                continue
+            continue
+        continue
+    print('# EOF')
+elif fmt == 'json':
+    json.dump(result, sys.stdout)
+else:
+    assert fmt == 'pretty'
+    pprint.pprint(result)
+    pass
