@@ -136,7 +136,8 @@ for osdid in get_osds():
             if dmets['device']['type'] != 'scsi':
                 continue
             name = dmets['device']['name']
-            entry = result.setdefault(name, {})
+            entry = result.setdefault(osdid, {})
+            entry['drive'] = name
             for key in dmets['scsi_error_counter_log']:
                 log = dmets['scsi_error_counter_log'][key]
                 entry.setdefault('log', {})[key] = log['total_uncorrected_errors']
