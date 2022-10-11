@@ -171,6 +171,7 @@ for osdid in result:
     result[osdid]['poolcause'] = list(pools)
     continue
 
+# mmsfmt = re.compile(r'([^_]+)_(.+)_([^_]+)')
 
 ## Report all metrics.
 if fmt == 'openmetrics':
@@ -190,31 +191,28 @@ if fmt == 'openmetrics':
                    ',pool_id="%d"} 1') % (osdid, pgid))
             continue
         continue
-    print('# TYPE cephx_osd_scsi_defects counter')
-    print('# HELP cephx_osd_scsi_defects defect list size')
+    print('# TYPE scsi_defects counter')
+    print('# HELP scsi_defects defect list size')
     for osdid in result:
         for drive in result[osdid]['drive']:
             devid = result[osdid]['drive'][drive]['id']
-            print(('cephx_osd_scsi_defects_total{ceph_daemon="osd.%d"' +
-                   ',drive="%s",device_id="%s"} %d') %
-                  (osdid, drive, devid, result[osdid]['drive'][drive]['defect']))
-            print(('cephx_osd_scsi_defects_created{ceph_daemon="osd.%d"' +
-                   ',drive="%s",device_id="%s"} 0') % (osdid, drive, devid))
+            # make, model, serial = mmsfmt.match(devid).groups()
+            print(('scsi_defects_total{device_id="%s"} %d') %
+                  (devid, result[osdid]['drive'][drive]['defect']))
+            print(('scsi_defects_created{device_id="%s"} 0') % (devid))
             continue
         continue
-    print('# TYPE cephx_osd_scsi_error_log counter')
-    print('# HELP cephx_osd_scsi_error_log uncorrected errors')
+    print('# TYPE scsi_error_log counter')
+    print('# HELP scsi_error_log uncorrected errors')
     for osdid in result:
         for drive in result[osdid]['drive']:
             devid = result[osdid]['drive'][drive]['id']
+            # make, model, serial = mmsfmt.match(devid).groups()
             for log in result[osdid]['drive'][drive]['log']:
-                print(('cephx_osd_scsi_error_log_total{ceph_daemon="osd.%d"' +
-                       ',drive="%s",device_id="%s",log="%s"} %d') %
-                      (osdid, drive, devid, log,
-                       result[osdid]['drive'][drive]['log'][log]))
-                print(('cephx_osd_scsi_error_log_created{ceph_daemon="osd.%d"' +
-                       ',drive="%s",device_id="%s",log="%s"} 0') %
-                      (osdid, drive, devid, log))
+                print(('scsi_error_log_total{device_id="%s",log="%s"} %d') %
+                      (devid, log, result[osdid]['drive'][drive]['log'][log]))
+                print(('scsi_error_log_created{device_id="%s",log="%s"} 0') %
+                      (devid, log))
                 continue
             continue
         continue
