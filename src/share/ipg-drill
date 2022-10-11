@@ -149,6 +149,7 @@ for osdid in osds:
             topent['cause'] = list(osds[osdid])
             topent.setdefault('drive', {})[name] = entry = {}
             entry['log'] = {}
+            entry['id'] = devid
             for key in dmets['scsi_error_counter_log']:
                 log = dmets['scsi_error_counter_log'][key]
                 entry['log'][key] = log['total_uncorrected_errors']
@@ -193,24 +194,27 @@ if fmt == 'openmetrics':
     print('# HELP cephx_osd_scsi_defects defect list size')
     for osdid in result:
         for drive in result[osdid]['drive']:
+            devid = result[osdid]['drive'][drive]['id']
             print(('cephx_osd_scsi_defects_total{ceph_daemon="osd.%d"' +
-                   ',drive="%s"} %d') %
-                  (osdid, drive, result[osdid]['drive'][drive]['defect']))
+                   ',drive="%s",device_id="%s"} %d') %
+                  (osdid, drive, devid, result[osdid]['drive'][drive]['defect']))
             print(('cephx_osd_scsi_defects_created{ceph_daemon="osd.%d"' +
-                   ',drive="%s"} 0') % (osdid, drive))
+                   ',drive="%s",device_id="%s"} 0') % (osdid, drive, devid))
             continue
         continue
     print('# TYPE cephx_osd_scsi_error_log counter')
     print('# HELP cephx_osd_scsi_error_log uncorrected errors')
     for osdid in result:
         for drive in result[osdid]['drive']:
+            devid = result[osdid]['drive'][drive]['id']
             for log in result[osdid]['drive'][drive]['log']:
                 print(('cephx_osd_scsi_error_log_total{ceph_daemon="osd.%d"' +
-                       ',drive="%s",log="%s"} %d') %
-                      (osdid, drive, log,
+                       ',drive="%s",device_id="%s",log="%s"} %d') %
+                      (osdid, drive, devid, log,
                        result[osdid]['drive'][drive]['log'][log]))
                 print(('cephx_osd_scsi_error_log_created{ceph_daemon="osd.%d"' +
-                       ',drive="%s",log="%s"} 0') % (osdid, drive, log))
+                       ',drive="%s",device_id="%s",log="%s"} 0') %
+                      (osdid, drive, devid, log))
                 continue
             continue
         continue
