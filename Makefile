@@ -17,9 +17,11 @@ hidden_scripts += perfsonar-stats
 hidden_scripts += static-metrics
 hidden_scripts += xrootd-stats
 hidden_scripts += qstats-exporter
+hidden_scripts += cephhealth-exporter
 datafiles += metrics.py
 datafiles += perfsonar.py
 datafiles += xrootd.py
+datafiles += cephhealth.py
 
 BINODEPS_SHAREDIR=src/share
 BINODEPS_SCRIPTDIR=$(BINODEPS_SCRIPTDIR)

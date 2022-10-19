@@ -1,0 +1,178 @@
+#!/bin/env python3
+
+## Copyright (c) 2022, Lancaster University
+## All rights reserved.
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions
+## are met:
+##
+## 1. Redistributions of source code must retain the above copyright
+##    notice, this list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above
+##    copyright notice, this list of conditions and the following
+##    disclaimer in the documentation and/or other materials provided
+##    with the distribution.
+##
+## 3. Neither the name of the copyright holder nor the names of its
+##    contributors may be used to endorse or promote products derived
+##    from this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+## "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+## LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+## FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+## COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+## INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+## (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+## SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+## STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+## OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import functools
+from http.server import HTTPServer
+import threading
+import pprint
+import subprocess
+import sys
+import time
+import json
+import re
+from getopt import gnu_getopt
+
+## Local libraries
+import cephhealth
+import metrics
+
+http_host = "localhost"
+http_port = 8799
+horizon = 60 * 60 * 24 * 3
+lag = 20
+interval = 12
+opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:i:")
+for opt, val in opts:
+    if opt == '-h':
+        horizon = int(val) * 60
+    elif opt == '-i':
+        interval = int(val) * 60 * 60
+    elif opt == '-l':
+        lag = int(val)
+    elif opt == '-T':
+        http_host = val
+    elif opt == '-t':
+        http_port = int(val)
+        pass
+    continue
+
+cephcoll = cephhealth.CephHealthCollector(args, lag=lag, horizon=horizon)
+methist = metrics.MetricHistory(cephhealth.schema, horizon=horizon)
+partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
+webserver = HTTPServer((http_host, http_port), partial_handler)
+
+def check_delay(hist, start):
+    if not hist.check():
+        return False
+    now = int(time.time())
+    delay = start - now
+    return delay > 0
+
+def keep_polling(hist, coll, interval):
+    try:
+        last = int(time.time())
+        while hist.check():
+            print('Getting latest data')
+            start = last + interval
+            last = start
+            new_data = coll.update()
+            hist.install(new_data)
+            print('Installed')
+            while check_delay(hist, start):
+                time.sleep(1)
+                pass
+            continue
+    except InterruptedError:
+        pass
+    except KeyboardInterrupt:
+        pass
+    print('Polling halted')
+    hist.halt()
+    pass
+
+poll_thrd = threading.Thread(target=keep_polling,
+                             args=(methist, cephcoll, interval))
+poll_thrd.start()
+
+try:
+    webserver.serve_forever()
+except KeyboardInterrupt:
+    pass
+print('HTTP halted')
+
+methist.halt()
+sys.exit(0)
+
+# result = { }
+# cephhealth.get_device_metrics(result, "TOSHIBA_MG08SCA16TEY_11X0A1Z2F9SH",
+#                               args=args,
+#                               start=1665794097,
+#                               adorn={'a': 30})
+# pprint.pprint(result)
+# sys.exit(0)
+
+# pprint.pprint(cephhealth.get_device_set(args))
+# sys.exit(0)
+
+# pprint.pprint(cephcoll.update(limit=2))
+# sys.exit(0)
+
+data = cephcoll.update(limit=1)
+methist.install(data, mismatch=-1)
+
+# now = int(time.time())
+# sample = {
+#     now - 20: {
+#         'TOSHIBA_MG08SCA16TEY_11X0A1Z2F9SH': {
+#             'defects': 2000,
+#             'uncorrected': {
+#                 'read': 104,
+#                 'write': 1,
+#                 'verify': 0,
+#             },
+#         },
+#     },
+# }
+
+
+# sample = {
+#     1666052642: {
+#         'TOSHIBA_MG08SCA16TEY_11P0A00NF9SH': {
+#             'defects': 0,
+#             'host': 'stor057',
+#             'path': 'pci-0000:18:00.0-scsi-0:0:16:0',
+#             'uncorrected': {
+#                 'read': 0,
+#                 'verify': 0,
+#                 'write': 0
+#             }
+#         }
+#     },
+#     1666139254: {
+#         'TOSHIBA_MG08SCA16TEY_11P0A00NF9SH': {
+#             'defects': 0,
+#             'host': 'stor057',
+#             'path': 'pci-0000:18:00.0-scsi-0:0:16:0',
+#             'uncorrected': {
+#                 'read': 0,
+#                 'verify': 0,
+#                 'write': 0
+#             }
+#         }
+#     }
+# }
+# methist.install(sample)
+
+body, ts0, ts1 = methist.get_message('foo')
+sys.stdout.write(body)
