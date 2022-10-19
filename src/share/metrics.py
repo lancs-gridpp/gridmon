@@ -35,7 +35,7 @@ import time
 
 from http.server import BaseHTTPRequestHandler
 
-def _merge(a, b, pfx=()):
+def _merge(a, b, pfx=(), mismatch=0):
     for key, nv in b.items():
         ## Add a value if not already present.
         if key not in a:
@@ -46,7 +46,15 @@ def _merge(a, b, pfx=()):
         ## they are both dictionaries.
         ov = a[key]
         if isinstance(ov, dict) and isinstance(nv, dict):
-            _merge(ov, nv, pfx + (key,))
+            _merge(ov, nv, pfx + (key,), mismatch=mismatch)
+            continue
+
+        if mismatch < 0:
+            ## Use the old value.
+            continue
+        if mismatch > 0:
+            ## Replace the old value.
+            a[key] = nv
             continue
 
         ## The new value and the existing value must match.
@@ -117,10 +125,12 @@ class MetricHistory:
         self.entries = { }
         pass
 
-    def install(self, samples):
+    def install(self, samples, mismatch=0):
         """Install new timestamped data, and flush out data beyond the
         horizon.  'samples' is a dict indexed by Unix timestamp, and
-        will be merged with existing data.
+        will be merged with existing data.  Set 'mismatch' negative to
+        silently avoid replacing values, positive to silently override
+        old values, and zero (default) to raise an exception.
 
         """
         with self.lock:
@@ -128,7 +138,7 @@ class MetricHistory:
             threshold = int(time.time()) - self.horizon
 
             ## Merge the new data with the old.
-            _merge(self.entries, samples)
+            _merge(self.entries, samples, mismatch=mismatch)
 
             ## Discard old entries.
             for k in [ k for k in self.entries if k < threshold ]:
