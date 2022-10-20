@@ -55,7 +55,7 @@ interval = 12
 opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:i:")
 for opt, val in opts:
     if opt == '-h':
-        horizon = int(val) * 60
+        horizon = int(val) * 60 * 60 * 24
     elif opt == '-i':
         interval = int(val) * 60 * 60
     elif opt == '-l':
