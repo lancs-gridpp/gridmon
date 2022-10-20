@@ -82,7 +82,7 @@ def check_delay(hist, start):
     now = int(time.time())
     delay = start - now
     return delay > 0
-    
+
 def keep_polling(hist, coll):
     try:
         while hist.check():
