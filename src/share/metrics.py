@@ -347,8 +347,9 @@ class MetricHistory:
 
 
 class MetricsHTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, hist=None, **kwargs):
+    def __init__(self, *args, hist=None, prebody=None, **kwargs):
         self.hist = hist
+        self.prebody = prebody
         super().__init__(*args, **kwargs)
         pass
 
@@ -362,6 +363,15 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
         ## Fetch the message appropriate to the client, and send it.
         print('  Forming message for %s' % auth)
         body, ts0, ts1 = self.hist.get_message(auth)
+
+        ## Prefix the body with additional content, if a provider is
+        ## specified.
+        if callable(self.prebody):
+            prebody = self.prebody()
+            body = prebody + body
+            pass
+
+        ## Send the complete response.
         self.send_response(200)
         ct = 'application/openmetrics-text'
         ct += '; version=1.0.0; charset=utf-8'
