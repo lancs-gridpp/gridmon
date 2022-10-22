@@ -51,7 +51,7 @@ http_host = "localhost"
 http_port = 8799
 horizon = 60 * 60 * 24 * 3
 lag = 20
-interval = 12
+interval = 60 * 60 * 12
 disk_limit = None
 opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:i:", [ 'disk-limit=' ])
 for opt, val in opts:
