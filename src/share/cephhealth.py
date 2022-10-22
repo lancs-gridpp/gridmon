@@ -36,6 +36,86 @@ import datetime
 import json
 import re
 import sys
+import traceback
+import logging
+
+def get_pools(args=[]):
+    ## TODO: Is there a Python library that will do this more
+    ## directly?
+    proc = subprocess.Popen(args + [ 'rados', 'lspools' ],
+                            stdout=subprocess.PIPE,
+                            universal_newlines=True)
+    return set([ i.strip() for i in proc.stdout.readlines() ])
+
+def get_inconsistent_pgs(pools, args=[]):
+    ## For each pool, get the set of PG ids for inconsistent PGs.
+    groups = set()
+    for pool in pools:
+        cmd = args + [ 'rados', 'list-inconsistent-pg', pool ]
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            doc = json.loads(proc.stdout.read().decode("utf-8"))
+            for pgid in doc:
+                groups.add(pgid)
+                continue
+        except:
+            sys.stderr.write('Failed to execute %s\n' % cmd)
+            pass
+        continue
+    return groups
+
+_pgidfmt = re.compile(r'([0-9]+)\.(.+)')
+
+def get_osd_complaints(pgids, args=[]):
+    ## For each inconsistent PG, find out which of the OSDs it uses
+    ## have errors.  Generate a dict from OSD number to id of PG
+    ## complaining about the OSD.
+    osds = { }
+    for pgid in pgids:
+        pool, subid = _pgidfmt.match(pgid).groups()
+        pool = int(pool)
+        cmd = args + [ 'rados', 'list-inconsistent-obj', pgid ]
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            doc = json.loads(proc.stdout.read().decode("utf-8"))
+            for incons in doc['inconsistents']:
+                for shard in incons['shards']:
+                    if len(shard['errors']) > 0:
+                        osds.setdefault(shard['osd'], {}) \
+                            .setdefault(pool, set()) \
+                            .add(subid)
+                        continue
+                    continue
+                continue
+        except json.decoder.JSONDecodeError:
+            sys.stderr.write('No good data for %s\n' % pgid)
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            sys.stderr.write('Failed to execute %s\n' % cmd)
+            pass
+        continue
+    return osds
+
+def convert_osd_complaints_to_metrics(complaints):
+    msg = ''
+    msg += '# TYPE cephhealth_osd_pg_complaint info\n'
+    msg += '# HELP cephhealth_osd_pg_complaint ' + \
+        'PGs referencing OSDs with errors\n'
+    for osdid in complaints:
+        elem = complaints[osdid]
+        for pool in elem:
+            for pgid in elem[pool]:
+                msg += ('cephhealth_osd_pg_complaint{ceph_daemon="osd.%d"' +
+                        ',pool_id="%d",pg_id="%s"} 1\n') % (osdid, pool, pgid)
+            continue
+        continue
+    return msg
+
+def get_osd_complaints_as_metrics(args=[]):
+    pools = get_pools(args=args)
+    pgids = get_inconsistent_pgs(pools, args=args)
+    complaints = get_osd_complaints(pgids, args=args)
+    return convert_osd_complaints_to_metrics(complaints)
 
 _devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
 
