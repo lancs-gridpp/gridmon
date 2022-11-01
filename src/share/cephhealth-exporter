@@ -115,10 +115,6 @@ if len(schedule) == 0:
     pass
 
 logging.basicConfig(**log_params)
-logging.info('Schedule: %s' % [
-    '%02d:%02d:%02d' % (int(x / 3600),
-                        int(x / 60) % 60,
-                        x % 60) for x in schedule ])
 
 def get_next_in_schedule(schedule):
     ## What time is it now?  When did this day start?  When does
@@ -148,6 +144,11 @@ partial_handler = functools.partial(metrics.MetricsHTTPHandler,
                                     hist=methist,
                                     prebody=nowmets)
 webserver = HTTPServer((http_host, http_port), partial_handler)
+
+logging.info('Schedule: %s' % [
+    '%02d:%02d:%02d' % (int(x / 3600),
+                        int(x / 60) % 60,
+                        x % 60) for x in schedule ])
 
 def check_delay(hist, start):
     if not hist.check():
