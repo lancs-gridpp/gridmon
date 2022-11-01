@@ -42,10 +42,16 @@ import logging
 def get_pools(args=[]):
     ## TODO: Is there a Python library that will do this more
     ## directly?
-    proc = subprocess.Popen(args + [ 'rados', 'lspools' ],
-                            stdout=subprocess.PIPE,
-                            universal_newlines=True)
-    return set([ i.strip() for i in proc.stdout.readlines() ])
+    cmd = args + [ 'rados', 'lspools' ]
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                universal_newlines=True)
+        return set([ i.strip() for i in proc.stdout.readlines() ])
+    except:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
+        pass
+    return set()
 
 def get_inconsistent_pgs(pools, args=[]):
     ## For each pool, get the set of PG ids for inconsistent PGs.
@@ -58,6 +64,8 @@ def get_inconsistent_pgs(pools, args=[]):
             for pgid in doc:
                 groups.add(pgid)
                 continue
+        except json.decoder.JSONDecodeError:
+            logging.error('No JSON data from %s' % cmd)
         except:
             logging.error(traceback.format_exc())
             logging.error('Failed to execute %s' % cmd)
@@ -122,27 +130,33 @@ _devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
 
 def get_device_set(args=[]):
     cmd = args + [ 'ceph', 'device', 'ls', '--format=json' ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    doc = json.loads(proc.stdout.read().decode("utf-8"))
     result = { }
-    for elem in doc:
-        if 'devid' not in elem or 'location' not in elem:
-            continue
-        if len(elem['location']) == 0:
-            continue
-        devid = elem['devid']
-        pathtxt = elem['location'][0]['path']
-        mt = _devpathfmt.match(pathtxt)
-        if mt is not None:
-            (path,) = mt.groups()
-            if path is not None:
-                result[devid] = {
-                    'host': elem['location'][0]['host'],
-                    'path': path,
-                }
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        doc = json.loads(proc.stdout.read().decode("utf-8"))
+        for elem in doc:
+            if 'devid' not in elem or 'location' not in elem:
+                continue
+            if len(elem['location']) == 0:
+                continue
+            devid = elem['devid']
+            pathtxt = elem['location'][0]['path']
+            mt = _devpathfmt.match(pathtxt)
+            if mt is not None:
+                (path,) = mt.groups()
+                if path is not None:
+                    result[devid] = {
+                        'host': elem['location'][0]['host'],
+                        'path': path,
+                    }
+                    pass
                 pass
-            pass
-        continue
+            continue
+    except json.decoder.JSONDecodeError:
+        logging.error('No JSON data from %s' % cmd)
+    except:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
     return result
 
 _timestamp = \
@@ -157,34 +171,41 @@ def decode_time(txt):
 def get_device_metrics(result, devid, args=[], start=None, end=None, adorn=None):
     cmd = args + [ 'ceph', 'device', 'get-health-metrics',
                    '--format=json', devid ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    doc = json.loads(proc.stdout.read().decode("utf-8"))
     mod = False
-    for tstxt in doc:
-        ts = decode_time(tstxt)
-        if start is not None and ts < start:
-            continue
-        if end is not None and ts >= end:
-            continue
-        # sys.stderr.write('Time %d\n' % ts)
-        ent = doc[tstxt]
-        out = result.setdefault(ts,
-                                { }).setdefault(devid,
-                                                { } if adorn is None
-                                                else dict(adorn))
-        if 'scsi_error_counter_log' in ent:
-            out['uncorrected'] = { }
-            log = ent['scsi_error_counter_log']
-            for mode in log:
-                out['uncorrected'][mode] = log[mode]['total_uncorrected_errors']
-                mod = True
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        doc = json.loads(proc.stdout.read().decode("utf-8"))
+        for tstxt in doc:
+            ts = decode_time(tstxt)
+            if start is not None and ts < start:
                 continue
-            pass
-        if 'scsi_grown_defect_list' in ent:
-            out['defects'] = ent['scsi_grown_defect_list']
-            mod = True
-            pass
-        continue
+            if end is not None and ts >= end:
+                continue
+            # sys.stderr.write('Time %d\n' % ts)
+            ent = doc[tstxt]
+            out = result.setdefault(ts,
+                                    { }).setdefault(devid,
+                                                    { } if adorn is None
+                                                    else dict(adorn))
+            if 'scsi_error_counter_log' in ent:
+                out['uncorrected'] = { }
+                log = ent['scsi_error_counter_log']
+                for mode in log:
+                    out['uncorrected'][mode] = \
+                        log[mode]['total_uncorrected_errors']
+                    mod = True
+                    continue
+                pass
+            if 'scsi_grown_defect_list' in ent:
+                out['defects'] = ent['scsi_grown_defect_list']
+                mod = True
+                pass
+            continue
+    except json.decoder.JSONDecodeError:
+        logging.error('No JSON data for %s from %s' % (pgid, cmd))
+    except:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
     return mod
     
     
