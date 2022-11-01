@@ -38,6 +38,8 @@ from http.server import HTTPServer
 from getopt import getopt
 import threading
 import time
+import logging
+import traceback
 
 ## Local libraries
 import perfsonar
@@ -50,7 +52,12 @@ horizon = 60 * 30
 lag = 20
 fore = 0
 aft = 60
-opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:f:a:")
+log_params = {
+    'format': '%(asctime)s %(message)s',
+    'datefmt': '%Y-%d-%mT%H:%M:%S',
+}
+opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:f:a:",
+                    [ 'log=', 'log-file=' ])
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val) * 60
@@ -66,6 +73,15 @@ for opt, val in opts:
         http_port = int(val)
     elif opt == '-E':
         endpoint = val
+    elif opt == '--log':
+        log_params['level'] = getattr(logging, val.upper(), None)
+        if not isinstance(log_params['level'], int):
+            sys.stderr.write('bad log level [%s]\n' % val)
+            sys.exit(1)
+            pass
+        pass
+    elif opt == '--log-file':
+        log_params['filename'] = val
     elif opt == '-S':
         endpoint = 'https://' + val + '/esmond/perfsonar/archive/'
         pass
@@ -75,6 +91,8 @@ methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
 perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
 partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
 webserver = HTTPServer((http_host, http_port), partial_handler)
+
+logging.basicConfig(**log_params)
 
 def check_delay(hist, start):
     if not hist.check():
@@ -86,11 +104,11 @@ def check_delay(hist, start):
 def keep_polling(hist, coll):
     try:
         while hist.check():
-            print('Getting latest data')
+            logging.info('Getting latest data')
             start = int(time.time()) + 30
             new_data = coll.update()
             hist.install(new_data)
-            print('Installed')
+            logging.info('Installed')
             while check_delay(hist, start):
                 time.sleep(1)
                 pass
@@ -99,7 +117,7 @@ def keep_polling(hist, coll):
         pass
     except KeyboardInterrupt:
         pass
-    print('Polling halted')
+    logging.info('Polling halted')
     hist.halt()
     pass
 
@@ -110,6 +128,6 @@ try:
     webserver.serve_forever()
 except KeyboardInterrupt:
     pass
-print('HTTP halted')
+logging.info('HTTP halted')
 
 methist.halt()

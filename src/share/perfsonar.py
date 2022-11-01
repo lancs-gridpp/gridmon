@@ -39,6 +39,8 @@ from urllib.parse import urljoin
 import json
 import sys
 import re
+import logging
+import traceback
 
 _tozero = re.compile(r"[0-9]")
 
@@ -368,10 +370,10 @@ class PerfsonarCollector:
         scan_end = curr + self.aft
         scan = "time-start=%d&time-end=%d" % (scan_start, scan_end)
 
-        print('scan0: %10d (%s)' % (scan_start, _nicetime(scan_start)))
-        print('read0: %10d (%s)' % (start, _nicetime(start)))
-        print('read1: %10d (%s)' % (curr, _nicetime(curr)))
-        print('scan1: %10d (%s)' % (scan_end, _nicetime(scan_end)))
+        logging.info('scan0: %10d (%s)' % (scan_start, _nicetime(scan_start)))
+        logging.info('read0: %10d (%s)' % (start, _nicetime(start)))
+        logging.info('read1: %10d (%s)' % (curr, _nicetime(curr)))
+        logging.info('scan1: %10d (%s)' % (scan_end, _nicetime(scan_end)))
 
         ## Get the summary of measurements within the interval.
         url = self.endpoint + "?" + scan
@@ -408,7 +410,7 @@ class PerfsonarCollector:
                 evtype = evt.get('event-type')
                 if evtype not in PerfsonarCollector.known_events:
                     if evtype not in PerfsonarCollector.unknown_events:
-                        print('%s %s: skipped' % (mdkey, evtype))
+                        logging.info('%s %s: skipped' % (mdkey, evtype))
                         pass
                     continue
 
@@ -435,10 +437,10 @@ class PerfsonarCollector:
                 for ts in evtss:
                     val = evdic[ts]
 
-                    print('%+3d %+3d %s/%s' %
-                          (ts - scan_start,
-                           ts - start,
-                           mdkey, evtype))
+                    logging.info('%+3d %+3d %s/%s' %
+                                 (ts - scan_start,
+                                  ts - start,
+                                  mdkey, evtype))
 
                     ## Install metadata and the value for this event.
                     tsdata = data.setdefault(ts, { })
@@ -457,7 +459,7 @@ class PerfsonarCollector:
                     continue
                 continue
             continue
-        print("  %d keys; %d events" % (kc, evc))
+        logging.info("  %d keys; %d events" % (kc, evc))
 
         self.last = curr
         return data
