@@ -47,6 +47,8 @@ def get_pools(args=[]):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 universal_newlines=True)
         return set([ i.strip() for i in proc.stdout.readlines() ])
+    except FileNotFoundError:
+        logging.error('Command not found: %s' % cmd)
     except:
         logging.error(traceback.format_exc())
         logging.error('Failed to execute %s' % cmd)
@@ -64,6 +66,8 @@ def get_inconsistent_pgs(pools, args=[]):
             for pgid in doc:
                 groups.add(pgid)
                 continue
+        except FileNotFoundError:
+            logging.error('Command not found: %s' % cmd)
         except json.decoder.JSONDecodeError:
             logging.error('No JSON data from %s' % cmd)
         except:
@@ -96,6 +100,8 @@ def get_osd_complaints(pgids, args=[]):
                         continue
                     continue
                 continue
+        except FileNotFoundError:
+            logging.error('Command not found: %s' % cmd)
         except json.decoder.JSONDecodeError:
             logging.error('No JSON data for %s from %s' % (pgid, cmd))
         except Exception as e:
@@ -152,6 +158,8 @@ def get_device_set(args=[]):
                     pass
                 pass
             continue
+    except FileNotFoundError:
+        logging.error('Command not found: %s' % cmd)
     except json.decoder.JSONDecodeError:
         logging.error('No JSON data from %s' % cmd)
     except:
