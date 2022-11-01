@@ -59,7 +59,8 @@ def get_inconsistent_pgs(pools, args=[]):
                 groups.add(pgid)
                 continue
         except:
-            sys.stderr.write('Failed to execute %s\n' % cmd)
+            logging.error(traceback.format_exc())
+            logging.error('Failed to execute %s' % cmd)
             pass
         continue
     return groups
@@ -88,10 +89,10 @@ def get_osd_complaints(pgids, args=[]):
                     continue
                 continue
         except json.decoder.JSONDecodeError:
-            sys.stderr.write('No good data for %s\n' % pgid)
+            logging.error('No JSON data for %s from %s' % (pgid, cmd))
         except Exception as e:
             logging.error(traceback.format_exc())
-            sys.stderr.write('Failed to execute %s\n' % cmd)
+            logging.error('Failed to execute %s' % cmd)
             pass
         continue
     return osds
@@ -210,14 +211,18 @@ class CephHealthCollector:
             ## (This actually gets the entire history, and then
             ## filters it, as the Ceph command used does not offer
             ## filtering, except to get a specific timestamp.)
-            sys.stderr.write('Getting %s\n' % devid)
+            logging.debug('Getting %s' % devid)
             if get_device_metrics(newdata,
                                   devid,
                                   args=self.cmdpfx,
                                   start=self.last,
                                   end=curr,
-                                  adorn=devset[devid]) and limit is not None:
-                limit -= 1
+                                  adorn=devset[devid]):
+                if limit is not None:
+                    limit -= 1
+                    pass
+            else:
+                logging.info('no data for %s' % devid)
                 pass
 
             continue
