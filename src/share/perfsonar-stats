@@ -129,6 +129,9 @@ def keep_polling(hist, coll):
         pass
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        pass
     logging.info('Polling halted')
     hist.halt()
     pass
@@ -139,6 +142,10 @@ poll_thrd.start()
 try:
     webserver.serve_forever()
 except KeyboardInterrupt:
+    pass
+except Exception as e:
+    logging.error(traceback.format_exc())
+    sys.exit(1)
     pass
 logging.info('HTTP halted')
 
