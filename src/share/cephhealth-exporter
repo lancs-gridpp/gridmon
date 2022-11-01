@@ -39,6 +39,7 @@ import pprint
 import subprocess
 import sys
 import time
+import errno
 import json
 import re
 from getopt import gnu_getopt
@@ -143,7 +144,17 @@ nowmets = functools.partial(cephhealth.get_osd_complaints_as_metrics, args=args)
 partial_handler = functools.partial(metrics.MetricsHTTPHandler,
                                     hist=methist,
                                     prebody=nowmets)
-webserver = HTTPServer((http_host, http_port), partial_handler)
+try:
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+except OSError as e:
+    if e.errno == errno.EADDRINUSE:
+        sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                         (http_host, http_port))
+    else:
+        logging.error(traceback.format_exc())
+        pass
+    sys.exit(1)
+    pass
 
 logging.info('Schedule: %s' % [
     '%02d:%02d:%02d' % (int(x / 3600),
