@@ -38,6 +38,7 @@ from http.server import HTTPServer
 from getopt import getopt
 import threading
 import time
+import errno
 import logging
 import traceback
 
@@ -90,9 +91,20 @@ for opt, val in opts:
 methist = metrics.MetricHistory(perfsonar.schema, horizon=horizon)
 perfcoll = perfsonar.PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
 partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
-webserver = HTTPServer((http_host, http_port), partial_handler)
 
 logging.basicConfig(**log_params)
+
+try:
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+except OSError as e:
+    if e.errno == errno.EADDRINUSE:
+        sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                         (http_host, http_port))
+    else:
+        logging.error(traceback.format_exc())
+        pass
+    sys.exit(1)
+    pass
 
 def check_delay(hist, start):
     if not hist.check():
