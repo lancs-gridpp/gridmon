@@ -42,6 +42,8 @@ import time
 import json
 import re
 from getopt import gnu_getopt
+import logging
+import traceback
 
 ## Local libraries
 import cephhealth
@@ -53,7 +55,12 @@ horizon = 60 * 60 * 24 * 3
 lag = 20
 interval = 60 * 60 * 12
 disk_limit = None
-opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:i:", [ 'disk-limit=' ])
+log_params = {
+    'format': '%(asctime)s %(message)s',
+    'datefmt': '%Y-%d-%mT%H:%M:%S',
+}
+opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:i:",
+                        [ 'disk-limit=', 'log=', 'log-file=' ])
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val) * 60 * 60 * 24
@@ -65,10 +72,22 @@ for opt, val in opts:
         http_host = val
     elif opt == '-t':
         http_port = int(val)
+    elif opt == '--log':
+        log_params['level'] = getattr(logging, val.upper(), None)
+        if not isinstance(log_params['level'], int):
+            sys.stderr.write('bad log level [%s]\n' % val)
+            sys.exit(1)
+            pass
+        pass
+    elif opt == '--log-file':
+        log_params['filename'] = val
     elif opt == '--disk-limit':
         disk_limit = int(val)
         pass
     continue
+
+logging.basicConfig(**log_params)
+
 
 cephcoll = cephhealth.CephHealthCollector(args, lag=lag, horizon=horizon)
 methist = metrics.MetricHistory(cephhealth.schema, horizon=horizon)
@@ -90,12 +109,12 @@ def keep_polling(hist, coll, interval):
     try:
         last = int(time.time())
         while hist.check():
-            print('Getting latest data')
+            logging.info('Getting latest data')
             start = last + interval
             last = start
             new_data = coll.update(limit=disk_limit)
             hist.install(new_data)
-            print('Installed')
+            logging.info('Installed')
             while check_delay(hist, start):
                 time.sleep(1)
                 pass
@@ -104,7 +123,10 @@ def keep_polling(hist, coll, interval):
         pass
     except KeyboardInterrupt:
         pass
-    print('Polling halted')
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        pass
+    logging.info('Polling halted')
     hist.halt()
     pass
 
@@ -116,7 +138,7 @@ try:
     webserver.serve_forever()
 except KeyboardInterrupt:
     pass
-print('HTTP halted')
+logging.info('HTTP halted')
 
 methist.halt()
 sys.exit(0)
