@@ -32,6 +32,8 @@
 
 import threading
 import time
+import traceback
+import logging
 
 from http.server import BaseHTTPRequestHandler
 
@@ -361,7 +363,7 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
             pass
 
         ## Fetch the message appropriate to the client, and send it.
-        print('  Forming message for %s' % auth)
+        logging.info('Forming metrics message for %s' % auth)
         body, ts0, ts1 = self.hist.get_message(auth)
 
         ## Prefix the body with additional content, if a provider is
@@ -378,7 +380,7 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', ct)
         self.end_headers()
         self.wfile.write(body.encode('UTF-8'))
-        print('  Complete %d-%d' % (ts1, ts1 - ts0))
+        logging.info('Completed metrics %d-%d' % (ts1, ts1 - ts0))
         pass
 
     pass
