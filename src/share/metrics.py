@@ -34,6 +34,7 @@ import threading
 import time
 import traceback
 import logging
+from frozendict import frozendict
 
 from http.server import BaseHTTPRequestHandler
 
@@ -381,6 +382,140 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body.encode('UTF-8'))
         logging.info('Completed metrics %d-%d' % (ts1, ts1 - ts0))
+        pass
+
+    pass
+
+## Remote-write specification?: <https://docs.google.com/document/d/1LPhVRSFkGNSuU1fBd81ulhsCPR4hkSZyyBj1SZ8fWOM/edit#>
+
+## Snappy: <http://google.github.io/snappy/>
+
+class RemoteMetricsWriter:
+    def __init__(self, endpoint, schema):
+        self.endpoint = endpoint
+        self.schema = schema
+        ## Each schema entry describes a metric family, and is a dict
+        ## with the following members:
+        ##
+        ## 'base': the base name of the metric family.  Suffixes may
+        ## be appended to this to indicate different samples within
+        ## the same family, as specified by the 'samples' member
+        ## below.
+        ##
+        ## 'select': a function taking a snapshot, and yielding a list
+        ## or set of series indices for time series present in the
+        ## snapshot.  Each index will usually be a tuple of dict keys
+        ## allowing the snapshot to be walked to reach the value, and
+        ## to annotate it with various labels.  A series index is used
+        ## by functions specified in the 'samples' and 'attrs' members
+        ## of the metric-family description.
+        ##
+        ## 'samples': a dict from name suffix to a (format, function)
+        ## tuple.  The format isn't used.  The function takes a series
+        ## index (as returned by 'select') and a snapshot, and yields
+        ## a sample point).
+        ##
+        ## 'attrs': a dict from label name to a (format, function)
+        ## tuple.  The function takes a series index (as returned by
+        ## 'select') and a snapshot, and yields a label value to be
+        ## formatted by the format string.
+        pass
+
+    def transmit(self, data):
+        ## Data is a dict with timestamps (in seconds) as keys.
+        ## Values are a usually a dict hierarchy specified by the
+        ## schema.  Each of these is referred to as a snapshot below.
+
+        ## Get all the timestamps in order.
+        tss = [ ts for ts in data ]
+        tss.sort()
+
+        ## This will map a frozendict of labels to a dict from
+        ## timestamps to sample values.
+        series = { }
+
+        ## Consider each metric family.
+        for family in self.schema:
+            basename = family['base']
+            sel = family['select']
+            lab = family['attrs']
+            sam = family['samples']
+
+            for ts in tss:
+                snapshot = data[ts]
+
+                for idx in sel(snapshot):
+                    ## Get the labels shared by all samples in the
+                    ## family.
+                    famkey = { }
+                    for labname, (labfmt, labfunc) in lab.items():
+                        labval = labfunc(idx, snapshot)
+                        labtxt = labfmt % labval
+                        famkey[labtxt] = labval
+                        continue
+
+                    for sfx, (samfmt, samfunc) in sam.items():
+                        ## The sample key is the family key plus a
+                        ## __name__ label.  Then freeze it so it can
+                        ## be used as a dict key.
+                        samkey = dict(famkey)
+                        samkey['__name__'] = basename + sfx
+                        samkey = frozendict(samkey)
+
+                        ## Extract the value.
+                        val = samfunc(idx, snapshot)
+
+                        ## Append the timestamp and value to the
+                        ## series as a tuple.  Because we already
+                        ## sorted the timestamps, each time series's
+                        ## values will always be added in order.
+                        seq = series.setdefault(samkey, [ ])
+                        seq.add((ts, val))
+                        continue
+                    continue
+                continue
+            continue
+
+        ## Convert the timeseries into write request.
+        import remote_write_pb2 as pb
+
+        rw = pb.WriteRequest()
+        for labs, vals in series.items():
+            ts = rw.timeseries.add()
+
+            ## Append the labels in order.
+            labnames = [ name for name in labs ]
+            labnames.sort()
+            for labname in labnames:
+                le = ts.labels.add()
+                le.name = labname
+                le.value = labs[labname]
+                continue
+
+            ## Append the samples.  They are already in order.
+            ## Convert the timestamps in seconds to integer
+            ## milliseconds.
+            for stamp, value in vals.items():
+                se = ts.samples.add()
+                se.value = value
+                se.timestamp = int(stamp * 1000)
+                continue
+
+            continue
+
+        ## Compress using Snappy block format.
+        import snappy
+        body = snappy.compress(rw.SerializeToString())
+
+        ## POST to the endpoint, including headers, and the protobuf
+        ## message in Snappy block format.
+        from urllib import request
+        req = request.Request(self.endpoint, data=body)
+        req.add_header('Content-Encoding', 'snappy')
+        req.add_header('Content-Type', 'application/x-protobuf')
+        req.add_header('User-Agent: GridMon-remote-writer')
+        req.add_header('X-Prometheus-Remote-Write-Version', '0.1.0')
+        rsp = request.urlopen(req)
         pass
 
     pass
