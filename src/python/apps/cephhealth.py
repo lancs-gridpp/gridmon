@@ -39,6 +39,7 @@ import sys
 import traceback
 import logging
 
+
 def get_pools(args=[]):
     ## TODO: Is there a Python library that will do this more
     ## directly?
@@ -310,3 +311,177 @@ schema = [
         },
     },
 ]
+
+if __name__ == '__main__':
+    import functools
+    from http.server import HTTPServer
+    import threading
+    import pprint
+    import subprocess
+    import errno
+    from getopt import gnu_getopt
+
+    ## Local libraries
+    import metrics
+
+    todfmt = re.compile(r'([0-9]{1,2}):([0-9]{1,2})')
+    def get_tod_offset(text):
+        m = todfmt.match(text)
+        if m is None:
+            return None
+        hrt, mnt = m.groups()
+        hr = int(hrt)
+        mn = int(mnt)
+        if hr < 0 or hr > 23:
+            return None
+        if mn < 0 or mn > 59:
+            return None
+        return (hr * 60 + mn) * 60
+
+    http_host = "localhost"
+    http_port = 8799
+    horizon = 60 * 60 * 24 * 3
+    lag = 20
+    disk_limit = None
+    log_params = {
+        'format': '%(asctime)s %(message)s',
+        'datefmt': '%Y-%d-%mT%H:%M:%S',
+    }
+    schedule = set()
+    opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:s:",
+                            [ 'disk-limit=', 'log=', 'log-file=' ])
+    for opt, val in opts:
+        if opt == '-h':
+            horizon = int(val) * 60 * 60 * 24
+        elif opt == '-l':
+            lag = int(val)
+        elif opt == '-s':
+            tod = get_tod_offset(val)
+            if tod is None:
+                sys.stderr.write('bad time of day: %s' % val)
+                sys.exit(1)
+                pass
+            schedule.add(tod)
+        elif opt == '-T':
+            http_host = val
+        elif opt == '-t':
+            http_port = int(val)
+        elif opt == '--log':
+            log_params['level'] = getattr(logging, val.upper(), None)
+            if not isinstance(log_params['level'], int):
+                sys.stderr.write('bad log level [%s]\n' % val)
+                sys.exit(1)
+                pass
+            pass
+        elif opt == '--log-file':
+            log_params['filename'] = val
+        elif opt == '--disk-limit':
+            disk_limit = int(val)
+            pass
+        continue
+
+    ## If no schedule is provided, define the current time of day as the
+    ## sole entry.
+    if len(schedule) == 0:
+        now = datetime.datetime.utcnow()
+        tod = (now.hour * 60 + now.minute) * 60
+        schedule.add(tod)
+        pass
+
+    logging.basicConfig(**log_params)
+
+    def get_next_in_schedule(schedule):
+        ## What time is it now?  When did this day start?  When does
+        ## tomorrow start?
+        calnow = datetime.datetime.now(tz=datetime.timezone.utc)
+        caltoday = datetime.datetime(calnow.year, calnow.month, calnow.day,
+                                     tzinfo=datetime.timezone.utc)
+        tod = (calnow - caltoday).total_seconds()
+        caltomorrow = caltoday + datetime.timedelta(days=1)
+        tomorrow = datetime.datetime.timestamp(caltomorrow)
+        today = datetime.datetime.timestamp(caltoday)
+
+        ## Try each time of day in the schedule, to see whether it is next
+        ## today or tomorrow.
+        best = None
+        for scand in schedule:
+            cand = scand + (tomorrow if scand < tod else today)
+            if best is None or cand < best:
+                best = cand
+                continue
+        return best
+
+    cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
+    methist = metrics.MetricHistory(schema, horizon=horizon)
+    nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=methist,
+                                        prebody=nowmets)
+    try:
+        webserver = HTTPServer((http_host, http_port), partial_handler)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                             (http_host, http_port))
+        else:
+            logging.error(traceback.format_exc())
+            pass
+        sys.exit(1)
+        pass
+
+    logging.info('Schedule: %s' % [
+        '%02d:%02d:%02d' % (int(x / 3600),
+                            int(x / 60) % 60,
+                            x % 60) for x in schedule ])
+
+    def check_delay(hist, start):
+        if not hist.check():
+            return False
+        now = int(time.time())
+        delay = start - now
+        return delay > 0
+
+    def keep_polling(hist, coll, schedule):
+        global disk_limit
+        try:
+            while hist.check():
+                logging.info('Getting latest data')
+                new_data = coll.update(limit=disk_limit)
+                hist.install(new_data)
+                logging.info('Installed')
+                start = get_next_in_schedule(schedule)
+                lim = datetime.datetime.fromtimestamp(start)
+                logging.info('Waiting until %s in %s' % \
+                             (lim,
+                              datetime.timedelta(seconds=start - time.time())))
+                while check_delay(hist, start):
+                    time.sleep(1)
+                    pass
+                continue
+        except InterruptedError:
+            pass
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
+        logging.info('Polling halted')
+        hist.halt()
+        pass
+
+    poll_thrd = threading.Thread(target=keep_polling,
+                                 args=(methist, cephcoll, schedule))
+    poll_thrd.start()
+
+    try:
+        webserver.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        sys.exit(1)
+        pass
+    logging.info('HTTP halted')
+
+    methist.halt()
+    pass

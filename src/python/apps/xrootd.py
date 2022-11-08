@@ -1579,3 +1579,204 @@ class ReportReceiver:
         return
 
     pass
+
+if __name__ == '__main__':
+    import time
+    import threading
+    from pprint import pprint
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import functools
+    import sys
+    from getopt import getopt
+
+    ## Local libraries
+    import metrics
+
+    ## This is a sample to populate the history with for test
+    ## purposes.
+    sample_now = time.time()
+    sample = {
+        sample_now: {
+            ('xrootd-server', 'main'): {
+                'buff': {
+                    'adj': 0,
+                    'buffs': 664,
+                    'mem': 501411840,
+                    'reqs': 170749
+                },
+                'link': {
+                    'ctime': 2622954,
+                    'in': 2386464921,
+                    'maxn': 412,
+                    'num': 203,
+                    'out': 4940357118960,
+                    'sfps': 0,
+                    'stall': 0,
+                    'tmo': 0,
+                    'tot': 89157
+                },
+                'ofs': {
+                    'bxq': 0,
+                    'dly': 0,
+                    'err': 0,
+                    'han': 37,
+                    'opp': 0,
+                    'opr': 23,
+                    'opw': 14,
+                    'rdr': 0,
+                    'rep': 0,
+                    'role': 'server',
+                    'ser': 0,
+                    'sok': 0,
+                    'tpc': {
+                        'deny': 0,
+                        'err': 0,
+                        'exp': 0,
+                        'grnt': 0
+                    },
+                    'ups': 0
+                },
+                'oss': {
+                    'paths': {
+                        '/cephfs': {
+                            'free': 9991486255104,
+                            'ifr': -1,
+                            'ino': 315834240,
+                            'lp': '/cephfs',
+                            'tot': 10966251003904
+                        }
+                    }
+                },
+                'poll': {
+                    'att': 203,
+                    'en': 213581,
+                    'ev': 213427,
+                    'int': 0
+                },
+                'proc': {
+                    'sys': 11107.215161,
+                    'usr': 10124.33064
+                },
+                'sched': {
+                    'idle': 11,
+                    'inq': 0,
+                    'jobs': 315890,
+                    'maxinq': 4,
+                    'tcr': 237,
+                    'tde': 180,
+                    'threads': 57,
+                    'tlimr': 0
+                },
+                'sgen': {
+                    'as': 1,
+                    'et': 6,
+                    'toe': 1651696117
+                },
+                'start': sample_now - 16801,
+                'xrootd': {
+                    'aio': {
+                        'max': 0,
+                        'num': 0,
+                        'rej': 0
+                    },
+                    'dly': 0,
+                    'err': 36732,
+                    'lgn': {
+                        'af': 0,
+                        'au': 30,
+                        'num': 1327,
+                        'ua': 0
+                    },
+                    'num': 70231,
+                    'ops': {
+                        'getf': 0,
+                        'misc': 249972,
+                        'open': 13242,
+                        'pr': 0,
+                        'putf': 0,
+                        'rd': 4705135,
+                        'rf': 0,
+                        'rs': 0,
+                        'rv': 0,
+                        'sync': 0,
+                        'wr': 1425,
+                        'ws': 0,
+                        'wv': 0
+                    },
+                    'rdr': 0,
+                    'sig': {
+                        'bad': 0,
+                        'ign': 0,
+                        'ok': 0
+                    }
+                }
+            }
+        }
+    }
+
+    udp_host = ''
+    udp_port = 9485
+    http_host = 'localhost'
+    http_port = 8744
+    horizon = 60 * 30
+    fake_data = False
+    opts, args = getopt(sys.argv[1:], "h:u:U:t:T:X")
+    for opt, val in opts:
+        if opt == '-h':
+            horizon = int(val) * 60
+        elif opt == '-u':
+            udp_port = int(val)
+        elif opt == '-U':
+            udp_host = val
+        elif opt == '-t':
+            http_port = int(val)
+        elif opt == '-T':
+            http_host = val
+        elif opt == '-X':
+            fake_data = True
+            pass
+        continue
+
+    ## Record XRootD stats history, indexed by timestamp and instance.
+    history = metrics.MetricHistory(schema, horizon=horizon)
+
+    if fake_data:
+        ## Don't bother listening for data, just populate with some
+        ## fake stuff for testing.
+        recv_thrd = None
+        receiver = None
+        history.install(sample)
+    else:
+        ## Run an XRootD report receiver as a separate thread,
+        ## dropping data into the metrics history.
+        receiver = ReportReceiver((udp_host, udp_port), history)
+        recv_thrd = threading.Thread(target=ReportReceiver.keep_polling,
+                                     args=(receiver,))
+        recv_thrd.start()
+        pass
+
+    print('Creating HTTP server...')
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=history)
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+    print('Started on http://%s:%s' % (http_host, http_port))
+
+    try:
+        webserver.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+    history.halt()
+    print('Halted history')
+    if receiver is not None:
+        receiver.halt()
+        print('Halted receiver')
+        pass
+    if recv_thrd is not None:
+        recv_thrd.join()
+        print('Receiver thread joined')
+        pass
+
+    webserver.server_close()
+    print('Server stopped.')
+    pass

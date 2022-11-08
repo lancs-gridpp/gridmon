@@ -467,14 +467,116 @@ class PerfsonarCollector:
     pass
 
 if __name__ == "__main__":
-    coll = PerfsonarCollector(sys.argv[1])
-    time.sleep(5)
-    data = coll.update()
-    print(data)
-    time.sleep(5)
-    data = coll.update()
-    print(data)
-    time.sleep(5)
-    data = coll.update()
-    print(data)
+    from http.server import HTTPServer
+    from getopt import getopt
+    import threading
+    import errno
+
+    ## Local libraries
+    import metrics
+
+    http_host = "localhost"
+    http_port = 8732
+    endpoint = None
+    horizon = 60 * 30
+    lag = 20
+    fore = 0
+    aft = 60
+    log_params = {
+        'format': '%(asctime)s %(message)s',
+        'datefmt': '%Y-%d-%mT%H:%M:%S',
+    }
+    opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:f:a:",
+                        [ 'log=', 'log-file=' ])
+    for opt, val in opts:
+        if opt == '-h':
+            horizon = int(val) * 60
+        elif opt == '-l':
+            lag = int(val)
+        elif opt == '-f':
+            fore = int(val)
+        elif opt == '-a':
+            aft = int(val)
+        elif opt == '-T':
+            http_host = val
+        elif opt == '-t':
+            http_port = int(val)
+        elif opt == '-E':
+            endpoint = val
+        elif opt == '--log':
+            log_params['level'] = getattr(logging, val.upper(), None)
+            if not isinstance(log_params['level'], int):
+                sys.stderr.write('bad log level [%s]\n' % val)
+                sys.exit(1)
+                pass
+            pass
+        elif opt == '--log-file':
+            log_params['filename'] = val
+        elif opt == '-S':
+            endpoint = 'https://' + val + '/esmond/perfsonar/archive/'
+            pass
+        continue
+
+    methist = metrics.MetricHistory(schema, horizon=horizon)
+    perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
+
+    logging.basicConfig(**log_params)
+
+    try:
+        webserver = HTTPServer((http_host, http_port), partial_handler)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                             (http_host, http_port))
+        else:
+            logging.error(traceback.format_exc())
+            pass
+        sys.exit(1)
+        pass
+
+    def check_delay(hist, start):
+        if not hist.check():
+            return False
+        now = int(time.time())
+        delay = start - now
+        return delay > 0
+
+    def keep_polling(hist, coll):
+        try:
+            while hist.check():
+                logging.info('Getting latest data')
+                start = int(time.time()) + 30
+                new_data = coll.update()
+                hist.install(new_data)
+                logging.info('Installed')
+                while check_delay(hist, start):
+                    time.sleep(1)
+                    pass
+                continue
+        except InterruptedError:
+            pass
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
+        logging.info('Polling halted')
+        hist.halt()
+        pass
+
+    poll_thrd = threading.Thread(target=keep_polling, args=(methist, perfcoll))
+    poll_thrd.start()
+
+    try:
+        webserver.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        sys.exit(1)
+        pass
+    logging.info('HTTP halted')
+
+    methist.halt()
     pass
