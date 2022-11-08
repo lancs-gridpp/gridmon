@@ -2,6 +2,7 @@ all::
 
 ## Configurable defaults
 PREFIX=/usr/local
+FIND=find
 
 ## Provide a version of $(abspath) that can cope with spaces in the
 ## current directory.
@@ -36,3 +37,6 @@ include pynodeps.mk
 all:: python-zips
 install:: install-python-zips
 install:: install-hidden-scripts
+
+tidy::
+	$(FIND) . -name "*~" -delete
