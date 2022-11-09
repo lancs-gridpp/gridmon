@@ -513,7 +513,7 @@ class RemoteMetricsWriter:
         req = request.Request(self.endpoint, data=body)
         req.add_header('Content-Encoding', 'snappy')
         req.add_header('Content-Type', 'application/x-protobuf')
-        req.add_header('User-Agent: GridMon-remote-writer')
+        req.add_header('User-Agent', 'GridMon-remote-writer')
         req.add_header('X-Prometheus-Remote-Write-Version', '0.1.0')
         rsp = request.urlopen(req)
         pass
