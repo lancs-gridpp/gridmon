@@ -470,7 +470,7 @@ class RemoteMetricsWriter:
                         ## sorted the timestamps, each time series's
                         ## values will always be added in order.
                         seq = series.setdefault(samkey, [ ])
-                        seq.add((ts, val))
+                        seq.append((ts, val))
                         continue
                     continue
                 continue
