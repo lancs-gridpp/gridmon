@@ -519,3 +519,55 @@ class RemoteMetricsWriter:
         pass
 
     pass
+
+if __name__ == '__main__':
+    import sys
+    from math import fmod, sin, pi
+    from pprint import pprint
+    sinschema = [
+        {
+            'base': 'sine',
+            'type': 'gauge',
+            'help': 'helpless',
+            'select': lambda e: [ tuple() ],
+            'samples': {
+                '': ('%.3f', lambda t, d: d['sine']),
+            },
+            'attrs': {
+            },
+        }
+    ]
+    rmw = RemoteMetricsWriter(endpoint=sys.argv[1], schema=sinschema)
+    period = 15 # s
+    resolution = 1 # Hz
+    interval = 2 # s
+    tbase = t0 = time.time()
+
+    while True:
+        ## Wait a while.
+        time.sleep(interval)
+
+        ## How much time has passed?
+        t1 = time.time()
+
+        ## Populate with metric points.
+        data = { }
+        delta = t0 - tbase
+        ti = t0 - fmod(delta, 1.0 / resolution)
+        tb = t0 - fmod(delta, period)
+        #print('base=%.3f tb=%.3f ti=%.3f t0=%.3f' % (tbase, tb, ti, t0))
+        while ti < t1:
+            if ti >= t0:
+                data.setdefault(ti, { })['sine'] = \
+                    sin((ti - tb) / period * 2 * pi)
+                pass
+            ti += 1.0 / resolution
+            continue
+
+        pprint(data)
+        rmw.transmit(data)
+
+        ## Make the next action start from where we left off.
+        t0 = t1
+        continue
+    pass
