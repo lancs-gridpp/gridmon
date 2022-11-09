@@ -538,9 +538,9 @@ if __name__ == '__main__':
         }
     ]
     rmw = RemoteMetricsWriter(endpoint=sys.argv[1], schema=sinschema)
-    period = 15 # s
-    resolution = 1 # Hz
-    interval = 2 # s
+    period = 4 * 60 - 7 # s
+    resolution = 1 / 15 # Hz
+    interval = 30 # s
     tbase = t0 = time.time()
 
     while True:
