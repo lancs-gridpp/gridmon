@@ -495,7 +495,7 @@ class RemoteMetricsWriter:
             ## Append the samples.  They are already in order.
             ## Convert the timestamps in seconds to integer
             ## milliseconds.
-            for stamp, value in vals.items():
+            for stamp, value in vals:
                 se = ts.samples.add()
                 se.value = value
                 se.timestamp = int(stamp * 1000)
