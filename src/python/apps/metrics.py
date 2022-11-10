@@ -427,7 +427,10 @@ class RemoteMetricsWriter:
 
         pass
 
-    def transmit(self, data):
+    def check(self):
+        return True
+
+    def install(self, data, mismatch=0):
         ## Data is a dict with timestamps (in seconds) as keys.
         ## Values are a usually a dict hierarchy specified by the
         ## schema.  Each of these is referred to as a snapshot below.
@@ -622,7 +625,7 @@ if __name__ == '__main__':
             continue
 
         pprint(data)
-        rmw.transmit(data)
+        rmw.install(data)
 
         ## Make the next action start from where we left off.
         t0 = t1
