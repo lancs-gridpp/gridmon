@@ -391,7 +391,8 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
 ## Snappy: <http://google.github.io/snappy/>
 
 class RemoteMetricsWriter:
-    def __init__(self, endpoint, schema, **kwargs):
+    def __init__(self, endpoint, schema, expiry=5*60, **kwargs):
+        self.expiry = expiry
         self.endpoint = endpoint
         self.schema = schema
         ## Each schema entry describes a metric family, and is a dict
@@ -440,6 +441,7 @@ class RemoteMetricsWriter:
         series = { }
 
         ## Consider each metric family.
+        lasttime = 0
         for family in self.schema:
             basename = family['base']
             sel = family['select']
@@ -479,6 +481,9 @@ class RemoteMetricsWriter:
                         ## values will always be added in order.
                         seq = series.setdefault(samkey, [ ])
                         seq.append((ts, val))
+                        if ts > lasttime:
+                            lasttime = ts
+                            pass
                         continue
                     continue
                 continue
@@ -487,6 +492,9 @@ class RemoteMetricsWriter:
         ## Do nothing on empty data.
         if len(series) == 0:
             return 200
+
+        ## Retries are pointless after this time.
+        expiry = self.expiry + lasttime
 
         ## Convert the timeseries into write request.
         import remote_write_pb2 as pb
@@ -534,14 +542,23 @@ class RemoteMetricsWriter:
                 rsp = request.urlopen(req)
                 code = rsp.getcode()
                 if code >= 500 and code <= 599:
-                    delay = random.randint(240, 360)
+                    now = time.time()
+                    delay = min(random.randint(240, 360), expiry - now - 1)
+                    if delay < 1:
+                        logging.error('target %s response %d; aborting' % \
+                                      (self.endpoint, code))
+                        return False
                     logging.warning('target %s response %d; retrying in %ds' % \
                                     (self.endpoint, code, delay))
                     time.sleep(delay)
                     continue
-                return code
-            except URLError:
-                delay = random.randint(60, 120)
+                return True
+            except URLError as e:
+                now = time.time()
+                delay = min(random.randint(60, 120), expiry - now - 1)
+                if delay < 1:
+                    logging.error('no target %s; aborting' % (self.endpoint))
+                    return False
                 logging.warning('no target %s; retrying in %ds' % \
                                 (self.endpoint, delay))
                 time.sleep(delay)
@@ -568,7 +585,7 @@ if __name__ == '__main__':
         }
     ]
     rmw = RemoteMetricsWriter(endpoint=sys.argv[1], schema=sinschema,
-                              job='sine')
+                              job='sine', expiry=120)
     period = 4 * 60 - 7 # s
     resolution = 1 / 15 # Hz
     interval = 30 # s
