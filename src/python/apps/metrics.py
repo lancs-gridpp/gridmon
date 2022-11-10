@@ -391,7 +391,7 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
 ## Snappy: <http://google.github.io/snappy/>
 
 class RemoteMetricsWriter:
-    def __init__(self, endpoint, schema):
+    def __init__(self, endpoint, schema, **kwargs):
         self.endpoint = endpoint
         self.schema = schema
         ## Each schema entry describes a metric family, and is a dict
@@ -419,6 +419,11 @@ class RemoteMetricsWriter:
         ## tuple.  The function takes a series index (as returned by
         ## 'select') and a snapshot, and yields a label value to be
         ## formatted by the format string.
+
+        if 'job' in kwargs:
+            self.job = kwargs['job']
+            pass
+
         pass
 
     def transmit(self, data):
@@ -448,6 +453,9 @@ class RemoteMetricsWriter:
                     ## Get the labels shared by all samples in the
                     ## family.
                     famkey = { }
+                    if hasattr(self, 'job'):
+                        famkey['job'] = self.job
+                        pass
                     for labname, (labfmt, labfunc) in lab.items():
                         labval = labfunc(idx, snapshot)
                         labtxt = labfmt % labval
@@ -537,7 +545,8 @@ if __name__ == '__main__':
             },
         }
     ]
-    rmw = RemoteMetricsWriter(endpoint=sys.argv[1], schema=sinschema)
+    rmw = RemoteMetricsWriter(endpoint=sys.argv[1], schema=sinschema,
+                              job='sine')
     period = 4 * 60 - 7 # s
     resolution = 1 / 15 # Hz
     interval = 30 # s
