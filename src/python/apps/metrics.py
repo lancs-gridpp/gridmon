@@ -484,6 +484,10 @@ class RemoteMetricsWriter:
                 continue
             continue
 
+        ## Do nothing on empty data.
+        if len(series) == 0:
+            return 200
+
         ## Convert the timeseries into write request.
         import remote_write_pb2 as pb
 
