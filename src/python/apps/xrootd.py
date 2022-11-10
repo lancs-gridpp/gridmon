@@ -1587,6 +1587,7 @@ if __name__ == '__main__':
     from http.server import BaseHTTPRequestHandler, HTTPServer
     import functools
     import sys
+    import os
     from getopt import getopt
 
     ## Local libraries
@@ -1719,12 +1720,15 @@ if __name__ == '__main__':
     http_host = 'localhost'
     http_port = 8744
     horizon = 60 * 30
+    silent = False
     fake_data = False
     endpoint = None
-    opts, args = getopt(sys.argv[1:], "h:u:U:t:T:E:X")
+    opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X")
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
+        elif opt == '-z':
+            silent = True
         elif opt == '-u':
             udp_port = int(val)
         elif opt == '-U':
@@ -1739,6 +1743,14 @@ if __name__ == '__main__':
             fake_data = True
             pass
         continue
+
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
+        pass
 
     if endpoint is not None:
         rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
