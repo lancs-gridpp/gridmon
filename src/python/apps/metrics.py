@@ -595,20 +595,29 @@ if __name__ == '__main__':
         ## Wait a while.
         time.sleep(interval)
 
-        ## How much time has passed?
+        ## What's the end of this reporting interval?
         t1 = time.time()
+
+        ## How much time has passed?
+        delta = t0 - tbase
+
+        ## Find a recent timestamp to report a sample.  This will
+        ## actually be slightly too early (ti < t0), but we will
+        ## correct for it.
+        ti = t0 - fmod(delta, 1.0 / resolution)
+        while ti < t0:
+            ti += 1.0 / resolution
+            continue
+
+        ## Find a recent moment when the sine wave crossed zero
+        ## increasing.  This ensures we don't pass a huge value to
+        ## sin().
+        tb = t0 - fmod(delta, period)
 
         ## Populate with metric points.
         data = { }
-        delta = t0 - tbase
-        ti = t0 - fmod(delta, 1.0 / resolution)
-        tb = t0 - fmod(delta, period)
-        #print('base=%.3f tb=%.3f ti=%.3f t0=%.3f' % (tbase, tb, ti, t0))
         while ti < t1:
-            if ti >= t0:
-                data.setdefault(ti, { })['sine'] = \
-                    sin((ti - tb) / period * 2 * pi)
-                pass
+            data.setdefault(ti, { })['sine'] = sin((ti - tb) / period * 2 * pi)
             ti += 1.0 / resolution
             continue
 
