@@ -549,6 +549,7 @@ class RemoteMetricsWriter:
                 req.add_header('X-Prometheus-Remote-Write-Version', '0.1.0')
                 rsp = request.urlopen(req)
                 code = rsp.getcode()
+                logging.info('target %s response %d' % (self.endpoint, code))
                 if code >= 500 and code <= 599:
                     now = time.time()
                     delay = min(random.randint(240, 360), expiry - now - 1)
