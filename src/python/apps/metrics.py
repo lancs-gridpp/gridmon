@@ -518,12 +518,30 @@ class RemoteMetricsWriter:
         ## POST to the endpoint, including headers, and the protobuf
         ## message in Snappy block format.
         from urllib import request
-        req = request.Request(self.endpoint, data=body)
-        req.add_header('Content-Encoding', 'snappy')
-        req.add_header('Content-Type', 'application/x-protobuf')
-        req.add_header('User-Agent', 'GridMon-remote-writer')
-        req.add_header('X-Prometheus-Remote-Write-Version', '0.1.0')
-        rsp = request.urlopen(req)
+        from urllib.error import URLError
+        import random
+        while True:
+            try:
+                req = request.Request(self.endpoint, data=body)
+                req.add_header('Content-Encoding', 'snappy')
+                req.add_header('Content-Type', 'application/x-protobuf')
+                req.add_header('User-Agent', 'GridMon-remote-writer')
+                req.add_header('X-Prometheus-Remote-Write-Version', '0.1.0')
+                rsp = request.urlopen(req)
+                code = rsp.getcode()
+                if code >= 500 and code <= 599:
+                    delay = random.randint(240, 360)
+                    logging.warning('target %s response %d; retrying in %ds' % \
+                                    (self.endpoint, code, delay))
+                    time.sleep(delay)
+                    continue
+                return code
+            except URLError:
+                delay = random.randint(60, 120)
+                logging.warning('no target %s; retrying in %ds' % \
+                                (self.endpoint, delay))
+                time.sleep(delay)
+                continue
         pass
 
     pass
