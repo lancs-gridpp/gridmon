@@ -461,10 +461,10 @@ class RemoteMetricsWriter:
                     if hasattr(self, 'job'):
                         famkey['job'] = self.job
                         pass
-                    for labname, (labfmt, labfunc) in lab.items():
-                        labval = labfunc(idx, snapshot)
-                        labtxt = labfmt % labval
-                        famkey[labtxt] = labval
+                    for labname, labspec in lab.items():
+                        labval = labspec[0] % \
+                            tuple([ af(idx, snapshot) for af in labspec[1:] ])
+                        famkey[labname] = labval
                         continue
 
                     for sfx, (samfmt, samfunc) in sam.items():
@@ -584,6 +584,7 @@ if __name__ == '__main__':
                 '': ('%.3f', lambda t, d: d['sine']),
             },
             'attrs': {
+                'pong': ('%s-%s', lambda t, d: 'yes', lambda t, d: 'no')
             },
         }
     ]
