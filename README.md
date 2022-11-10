@@ -8,8 +8,8 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 You'll also need (Protocol Buffers)[https://developers.google.com/protocol-buffers] and [Snappy compression](http://google.github.io/snappy/), so try one of these:
 
 ```
-sudo dnf install protobuf-compiler python3-snappy python3-protobuf
-sudo apt-get install protobuf-compiler python3-snappy python3-protobuf
+sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict
+sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict
 ```
 
 (Technically, you'll probably only need the Python packages to run some of the scripts, not to build/install.)
@@ -24,9 +24,44 @@ sudo make install
 Python/Bash sources and executables are then installed in `/usr/local/share/gridmon/`:
 
 - `static-metrics` &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
-- `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves them to Prometheus.
+- `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves or pushes them to Prometheus.
 - `perfsonar-stats` &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
   This is a bit flakey at the moment, and suspected of driving Prometheus nuts, so use with caution.
+- `cephhealth-exporter` &ndash; Run continuously, this scans disc health metrics retained by Ceph, and serves them to Prometheus.
+
+
+## Configuration of Prometheus
+
+For each script, either Prometheus scrapes the running process with an HTTP GET, or the process pushes metrics into Prometheus as soon as it has them.
+
+### Scraping
+
+Prometheus YAML configuration will include a `scrape_configs` section, specifying HTTP locations to issue GETs to periodically.
+For example:
+
+```
+scrape_configs:
+  - job_name: 'alerts'
+    static_configs:
+      - targets:
+          - 'localhost:9093'
+  - job_name: 'statics'
+    scrape_interval: 15s
+    metrics_path: '/ip.metrics'
+    static_configs:
+      - targets:
+          - 'localhost:80'
+```
+
+The second entry specifies that `http://localhost:80/ip.metrics` is to be fetched every 15 seconds.
+`metrics_path` is `/metrics` by default, so the first entry fetches `http://localhost:9093/metrics` at whatever the default interval is.
+
+
+### Remote-write
+
+There doesn't seem to be much authoritative-looking documentation on this, but there might be a [specification](https://docs.google.com/document/d/1LPhVRSFkGNSuU1fBd81ulhsCPR4hkSZyyBj1SZ8fWOM/edit#).
+Prometheus needs to run with `--enable-feature=remote-write-receiver` to enable such an endpoint, which is at `/api/v1/write` on port 9090 by default.
+For example, a typical endpoint might be `http://localhost:9090/api/v1/write`.
 
 
 ## Static metrics
@@ -151,6 +186,77 @@ Only one metric is actually defined:
 
 Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
 
+## Ceph disc health metrics exporter
+
+Ceph can be made to collect SMART metrics to ascertain the health of its discs.
+`cephhealth-exporter` pulls these metrics at a scheduled time, and makes them available to Prometheus.
+At the scheduled time, it performs this command:
+
+```
+ceph device ls --format=json
+```
+
+Using the output, it forms a list of devices indexed by device id with the format `MAKE_MODEL_SERIAL`, and invokes the following on each one:
+
+```
+ceph device get-health-metrics --format=json DEVID
+```
+
+From the last entry of the result, it forms the following metrics, each with a `devid` label:
+
+- `cephhealth_scsi_grown_defect_list_total` &ndash; the `scsi_grown_defect_list` reading; a counter, also with a `_created` time, which is always 0
+- `cephhealth_scsi_uncorrected_total` &ndash; the `scsi_error_counter_log` reading; a counter, also with a `_created` time, which is always 0; a `mode` label distingishes between `read`, `write` and `verify`
+- `cephhealth_metadata` &ndash; always 1; includes the label `path` giving the value of `location` with the `/dev/disk/by-path/` prefix lopped off
+
+These metrics are cached based on the timestamp that the `ceph` command supplies with the data.
+They can then be scraped by Prometheus in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md).
+Because they are normally obtained once per day, you will probably need to use `last_over_time(cephhealth_metadata[25h])` to ensure they are detected.
+
+The `devid` label can be correlated with the `device_ids` label of `ceph_disk_occupation` metrics supplied by Ceph itself.
+However, `device_ids` must be processed first to get a match.
+For example, it might contain `nvme0n1=Foo_Zippy1.5_987987532,sda=Bar_Whooshy2.0_927343`, while `devid` only contains `Bar_Whooshy2.0_927343`.
+You need to use `label_replace` on it in PromQL to create a suitable label.
+
+For example, to get a list of discs with at least one defect, include which OSD they serve, which host they are on, their `/dev/` names and device paths:
+
+```
+(last_over_time(cephhealth_scsi_grown_defect_list_total[25h]) > 0) * on(devid) group_right() avg without (device_ids, devices) (label_replace(label_replace(avg without (exported_instance, instance, job) (ceph_disk_occupation), "devid", '$2', "device_ids", `([^=]+=[^,]+,)?[^=]+=(.*)`), "disk", '$2', "devices", `([^,]+,)?(.*)`)) * on(devid) group_left(path) last_over_time(cephhealth_metadata[25h])
+```
+
+The following arguments are accepted:
+
+- `-l *int*` &ndash; the number of seconds of lag; default 20
+- `-s *HH:MM*` &ndash; Add the time of day to the daily schedule.
+  Ceph is scanned at each scheduled time.
+- `-h *int*` &ndash; days of horizon, beyond which metrics are discarded; 3 is the default
+- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
+- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
+- `--log=*level*` &ndash; Set the log level.
+  `info` is good.
+- `--log-file=*file*` &ndash; Append logging to a file.
+- `--disk-limit=*num*` &ndash; Stop after getting non-empty data from this many discs.
+  This is intended mainly for debugging on a small scale, without having to wait six minutes to scrape 700 discs!
+
+Any remaining arguments are prefixed to the executed commands.
+This allows the script to run on a different host to Ceph, and SSH into it, for example.
+Use `--` if any of the arguments could be mistaken for switches to this script.
+
+
+### Future directions
+
+A future version will instead obtain its own current metrics with commands such as:
+
+```
+ceph device query-daemon-health-metrics osd.312
+```
+
+This yields largely the same data as `ceph device get-health-metrics`, except it also gives details of the database device.
+The advantage is that the data returned is current, and could be immediately pushed to Prometheus via its remote-write interface.
+In contrast, `get-health-metrics` returns historical data, which might be too old by the time the exporter has obtained it, and Prometheus has asked for it.
+(We have observed that discs for the first or last 30-or-so OSDs sometimes do not get exported, because the scan of Ceph or Prometheus's scrape of the script started too late.)
+
 ## XRootD-Prometheus bridge
 
 The script `xrootd-stats` allows metrics emitted by XRootD to be absorbed by Prometheus.
@@ -166,6 +272,15 @@ The following arguments are accepted:
 - `-U *host*` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
 - `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8744 is the default
 - `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
+- `--log=*level*` &ndash; Set the log level.
+  `info` is good.
+- `--log-file=*file*` &ndash; Append logging to a file.
+- `-E *endpoint*` &ndash; Push metrics to a remote-write endpoint.
+
+If you use `-E`, the HTTP server is not created.
+Instead, everytime a UDP report is received by the bridge, the data is converted, and immediately pushed to the endpoint.
 
 Each variable specified by the XRootD format is represented by an OpenMetrics metric family by converting dots to underscores, prefixing with `xrootd_`, and suffixing with additional terms as expected by OpenMetrics.
 
