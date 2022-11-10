@@ -30,6 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import traceback
 import socket
 import xml
@@ -1412,14 +1413,16 @@ class ReportReceiver:
             tree = ElementTree.fromstring(msg)
         except xml.etree.ElementTree.ParseError:
             return
-        print('\nFrom %s:%d:' % addr)
+        logging.info('Report from %s:%d' % addr)
         if tree.tag != 'statistics':
-            print('  not statistics')
+            logging.warning('Ignored non-stats %s from %s:%d' %
+                            ((tree.tag,) + addr))
             return
 
         pgm = tree.attrib['pgm']
         if pgm != 'xrootd':
-            print('  not xrootd but %s' % pgm)
+            logging.warning('Ignored non-xrootd program %s from %s:%d' %
+                            ((pgm,) + addr))
             return
 
         ## Extract timestamp data.
@@ -1438,12 +1441,12 @@ class ReportReceiver:
         ## Get an instance identifier.
         blk = stats.get('info')
         if blk is None:
-            print('  no info element')
+            logging.warning('no info from %s:%d' % addr)
             return
         host = blk.find('host').text
         name = blk.find('name').text
         inst = (host, name)
-        print('  instance %s@%s' % (name, host))
+        logging.info('instance %s@%s from %s:%d' % ((name, host) + addr))
 
         ## Extract other metadata.
         port = int(blk.find('port').text)
@@ -1723,7 +1726,12 @@ if __name__ == '__main__':
     silent = False
     fake_data = False
     endpoint = None
-    opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X")
+    log_params = {
+        'format': '%(asctime)s %(message)s',
+        'datefmt': '%Y-%d-%mT%H:%M:%S',
+    }
+    opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X",
+                        [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
@@ -1739,6 +1747,15 @@ if __name__ == '__main__':
             http_port = int(val)
         elif opt == '-T':
             http_host = val
+        elif opt == '--log':
+            log_params['level'] = getattr(logging, val.upper(), None)
+            if not isinstance(log_params['level'], int):
+                sys.stderr.write('bad log level [%s]\n' % val)
+                sys.exit(1)
+                pass
+            pass
+        elif opt == '--log-file':
+            log_params['filename'] = val
         elif opt == '-X':
             fake_data = True
             pass
@@ -1751,6 +1768,8 @@ if __name__ == '__main__':
             os.dup2(fd, sys.stderr.fileno())
             pass
         pass
+
+    logging.basicConfig(**log_params)
 
     if endpoint is not None:
         rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
@@ -1780,11 +1799,12 @@ if __name__ == '__main__':
         recv_thrd.start()
         pass
 
-    print('Creating HTTP server...')
+    logging.info('Creating HTTP server on http://%s:%s' %
+                 (http_host, http_port))
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
                                         hist=history)
     webserver = HTTPServer((http_host, http_port), partial_handler)
-    print('Started on http://%s:%s' % (http_host, http_port))
+    logging.info('Ready to receive HTTP requests')
 
     try:
         webserver.serve_forever()
@@ -1792,16 +1812,16 @@ if __name__ == '__main__':
         pass
 
     history.halt()
-    print('Halted history')
+    logging.info('Halted history')
     if receiver is not None:
         receiver.halt()
-        print('Halted receiver')
+        logging.info('Halted receiver')
         pass
     if recv_thrd is not None:
         recv_thrd.join()
-        print('Receiver thread joined')
+        logging.info('Receiver thread joined')
         pass
 
     webserver.server_close()
-    print('Server stopped.')
+    logging.info('Server stopped.')
     pass
