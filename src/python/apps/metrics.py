@@ -494,7 +494,7 @@ class RemoteMetricsWriter:
 
         ## Do nothing on empty data.
         if len(series) == 0:
-            return 200
+            return True
 
         ## Retries are pointless after this time.
         expiry = self.expiry + lasttime
