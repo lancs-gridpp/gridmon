@@ -1720,7 +1720,8 @@ if __name__ == '__main__':
     http_port = 8744
     horizon = 60 * 30
     fake_data = False
-    opts, args = getopt(sys.argv[1:], "h:u:U:t:T:X")
+    endpoint = None
+    opts, args = getopt(sys.argv[1:], "h:u:U:t:T:E:X")
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
@@ -1728,6 +1729,8 @@ if __name__ == '__main__':
             udp_port = int(val)
         elif opt == '-U':
             udp_host = val
+        elif opt == '-E':
+            endpoint = val
         elif opt == '-t':
             http_port = int(val)
         elif opt == '-T':
@@ -1736,6 +1739,16 @@ if __name__ == '__main__':
             fake_data = True
             pass
         continue
+
+    if endpoint is not None:
+        rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
+                                          schema=schema,
+                                          job='xrootd',
+                                          expiry=10*60)
+        receiver = ReportReceiver((udp_host, udp_port), rmw)
+        receiver.keep_polling()
+        sys.exit()
+        pass
 
     ## Record XRootD stats history, indexed by timestamp and instance.
     history = metrics.MetricHistory(schema, horizon=horizon)
