@@ -5,6 +5,15 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 ## Installation
 
 [Binodeps](https://github.com/simpsonst/binodeps) is required to use the `Makefile`.
+You'll also need (Protocol Buffers)[https://developers.google.com/protocol-buffers] and [Snappy compression](http://google.github.io/snappy/), so try one of these:
+
+```
+sudo dnf install protobuf-compiler python3-snappy python3-protobuf
+sudo apt-get install protobuf-compiler python3-snappy python3-protobuf
+```
+
+(Technically, you'll probably only need the Python packages to run some of the scripts, not to build/install.)
+
 To install to the default location `/usr/local`:
 
 ```
@@ -17,8 +26,8 @@ Python/Bash sources and executables are then installed in `/usr/local/share/grid
 - `static-metrics` &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
 - `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves them to Prometheus.
 - `perfsonar-stats` &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
+  This is a bit flakey at the moment, and suspected of driving Prometheus nuts, so use with caution.
 
-(If you want to by-pass Binodeps, you could probably just copy `src/share/` to `/usr/local/share/gridmon/`.)
 
 ## Static metrics
 
@@ -28,7 +37,8 @@ The script is to be run as a cronjob to generate a file served statically throug
 
 The following options are accepted:
 
-- `-o *file*` &ndash; Atomically write output to the file.  An adjacent file is created, and then moved into place.
+- `-o *file*` &ndash; Atomically write output to the file.
+  An adjacent file is created, and then moved into place.
 - `+o` &ndash; Write to standard output.
 
 Other arguments are taken as source filenames.
@@ -262,6 +272,8 @@ The following arguments are accepted:
 - `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-E *endpoint*` &ndash; the `esmond` endpoint to fetch metrics from
 - `-S *host*` &ndash; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
+- `--log=level` &ndash; Set the log level.
+- `--log-file=file` &ndash; Set the log file; default is probably to `stderr`.
 
 One of `-E` or `-S` is required.
 The specified endpoint is consulted periodically to obtain timestamped metric points, which can then be scraped by Prometheus.
