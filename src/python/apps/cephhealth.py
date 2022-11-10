@@ -316,6 +316,7 @@ if __name__ == '__main__':
     import functools
     from http.server import HTTPServer
     import threading
+    import os
     import pprint
     import subprocess
     import errno
@@ -342,19 +343,22 @@ if __name__ == '__main__':
     http_port = 8799
     horizon = 60 * 60 * 24 * 3
     lag = 20
+    silent = False
     disk_limit = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     schedule = set()
-    opts, args = gnu_getopt(sys.argv[1:], "h:l:T:t:s:",
+    opts, args = gnu_getopt(sys.argv[1:], "zh:l:T:t:s:",
                             [ 'disk-limit=', 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60 * 60 * 24
         elif opt == '-l':
             lag = int(val)
+        elif opt == '-z':
+            silent = True
         elif opt == '-s':
             tod = get_tod_offset(val)
             if tod is None:
@@ -386,6 +390,14 @@ if __name__ == '__main__':
         now = datetime.datetime.utcnow()
         tod = (now.hour * 60 + now.minute) * 60
         schedule.add(tod)
+        pass
+
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
         pass
 
     logging.basicConfig(**log_params)
