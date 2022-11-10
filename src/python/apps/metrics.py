@@ -447,9 +447,14 @@ class RemoteMetricsWriter:
         lasttime = 0
         for family in self.schema:
             basename = family['base']
+            unit = family.get('unit')
             sel = family['select']
             lab = family['attrs']
             sam = family['samples']
+
+            if unit is not None:
+                basename += '_' + unit
+                pass
 
             for ts in tss:
                 snapshot = data[ts]
