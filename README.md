@@ -279,8 +279,10 @@ The following arguments are accepted:
 - `--log-file=*file*` &ndash; Append logging to a file.
 - `-E *endpoint*` &ndash; Push metrics to a remote-write endpoint.
 
-If you use `-E`, the HTTP server is not created.
-Instead, everytime a UDP report is received by the bridge, the data is converted, and immediately pushed to the endpoint.
+If you use `-E`, metrics are pushed to the endpoint as soon as a UDP report arrives and its contents are converted.
+In this case, the HTTP server serves no metrics, but still yields metric documentation in the form of `# HELP`, `# TYPE` and `# UNIT`, which you might choose to scrape infrequently.
+
+### XRootD metrics
 
 Each variable specified by the XRootD format is represented by an OpenMetrics metric family by converting dots to underscores, prefixing with `xrootd_`, and suffixing with additional terms as expected by OpenMetrics.
 

@@ -1795,9 +1795,9 @@ if __name__ == '__main__':
         pass
 
     ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT are exposed, which
-    ## doesn't seem to be possible with remote-write.  Use a separate
-    ## thread, which we can stop by calling shutdown().
+    ## in the history, the HELP, TYPE and UNIT strings are exposed,
+    ## which doesn't seem to be possible with remote-write.  Use a
+    ## separate thread, which we can stop by calling shutdown().
     logging.info('Creating HTTP server on http://%s:%d' %
                  (http_host, http_port))
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
