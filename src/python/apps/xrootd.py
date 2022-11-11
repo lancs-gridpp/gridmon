@@ -1771,57 +1771,54 @@ if __name__ == '__main__':
 
     logging.basicConfig(**log_params)
 
+    ## Record XRootD stats history, indexed by timestamp and instance.
+    ## Alternatively, prepare to push stats as soon as they're
+    ## converted.
+    rmw = history = metrics.MetricHistory(schema, horizon=horizon)
     if endpoint is not None:
         rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
                                           schema=schema,
                                           job='xrootd',
                                           expiry=10*60)
-        receiver = ReportReceiver((udp_host, udp_port), rmw)
-        receiver.keep_polling()
-        sys.exit()
-        pass
-
-    ## Record XRootD stats history, indexed by timestamp and instance.
-    history = metrics.MetricHistory(schema, horizon=horizon)
-
-    if fake_data:
-        ## Don't bother listening for data, just populate with some
-        ## fake stuff for testing.
-        recv_thrd = None
-        receiver = None
+    elif fake_data:
         history.install(sample)
-    else:
-        ## Run an XRootD report receiver as a separate thread,
-        ## dropping data into the metrics history.
-        receiver = ReportReceiver((udp_host, udp_port), history)
-        recv_thrd = threading.Thread(target=ReportReceiver.keep_polling,
-                                     args=(receiver,))
-        recv_thrd.start()
+        receiver = None
         pass
 
-    logging.info('Creating HTTP server on http://%s:%s' %
+    if endpoint is not None or not fake_data:
+        ## Create a UDP socket to listen on, convert XML stats from
+        ## XRootD into timestamped metrics, and drop them into the
+        ## history/remote writer.
+        logging.info('Creating UDP XRootD receiver on %s:%d' %
+                     (udp_host, udp_port))
+        receiver = ReportReceiver((udp_host, udp_port), rmw)
+        pass
+
+    ## Serve the history on demand.  Even if we don't store anything
+    ## in the history, the HELP, TYPE and UNIT are exposed, which
+    ## doesn't seem to be possible with remote-write.  Use a separate
+    ## thread, which we can stop by calling shutdown().
+    logging.info('Creating HTTP server on http://%s:%d' %
                  (http_host, http_port))
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
                                         hist=history)
     webserver = HTTPServer((http_host, http_port), partial_handler)
     logging.info('Ready to receive HTTP requests')
+    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                args=(webserver,))
+    srv_thrd.start()
 
     try:
-        webserver.serve_forever()
+        receiver.keep_polling()
     except KeyboardInterrupt:
         pass
 
     history.halt()
     logging.info('Halted history')
-    if receiver is not None:
-        receiver.halt()
-        logging.info('Halted receiver')
-        pass
-    if recv_thrd is not None:
-        recv_thrd.join()
-        logging.info('Receiver thread joined')
-        pass
-
+    webserver.shutdown()
+    logging.info('Halted webserver')
+    receiver.halt()
+    logging.info('Halted receiver')
     webserver.server_close()
     logging.info('Server stopped.')
     pass
