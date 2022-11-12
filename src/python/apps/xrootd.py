@@ -45,11 +45,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'buff' in e[t] and 'mem' in e[t]['buff'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['buff']['mem']),
+            '': ('%d', lambda t, d: d[t[0:3]]['buff']['mem']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -65,6 +66,7 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -76,11 +78,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'buff' in e[t] and 'buffs' in e[t]['buff'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['buff']['buffs']),
+            '': ('%d', lambda t, d: d[t[0:3]]['buff']['buffs']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -92,12 +95,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'buff' in e[t] and 'adj' in e[t]['buff'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['buff']['adj']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['buff']['adj']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -109,12 +113,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'buff' in e[t] and 'reqs' in e[t]['buff'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['buff']['reqs']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['buff']['reqs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -126,11 +131,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'num' in e[t]['link'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['link']['num']),
+            '': ('%d', lambda t, d: d[t[0:3]]['link']['num']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -143,12 +149,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'ctime' in e[t]['link'] ],
         'samples': {
-            '_total': ('%.3f', lambda t, d: d[t[0:2]]['link']['ctime']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%.3f', lambda t, d: d[t[0:3]]['link']['ctime']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -160,12 +167,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'maxn' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['maxn']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['maxn']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -177,12 +185,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'tot' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['tot']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['tot']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -194,12 +203,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'tmo' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['tmo']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['tmo']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -211,12 +221,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'stall' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['stall']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['stall']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -228,12 +239,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'sfps' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['sfps']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['sfps']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -246,12 +258,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'in' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['in']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['in']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -264,12 +277,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'link' in e[t] and 'out' in e[t]['link'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['link']['out']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['link']['out']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -282,11 +296,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sgen' in e[t] and 'et' in e[t]['sgen'] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d[t[0:2]]['sgen']['et'] / 1e6),
+            '': ('%.6f', lambda t, d: d[t[0:3]]['sgen']['et'] / 1e6),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -299,11 +314,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sgen' in e[t] and 'toe' in e[t]['sgen'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['sgen']['toe']),
+            '': ('%d', lambda t, d: d[t[0:3]]['sgen']['toe']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -315,11 +331,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sgen' in e[t] and 'as' in e[t]['sgen'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['sgen']['as']),
+            '': ('%d', lambda t, d: d[t[0:3]]['sgen']['as']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -331,11 +348,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'idle' in e[t]['sched'] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['idle']),
+            '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['idle']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -347,11 +365,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'inq' in e[t]['sched'] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['inq']),
+            '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['inq']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -363,12 +382,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'jobs' in e[t]['sched'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['jobs']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['sched']['jobs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -380,12 +400,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'maxinq' in e[t]['sched'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['maxinq']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['sched']['maxinq']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -397,12 +418,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'tcr' in e[t]['sched'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tcr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['sched']['tcr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -414,12 +436,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'tde' in e[t]['sched'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tde']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['sched']['tde']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -431,11 +454,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'threads' in e[t]['sched'] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d[t[0:2]]['sched']['threads']),
+            '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['threads']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -447,12 +471,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'sched' in e[t] and 'tlimr' in e[t]['sched'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['sched']['tlimr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['sched']['tlimr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -464,11 +489,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'poll' in e[t] and 'att' in e[t]['poll'] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d[t[0:2]]['poll']['att']),
+            '': ('%.6f', lambda t, d: d[t[0:3]]['poll']['att']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -480,12 +506,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'poll' in e[t] and 'en' in e[t]['poll'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['en']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['poll']['en']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -497,12 +524,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'poll' in e[t] and 'ev' in e[t]['poll'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['ev']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['poll']['ev']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -514,12 +542,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'poll' in e[t] and 'int' in e[t]['poll'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['poll']['int']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['poll']['int']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -532,12 +561,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'proc' in e[t] and 'sys' in e[t]['proc'] ],
         'samples': {
-            '_total': ('%.6f', lambda t, d: d[t[0:2]]['proc']['sys']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%.6f', lambda t, d: d[t[0:3]]['proc']['sys']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -550,12 +580,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'proc' in e[t] and 'usr' in e[t]['proc'] ],
         'samples': {
-            '_total': ('%.6f', lambda t, d: d[t[0:2]]['proc']['usr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%.6f', lambda t, d: d[t[0:3]]['proc']['usr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -572,8 +603,9 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'role': ('%s', lambda t, d: d[t[0:2]]['ofs']['role']),
+            'role': ('%s', lambda t, d: d[t[0:3]]['ofs']['role']),
         }
     },
 
@@ -589,8 +621,9 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'role': ('%s', lambda t, d: d[t[0:2]]['cms']['role']),
+            'role': ('%s', lambda t, d: d[t[0:3]]['cms']['role']),
         }
     },
 
@@ -605,9 +638,10 @@ schema = [
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'site': ('%s', lambda t, d: d[t[0:2]].get('site')),
-            'port': ('%s', lambda t, d: d[t[0:2]]['port']),
+            'site': ('%s', lambda t, d: d[t[0:3]].get('site')),
+            'port': ('%s', lambda t, d: d[t[0:3]]['port']),
         }
     },
 
@@ -618,11 +652,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'han' in e[t]['ofs'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['han']),
+            '': ('%d', lambda t, d: d[t[0:3]]['ofs']['han']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -634,11 +669,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'opp' in e[t]['ofs'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opp']),
+            '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opp']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -650,11 +686,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'opw' in e[t]['ofs'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opw']),
+            '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opw']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -666,11 +703,12 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'opr' in e[t]['ofs'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['ofs']['opr']),
+            '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opr']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -682,12 +720,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'bxq' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['bxq']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['bxq']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -699,12 +738,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'dly' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['dly']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['dly']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -716,12 +756,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'err' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['err']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -733,12 +774,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'rdr' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['rdr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['rdr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -750,12 +792,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'rep' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['rep']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['rep']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -767,12 +810,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'ser' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['ser']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['ser']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -784,12 +828,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'sok' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['sok']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['sok']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -801,12 +846,13 @@ schema = [
         'select': lambda e: [ t for t in e
                               if 'ofs' in e[t] and 'ups' in e[t]['ofs'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['ups']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['ups']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -820,12 +866,13 @@ schema = [
                               and 'tpc' in e[t]['ofs']
                               and 'grnt' in e[t]['ofs']['tpc'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['grnt']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['tpc']['grnt']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -839,12 +886,13 @@ schema = [
                               and 'tpc' in e[t]['ofs']
                               and 'deny' in e[t]['ofs']['tpc'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['deny']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['tpc']['deny']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -858,12 +906,13 @@ schema = [
                               and 'tpc' in e[t]['ofs']
                               and 'err' in e[t]['ofs']['tpc'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['err']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['tpc']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -877,12 +926,13 @@ schema = [
                               and 'tpc' in e[t]['ofs']
                               and 'exp' in e[t]['ofs']['tpc'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['ofs']['tpc']['exp']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['ofs']['tpc']['exp']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -895,12 +945,13 @@ schema = [
                               if 'xrootd' in e[t]
                               and 'num' in e[t]['xrootd'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['num']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -913,12 +964,13 @@ schema = [
                               if 'xrootd' in e[t]
                               and 'dly' in e[t]['xrootd'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['dly']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['dly']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -931,12 +983,13 @@ schema = [
                               if 'xrootd' in e[t]
                               and 'err' in e[t]['xrootd'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['err']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['err']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -949,12 +1002,13 @@ schema = [
                               if 'xrootd' in e[t]
                               and 'rdr' in e[t]['xrootd'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['rdr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['rdr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -968,12 +1022,13 @@ schema = [
                               and 'aio' in e[t]['xrootd']
                               and 'max' in e[t]['xrootd']['aio'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['max']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['aio']['max']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -987,12 +1042,13 @@ schema = [
                               and 'aio' in e[t]['xrootd']
                               and 'num' in e[t]['xrootd']['aio'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['num']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['aio']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1006,12 +1062,13 @@ schema = [
                               and 'aio' in e[t]['xrootd']
                               and 'rej' in e[t]['xrootd']['aio'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['aio']['rej']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['aio']['rej']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1025,12 +1082,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'getf' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['getf']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['getf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1044,12 +1102,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'misc' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['misc']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['misc']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1063,12 +1122,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'open' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['open']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['open']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1082,12 +1142,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'pr' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['pr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['pr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1101,12 +1162,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'putf' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['putf']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['putf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1120,12 +1182,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'rf' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rf']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['rf']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1139,12 +1202,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'rd' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rd']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['rd']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1158,12 +1222,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'rs' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rs']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['rs']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1177,12 +1242,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'rv' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['rv']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['rv']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1196,12 +1262,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'sync' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['sync']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['sync']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1215,12 +1282,13 @@ schema = [
                               and 'ops' in e[t]['xrootd']
                               and 'wr' in e[t]['xrootd']['ops'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['ops']['wr']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['ops']['wr']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1234,12 +1302,13 @@ schema = [
                               and 'lgn' in e[t]['xrootd']
                               and 'num' in e[t]['xrootd']['lgn'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['num']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['lgn']['num']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1253,12 +1322,13 @@ schema = [
                               and 'lgn' in e[t]['xrootd']
                               and 'af' in e[t]['xrootd']['lgn'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['af']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['lgn']['af']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1272,12 +1342,13 @@ schema = [
                               and 'lgn' in e[t]['xrootd']
                               and 'au' in e[t]['xrootd']['lgn'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['au']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['lgn']['au']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1291,12 +1362,13 @@ schema = [
                               and 'lgn' in e[t]['xrootd']
                               and 'ua' in e[t]['xrootd']['lgn'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0:2]]['xrootd']['lgn']['ua']),
-            '_created': ('%.3f', lambda t, d: d[t[0:2]]['start']),
+            '_total': ('%d', lambda t, d: d[t[0:3]]['xrootd']['lgn']['ua']),
+            '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1308,11 +1380,12 @@ schema = [
         'help': 'time XRootD started',
         'select': lambda e: [ t for t in e if 'start' in e[t] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['start']),
+            '': ('%d', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
@@ -1328,14 +1401,15 @@ schema = [
                               and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['free']),
+            '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['free']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[2]),
-            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+            'rp': ('%s', lambda t, d: t[3]),
+            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
         }
     },
 
@@ -1350,14 +1424,15 @@ schema = [
                               and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['tot']),
+            '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['tot']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[2]),
-            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+            'rp': ('%s', lambda t, d: t[3]),
+            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
         }
     },
 
@@ -1372,14 +1447,15 @@ schema = [
                               and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ifr']),
+            '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ifr']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[2]),
-            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+            'rp': ('%s', lambda t, d: t[3]),
+            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
         }
     },
 
@@ -1394,14 +1470,15 @@ schema = [
                               and 'paths' in e[t]['oss']
                               for rp in e[t]['oss']['paths'] ],
         'samples': {
-            '': ('%d', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['ino']),
+            '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ino']),
         },
         'attrs': {
             'host': ('%s', lambda t, d: t[0]),
             'name': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[2]),
-            'lp': ('%s', lambda t, d: d[t[0:2]]['oss']['paths'][t[2]]['lp']),
+            'rp': ('%s', lambda t, d: t[3]),
+            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
         }
     },
 ]
@@ -1478,8 +1555,9 @@ class ReportReceiver:
             return
         host = blk.find('host').text
         name = blk.find('name').text
-        inst = (host, name)
-        logging.info('instance %s@%s from %s:%d' % ((name, host) + addr))
+        inst = (host, name, pgm)
+        logging.info('instance %s:%s@%s from %s:%d' %
+                     ((pgm, name, host) + addr))
 
         ## Extract other metadata.
         port = int(blk.find('port').text)

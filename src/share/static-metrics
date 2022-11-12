@@ -186,7 +186,7 @@ function doit () {
     printf '# HELP xrootd_expect metadata for a XRootD server existing\n'
     for xrootd in "${!XROOTNODE[@]}" ; do
         if [[ "$xrootd" =~ ^([^@]*)@(.*)$ ]] ; then
-            printf 'xrootd_expect{name="%s",host="%s",xrdid="%s"' \
+            printf 'xrootd_expect{pgm="xrootd",name="%s",host="%s",xrdid="%s"' \
                    "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "$xrootd"
             printf ',node="%s"} 1\n' \
                    "${XROOTNODE["$xrootd"]}"
