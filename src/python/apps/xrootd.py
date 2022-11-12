@@ -1801,6 +1801,15 @@ if __name__ == '__main__':
         receiver = None
         pass
 
+    ## Serve the history on demand.  Even if we don't store anything
+    ## in the history, the HELP, TYPE and UNIT strings are exposed,
+    ## which doesn't seem to be possible with remote-write.
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=history)
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+    logging.info('Created HTTP server on http://%s:%d' %
+                 (http_host, http_port))
+
     if endpoint is not None or not fake_data:
         ## Create a UDP socket to listen on, convert XML stats from
         ## XRootD into timestamped metrics, and drop them into the
@@ -1810,16 +1819,8 @@ if __name__ == '__main__':
         receiver = ReportReceiver((udp_host, udp_port), rmw)
         pass
 
-    ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT strings are exposed,
-    ## which doesn't seem to be possible with remote-write.  Use a
-    ## separate thread, which we can stop by calling shutdown().
-    logging.info('Creating HTTP server on http://%s:%d' %
-                 (http_host, http_port))
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                        hist=history)
-    webserver = HTTPServer((http_host, http_port), partial_handler)
-    logging.info('Ready to receive HTTP requests')
+    ## Use a separate thread to run the server, which we can stop by
+    ## calling shutdown().
     srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
                                 args=(webserver,))
     srv_thrd.start()
