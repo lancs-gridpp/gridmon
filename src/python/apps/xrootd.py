@@ -578,6 +578,23 @@ schema = [
     },
 
     {
+        'base': 'xrootd_cms_meta',
+        'type': 'info',
+        'help': 'CMS metadata',
+        'select': lambda e: [ t for t in e
+                              if 'cms' in e[t] and 'role' in e[t]['ofs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
+            'role': ('%s', lambda t, d: d[t[0:2]]['cms']['role']),
+        }
+    },
+
+    {
         'base': 'xrootd_meta',
         'type': 'info',
         'help': 'server metadata',
@@ -1506,6 +1523,14 @@ class ReportReceiver:
             for key in [ 'jobs', 'inq', 'maxinq', 'threads',
                          'idle', 'tcr', 'tde', 'tlimr' ]:
                 sub[key] = int(blk.find('./' + key).text)
+                continue
+            pass
+
+        blk = stats.get('cms')
+        if blk is not None:
+            sub = data.setdefault('cms', { })
+            for key in [ 'role' ]:
+                sub[key] = blk.find('./' + key).text
                 continue
             pass
 
