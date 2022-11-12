@@ -1285,6 +1285,22 @@ schema = [
     },
 
     {
+        'base': 'xrootd_start_time',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'time XRootD started',
+        'select': lambda e: [ t for t in e if 'start' in e[t] ],
+        'samples': {
+            '': ('%d', lambda t, d: d[t[0:2]]['start']),
+        },
+        'attrs': {
+            'host': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
+        }
+    },
+
+    {
         'base': 'xrootd_oss_paths_free',
         'unit': 'bytes',
         'type': 'gauge',
