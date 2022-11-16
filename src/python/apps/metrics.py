@@ -451,6 +451,9 @@ class RemoteMetricsWriter:
             sel = family['select']
             lab = family['attrs']
             sam = family['samples']
+            typ = family.get('type')
+            gcount_name = 'gcount' if typ == 'gaugehistogram' else 'count'
+            gsum_name = 'gsum' if typ == 'gaugehistogram' else 'sum'
 
             if unit is not None:
                 basename += '_' + unit
@@ -483,12 +486,37 @@ class RemoteMetricsWriter:
                         ## Extract the value.
                         val = samfunc(idx, snapshot)
 
-                        ## Append the timestamp and value to the
-                        ## series as a tuple.  Because we already
-                        ## sorted the timestamps, each time series's
-                        ## values will always be added in order.
-                        seq = series.setdefault(samkey, [ ])
-                        seq.append((ts, val))
+                        if callable(samfmt):
+                            ## Convert the value using the function.
+                            val = samfmt(val)
+
+                            def insert(sfx, value, *args):
+                                subkey = dict(samkey)
+                                subkey['__name__'] += sfx
+                                for k, v in args:
+                                    subkey[k] = v
+                                subkey = frozendict(samkey)
+                                seq = series.setdefault(subkey, [ ])
+                                seq.append((ts, value))
+                                pass
+                            for thr, thrv in val.items():
+                                if isinstance(thr, (int, float)):
+                                    sublab = ('le', '%g' % thr)
+                                    insert('_bucket', thrv, sublab)
+                                    pass
+                                continue
+                            ## The +inf bucket and the count are the same.
+                            insert('_bucket', val['count'], ('le', '+inf'))
+                            insert('_' + gcount_name, val['count'])
+                            insert('_' + gsum_name, val['sum'])
+                        else:
+                            ## Append the timestamp and value to the
+                            ## series as a tuple.  Because we already
+                            ## sorted the timestamps, each time series's
+                            ## values will always be added in order.
+                            seq = series.setdefault(samkey, [ ])
+                            seq.append((ts, val))
+                            pass
                         if ts > lasttime:
                             lasttime = ts
                             pass
