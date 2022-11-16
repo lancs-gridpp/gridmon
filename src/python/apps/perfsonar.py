@@ -563,7 +563,8 @@ if __name__ == "__main__":
     ## Use a separate thread to run the server, which we can stop by
     ## calling shutdown().
     srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,))
+                                args=(webserver,),
+                                daemon=True)
     srv_thrd.start()
 
     def check_delay(hist, start):
@@ -603,8 +604,9 @@ if __name__ == "__main__":
         logging.error(traceback.format_exc())
         sys.exit(1)
         pass
-    logging.info('HTTP halted')
 
     methist.halt()
+    logging.info('Halted history')
     webserver.server_close()
+    logging.info('Server stopped.')
     pass
