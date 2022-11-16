@@ -1395,11 +1395,11 @@ schema = [
         'unit': 'bytes',
         'type': 'gauge',
         'help': 'available capacity',
-        'select': lambda e: [ t + (rp,)
+        'select': lambda e: [ t + (lp,)
                               for t in e
                               if 'oss' in e[t]
                               and 'paths' in e[t]['oss']
-                              for rp in e[t]['oss']['paths'] ],
+                              for lp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['free']),
         },
@@ -1408,8 +1408,8 @@ schema = [
             'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[3]),
-            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
+            'lp': ('%s', lambda t, d: t[3]),
+            'rp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['rp']),
         }
     },
 
@@ -1418,11 +1418,11 @@ schema = [
         'unit': 'bytes',
         'type': 'gauge',
         'help': 'total capacity',
-        'select': lambda e: [ t + (rp,)
+        'select': lambda e: [ t + (lp,)
                               for t in e
                               if 'oss' in e[t]
                               and 'paths' in e[t]['oss']
-                              for rp in e[t]['oss']['paths'] ],
+                              for lp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['tot']),
         },
@@ -1431,8 +1431,8 @@ schema = [
             'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[3]),
-            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
+            'lp': ('%s', lambda t, d: t[3]),
+            'rp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['rp']),
         }
     },
 
@@ -1441,11 +1441,11 @@ schema = [
         'unit': 'inodes',
         'type': 'gauge',
         'help': 'available capacity',
-        'select': lambda e: [ t + (rp,)
+        'select': lambda e: [ t + (lp,)
                               for t in e
                               if 'oss' in e[t]
                               and 'paths' in e[t]['oss']
-                              for rp in e[t]['oss']['paths'] ],
+                              for lp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ifr']),
         },
@@ -1454,8 +1454,8 @@ schema = [
             'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[3]),
-            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
+            'lp': ('%s', lambda t, d: t[3]),
+            'rp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['rp']),
         }
     },
 
@@ -1464,11 +1464,11 @@ schema = [
         'unit': 'inodes',
         'type': 'gauge',
         'help': 'total capacity',
-        'select': lambda e: [ t + (rp,)
+        'select': lambda e: [ t + (lp,)
                               for t in e
                               if 'oss' in e[t]
                               and 'paths' in e[t]['oss']
-                              for rp in e[t]['oss']['paths'] ],
+                              for lp in e[t]['oss']['paths'] ],
         'samples': {
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ino']),
         },
@@ -1477,8 +1477,8 @@ schema = [
             'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
-            'rp': ('%s', lambda t, d: t[3]),
-            'lp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['lp']),
+            'lp': ('%s', lambda t, d: t[3]),
+            'rp': ('%s', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['rp']),
         }
     },
 ]
@@ -1627,9 +1627,9 @@ class ReportReceiver:
                 # print('  Searching for path %d' % i)
                 elem = blk.find('./paths/stats[@id="%d"]' % i)
                 # print(ElementTree.tostring(blk, encoding="unicode"))
-                name = elem.find('./rp').text[1:-1]
+                name = elem.find('./lp').text[1:-1]
                 psub = sub.setdefault('paths', { }).setdefault(name, { })
-                psub['lp'] = elem.find('./lp').text[1:-1]
+                psub['rp'] = elem.find('./rp').text[1:-1]
                 for key in [ 'free', 'ifr', 'ino', 'tot' ]:
                     psub[key] = int(elem.find('./' + key).text)
                 continue
@@ -1765,7 +1765,7 @@ if __name__ == '__main__':
                             'free': 9991486255104,
                             'ifr': -1,
                             'ino': 315834240,
-                            'lp': '/cephfs',
+                            'rp': '/cephfs',
                             'tot': 10966251003904
                         }
                     }
