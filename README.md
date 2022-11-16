@@ -5,11 +5,11 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 ## Installation
 
 [Binodeps](https://github.com/simpsonst/binodeps) is required to use the `Makefile`.
-You'll also need (Protocol Buffers)[https://developers.google.com/protocol-buffers] and [Snappy compression](http://google.github.io/snappy/), so try one of these:
+You'll also need (Protocol Buffers)[https://developers.google.com/protocol-buffers] and [Snappy compression](http://google.github.io/snappy/), and `defusedxml` and `frozendict` Python 3 packages, so try one of these:
 
 ```
-sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict
-sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict
+sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml
 ```
 
 (Technically, you'll probably only need the Python packages to run some of the scripts, not to build/install.)
