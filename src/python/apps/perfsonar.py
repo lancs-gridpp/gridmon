@@ -480,6 +480,7 @@ if __name__ == "__main__":
     http_port = 8732
     silent = False
     endpoint = None
+    metrics_endpoint = None
     horizon = 60 * 30
     lag = 20
     fore = 0
@@ -488,7 +489,7 @@ if __name__ == "__main__":
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = getopt(sys.argv[1:], "zh:t:T:E:S:l:f:a:",
+    opts, args = getopt(sys.argv[1:], "zh:t:T:E:M:S:l:f:a:",
                         [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-h':
@@ -507,6 +508,8 @@ if __name__ == "__main__":
             http_port = int(val)
         elif opt == '-E':
             endpoint = val
+        elif opt == '-M':
+            metrics_endpoint = val
         elif opt == '--log':
             log_params['level'] = getattr(logging, val.upper(), None)
             if not isinstance(log_params['level'], int):
@@ -533,8 +536,18 @@ if __name__ == "__main__":
 
     methist = metrics.MetricHistory(schema, horizon=horizon)
     perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
+    if metrics_endpoint is None:
+        hist = methist
+    else:
+        hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                           schema=schema,
+                                           job='perfsonar',
+                                           expiry=10*60)
 
+    ## Serve the history on demand.  Even if we don't store anything
+    ## in the history, the HELP, TYPE and UNIT strings are exposed,
+    ## which doesn't seem to be possible with remote-write.
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
     try:
         webserver = HTTPServer((http_host, http_port), partial_handler)
     except OSError as e:
@@ -546,6 +559,12 @@ if __name__ == "__main__":
             pass
         sys.exit(1)
         pass
+
+    ## Use a separate thread to run the server, which we can stop by
+    ## calling shutdown().
+    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                args=(webserver,))
+    srv_thrd.start()
 
     def check_delay(hist, start):
         if not hist.check():
@@ -574,14 +593,10 @@ if __name__ == "__main__":
             logging.error(traceback.format_exc())
             pass
         logging.info('Polling halted')
-        hist.halt()
         pass
 
-    poll_thrd = threading.Thread(target=keep_polling, args=(methist, perfcoll))
-    poll_thrd.start()
-
     try:
-        webserver.serve_forever()
+        keep_polling(hist, perfcoll)
     except KeyboardInterrupt:
         pass
     except Exception as e:
@@ -591,4 +606,5 @@ if __name__ == "__main__":
     logging.info('HTTP halted')
 
     methist.halt()
+    webserver.server_close()
     pass

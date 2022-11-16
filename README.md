@@ -393,6 +393,7 @@ The following arguments are accepted:
 - `-S *host*` &ndash; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
 - `--log=level` &ndash; Set the log level.
 - `--log-file=file` &ndash; Set the log file; default is probably to `stderr`.
+- `-M *endpoint*` &ndash; Push metrics to a remote-write endpoint.
 
 One of `-E` or `-S` is required.
 The specified endpoint is consulted periodically to obtain timestamped metric points, which can then be scraped by Prometheus.
@@ -413,6 +414,9 @@ Because it always abuts with previous and next scrapes, no measurement is ever r
 Several calls to derivatives of the configured endpoint are required to get all measurements of interest within the scrape interval, and these derivatives vary by metadata key (identifying the measurement task) and event type (the metric, e.g., `throughput`).
 The derivates are obtained through a single call to the configured endpoint, using the *scan* interval, which is wider than the scrape interval.
 This is because the timestamps from the scan lag behind the measurements by a few to tens of seconds, and might not fall within the same scrape interval.
+
+If you use `-M`, metrics are pushed to the endpoint immediately at the end of a consultation.
+In this case, the HTTP server serves no metrics, but still yields metric documentation in the form of `# HELP`, `# TYPE` and `# UNIT`, which you might choose to scrape infrequently.
 
 The following metrics are defined:
 
