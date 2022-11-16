@@ -495,7 +495,7 @@ class RemoteMetricsWriter:
                                 subkey['__name__'] += sfx
                                 for k, v in args:
                                     subkey[k] = v
-                                subkey = frozendict(samkey)
+                                subkey = frozendict(subkey)
                                 seq = series.setdefault(subkey, [ ])
                                 seq.append((ts, value))
                                 pass
