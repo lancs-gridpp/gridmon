@@ -385,6 +385,8 @@ The following arguments are accepted:
 - `-l *int*` &ndash; the number of seconds of lag; default 20
 - `-f *int*` &ndash; seconds before the scraped period to look for metadata keys; default 0
 - `-a *int*` &ndash; seconds before the scraped period to look for metadata keys; default 60
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
 - `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8732 is the default
 - `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-E *endpoint*` &ndash; the `esmond` endpoint to fetch metrics from

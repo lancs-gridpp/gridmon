@@ -471,12 +471,14 @@ if __name__ == "__main__":
     from getopt import getopt
     import threading
     import errno
+    import os
 
     ## Local libraries
     import metrics
 
     http_host = "localhost"
     http_port = 8732
+    silent = False
     endpoint = None
     horizon = 60 * 30
     lag = 20
@@ -486,11 +488,13 @@ if __name__ == "__main__":
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = getopt(sys.argv[1:], "h:t:T:E:S:l:f:a:",
+    opts, args = getopt(sys.argv[1:], "zh:t:T:E:S:l:f:a:",
                         [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
+        elif opt == '-z':
+            silent = True
         elif opt == '-l':
             lag = int(val)
         elif opt == '-f':
@@ -517,11 +521,19 @@ if __name__ == "__main__":
             pass
         continue
 
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
+        pass
+
+    logging.basicConfig(**log_params)
+
     methist = metrics.MetricHistory(schema, horizon=horizon)
     perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
     partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
-
-    logging.basicConfig(**log_params)
 
     try:
         webserver = HTTPServer((http_host, http_port), partial_handler)
