@@ -642,6 +642,7 @@ schema = [
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'site': ('%s', lambda t, d: d[t[0:3]].get('site')),
             'port': ('%s', lambda t, d: d[t[0:3]]['port']),
+            'ver': ('%s', lambda t, d: d[t[0:3]]['ver']),
         }
     },
 
@@ -1538,6 +1539,7 @@ class ReportReceiver:
         ## Extract timestamp data.
         timestamp = int(tree.attrib['tod'])
         start = int(tree.attrib['tos'])
+        vers = tree.attrib['ver']
 
         ## Index all the <stats> elements by id.
         stats = { }
@@ -1567,6 +1569,7 @@ class ReportReceiver:
         data = { }
         data['start'] = start
         data['port'] = port
+        data['ver'] = vers
         if site is not None:
             data['site'] = site
             pass
