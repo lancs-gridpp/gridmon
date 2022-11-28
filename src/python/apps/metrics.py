@@ -68,6 +68,36 @@ def _merge(a, b, pfx=(), mismatch=0):
         continue
     pass
 
+def _safe_func(xxx):
+    """Ensures that the argument is a function taking an index, a snapshot
+    and a timestamp.  If it is callable, it is assumed to take the
+    correct number of arguments.  Otherwise, a lambda is returned
+    returning the argument.
+
+    """
+    if not callable(xxx):
+        return lambda t, d: xxx
+    return xxx
+
+def _get_sample_func(xxx):
+    """Ensures that the argument is a format string followed by
+    functions.  If the argument is a tuple, all but the first element
+    are processed with _safe_func.  Otherwise, an int is converted to
+    ('%d', ...), float to ('%.3f', ...), and anything else to ('%s',
+    ...), where ... is lambda t, d: xxx.
+
+    """
+    if type(xxx) is tuple:
+        return (xxx[0],) + tuple([ _safe_func(i) for i in xxx[1:] ])
+    elif type(xxx) is int:
+        return ('%d', _safe_func(xxx))
+    elif type(xxx) is float:
+        return ('%.3f', _safe_func(xxx))
+    else:
+        return ('%s', _safe_func(xxx))
+    pass
+
+
 class MetricHistory:
     """Keeps track of timestamped metrics in a thread-safe way.  Metrics
     timestamped beyond a configurable horizon are discarded.  Data can
@@ -162,6 +192,7 @@ class MetricHistory:
             attrs = { }
             pass
         for an, vspec in attrs.items():
+            vspec = _get_sample_func(vspec)
             ## The first element of vspec is a format string,
             ## containing len(vspec)-1 format specifiers.  The
             ## remaining elements are functions to be supplied with
@@ -283,9 +314,10 @@ class MetricHistory:
             ## Do each metric point.
             for k in kseq:
                 ## Do each metric sample.
-                for sfx, (fmt, func) in bits.items():
+                for sfx, xxx in bits.items():
+                    fmt, func = _get_sample_func(xxx)
                     msg += self.__sample(k, tup, mtr + sfx,
-                                         fmt, func, attrs,
+                                         fmt, _safe_func(func), attrs,
                                          gcount_name, gsum_name)
                     continue
                 continue
@@ -470,12 +502,14 @@ class RemoteMetricsWriter:
                         famkey['job'] = self.job
                         pass
                     for labname, labspec in lab.items():
+                        labspec = _get_sample_func(labspec)
                         labval = labspec[0] % \
                             tuple([ af(idx, snapshot) for af in labspec[1:] ])
                         famkey[labname] = labval
                         continue
 
-                    for sfx, (samfmt, samfunc) in sam.items():
+                    for sfx, xxx in sam.items():
+                        samfmt, samfunc = _get_sample_func(xxx)
                         ## The sample key is the family key plus a
                         ## __name__ label.  Then freeze it so it can
                         ## be used as a dict key.
@@ -484,7 +518,7 @@ class RemoteMetricsWriter:
                         samkey = frozendict(samkey)
 
                         ## Extract the value.
-                        val = samfunc(idx, snapshot)
+                        val = _safe_func(samfunc)(idx, snapshot)
 
                         if callable(samfmt):
                             ## Convert the value using the function.
