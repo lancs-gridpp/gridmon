@@ -68,6 +68,16 @@ def _merge(a, b, pfx=(), mismatch=0):
         continue
     pass
 
+def _safe_mod(spec, idx, snapshot):
+    vals = list()
+    for af in spec[1:]:
+        val = af(idx, snapshot)
+        if val is None:
+            return None
+        vals.append(val)
+        continue
+    return spec[0] % tuple(vals)
+
 def _safe_func(xxx):
     """Ensures that the argument is a function taking an index, a snapshot
     and a timestamp.  If it is callable, it is assumed to take the
@@ -198,11 +208,13 @@ class MetricHistory:
             ## remaining elements are functions to be supplied with
             ## details of the entry being rendered.  The functions'
             ## values are used to fulfil the format specifiers.
-            lval = vspec[0] % tuple([ af(tup, entry) for af in vspec[1:] ])
+            lval = _safe_mod(vspec, tup, entry)
 
             ## Create a name-value pair to form a label.  TODO: Escape
             ## the value.  TODO: Sanity-check the name.
-            labels.append(('%s="%s"') % (an, lval))
+            if lval is not None:
+                labels.append(('%s="%s"') % (an, lval))
+                pass
             continue
 
         msg = ''
@@ -503,9 +515,10 @@ class RemoteMetricsWriter:
                         pass
                     for labname, labspec in lab.items():
                         labspec = _get_sample_func(labspec)
-                        labval = labspec[0] % \
-                            tuple([ af(idx, snapshot) for af in labspec[1:] ])
-                        famkey[labname] = labval
+                        labval = _safe_mod(labspec, idx, snapshot)
+                        if labval is not None:
+                            famkey[labname] = labval
+                            pass
                         continue
 
                     for sfx, xxx in sam.items():
