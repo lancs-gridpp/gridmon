@@ -23,7 +23,8 @@ sudo make install
 
 Python/Bash sources and executables are then installed in `/usr/local/share/gridmon/`:
 
-- `static-metrics` &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
+- `static-metrics` (deprecated; use `ip-statics-exporter` instead) &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
+- `ip-statics-exporter` &ndash; Run continuously, this reads a YAML file describing static intent, and writes it in to Prometheus, along with ping times.
 - `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves or pushes them to Prometheus.
 - `perfsonar-stats` &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
   This is a bit flakey at the moment, and suspected of driving Prometheus nuts, so use with caution.
@@ -65,6 +66,60 @@ For example, a typical endpoint might be `http://localhost:9090/api/v1/write`.
 
 
 ## Static metrics
+
+The script `ip-statics-exporter` generates Prometheus-compatible metrics from static intent, and includes ping RTTs.
+It runs continously, but can be started safely with a cronjob, quitting if it's already running.
+
+The following options are accepted:
+
+- `-h *int*` &ndash; seconds of horizon, beyond which metrics are discarded; 120 is the default
+- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 9363 is the default
+- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
+- `--log=*level*` &ndash; Set the log level.
+  `info` is good.
+- `--log-file=*file*` &ndash; Append logging to a file.
+- `-f *file*` &ndash; Add the file to the list scanned each time metrics are generated.
+- `-M *endpoint*` &ndash; Push metrics to a remote-write endpoint.
+
+### Source format
+
+Every minute, files specified with `-f` are read to describe what metrics to generate.
+The source is expressed in YAML, and must contain a map with an entry `machines`.
+Each key is then a machine or node name, and the value is a map describing it.
+The node name appears as the label `node` on many metrics, including all the `machine_` ones, and `ip_metadata`.
+The following keys are recognized:
+
+- `building`, `room`, `rack`, `level` &ndash; These strings appear as labels in `machine_metadata`, and can be used to describe the location of the machine.
+- `osds` &ndash; This specifies the number of Ceph OSDs that the node should be running, and appears as the value of the `machine_osd_drives` metric.
+- `roles` &ndash; This specifies an array of role names.
+  A metric `machine_role` is generated for each one on that node.
+- `interfaces` &ndash; This describes interfaces present on the node.
+  IP addresses or DNS names are keys, and the values are maps with the following keys:
+  - `device` &ndash; the internal device name, such as `eth0`
+  - `network` &ndash; any form of network identifier, e.g., `public`, which can be cross-referenced with other interfaces to infer connectivity
+  - `roles` &ndash; an arbitrary set of roles that the interface fulfils
+  `network` and `device` appear in the metric `ip_metadata`.
+  The interface name appears as the label `iface` on almost all `ip_` metrics.
+  Each role generates an `ip_role` metric.
+  Additionally, a role of `xroot` identifies the device that XRootD uses to determine its full name.
+- `xroots` &ndash; This lists names of XRootD instances expected to be running on the node.
+  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`.
+- `enabled` &ndash; Assumed `true` if absent, this allows a node to be ignored from the configuration.
+
+All node names must be unique.
+All interface names must be unique.
+
+Interfaces are pinged every minute.
+If a response is obtained, an `ip_ping_milliseconds` gauge is generated, and the `ip_up` gauge has the value `1`.
+Otherwise, `ip_up` is `0`, and no `ip_ping_milliseconds` metric is generated.
+
+If `-M` is specified, all metrics are written to this endpoint as they have all been generated.
+Meanwhile, the HTTP server serves no metrics, only metric documentation.
+Otherwise, no remote-write occurs, and all metrics are served through the HTTP server.
+
+## Static metrics (deprecated)
 
 The script `static-metrics` is used to generate Prometheus-compatible metrics expressing essentially static intent.
 (It also includes `ping` RTTs, just to muddy the waters.)

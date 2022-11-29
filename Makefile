@@ -19,6 +19,7 @@ hidden_scripts += static-metrics
 hidden_scripts += xrootd-stats
 hidden_scripts += qstats-exporter
 hidden_scripts += cephhealth-exporter
+hidden_scripts += ip-statics-exporter
 
 
 BINODEPS_SHAREDIR=src/share
