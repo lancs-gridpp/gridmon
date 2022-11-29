@@ -543,6 +543,7 @@ if __name__ == "__main__":
                                            schema=schema,
                                            job='perfsonar',
                                            expiry=10*60)
+        pass
 
     ## Serve the history on demand.  Even if we don't store anything
     ## in the history, the HELP, TYPE and UNIT strings are exposed,
