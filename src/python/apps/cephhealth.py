@@ -80,6 +80,55 @@ def get_inconsistent_pgs(pools, args=[]):
         continue
     return groups
 
+def get_status(args=[]):
+    cmd = args + [ 'ceph', 'status', '--format=json']
+    try:
+        logging.debug('Command: %s' % cmd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        return json.loads(proc.stdout.read().decode("utf-8"))
+    except FileNotFoundError:
+        logging.error('Command not found: %s' % cmd)
+    except json.decoder.JSONDecodeError:
+        logging.error('No JSON data for Ceph status from %s' % cmd)
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
+        pass
+    return None
+
+def convert_status_to_metrics(status):
+    if status is None:
+        return ''
+    hth = status.get('health')
+    if hth is None:
+        return ''
+    cks = hth.get('checks')
+    if cks is None:
+        return ''
+    msg = ''
+    msg += '# TYPE cephhealth_status_check gauge\n'
+    msg += '# HELP counted check status or something\n'
+    for k, v in cks.items():
+        smy = v.get('summary')
+        if smy is None:
+            continue
+        cnt = smy.get('count')
+        if cnt is None:
+            continue
+        msg += 'cephhealth_status_check{'
+        msg += 'type="%s"' % k
+        # sev = v.get('severity')
+        # if sev is not None:
+        #     msg += ',severity="%s"' % sev
+        #     pass
+        # mut = v.get('muted')
+        # if mut is not None:
+        #     msg += ',muted="%s"' % mut
+        #     pass
+        msg += '} %d\n' % cnt
+        continue
+    return msg
+
 _pgidfmt = re.compile(r'([0-9]+)\.(.+)')
 
 def get_osd_complaints(pgids, args=[]):
@@ -134,7 +183,11 @@ def get_osd_complaints_as_metrics(args=[]):
     pools = get_pools(args=args)
     pgids = get_inconsistent_pgs(pools, args=args)
     complaints = get_osd_complaints(pgids, args=args)
-    return convert_osd_complaints_to_metrics(complaints)
+    status = get_status(args=args)
+    msg = ''
+    msg += convert_osd_complaints_to_metrics(complaints)
+    msg += convert_status_to_metrics(status)
+    return msg
 
 _devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
 
