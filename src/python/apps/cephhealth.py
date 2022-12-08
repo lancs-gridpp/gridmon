@@ -45,6 +45,7 @@ def get_pools(args=[]):
     ## directly?
     cmd = args + [ 'rados', 'lspools' ]
     try:
+        logging.debug('Command: %s' % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 universal_newlines=True)
         return set([ i.strip() for i in proc.stdout.readlines() ])
@@ -62,6 +63,7 @@ def get_inconsistent_pgs(pools, args=[]):
     for pool in pools:
         cmd = args + [ 'rados', 'list-inconsistent-pg', pool ]
         try:
+            logging.debug('Command: %s' % cmd)
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             doc = json.loads(proc.stdout.read().decode("utf-8"))
             for pgid in doc:
@@ -90,6 +92,7 @@ def get_osd_complaints(pgids, args=[]):
         pool = int(pool)
         cmd = args + [ 'rados', 'list-inconsistent-obj', pgid ]
         try:
+            logging.debug('Command: %s' % cmd)
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             doc = json.loads(proc.stdout.read().decode("utf-8"))
             for incons in doc['inconsistents']:
@@ -139,6 +142,7 @@ def get_device_set(args=[]):
     cmd = args + [ 'ceph', 'device', 'ls', '--format=json' ]
     result = { }
     try:
+        logging.debug('Command: %s' % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         doc = json.loads(proc.stdout.read().decode("utf-8"))
         for elem in doc:
@@ -182,6 +186,7 @@ def get_device_metrics(result, devid, args=[], start=None, end=None, adorn=None)
                    '--format=json', devid ]
     mod = False
     try:
+        logging.debug('Command: %s' % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         doc = json.loads(proc.stdout.read().decode("utf-8"))
         for tstxt in doc:
