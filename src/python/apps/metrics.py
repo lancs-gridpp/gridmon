@@ -411,7 +411,7 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
         ## If specified, perform some rapid, current population of the
         ## history.  New data should have a very recent timestamp.
         if callable(self.prescrape):
-            self.prescrape()
+            self.prescrape(self)
             pass
 
         ## Form the message appropriate to the client, and send it.
