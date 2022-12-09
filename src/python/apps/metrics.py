@@ -394,9 +394,10 @@ class MetricHistory:
 
 
 class MetricsHTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, hist=None, prebody=None, **kwargs):
+    def __init__(self, *args, hist=None, preupdate=None, prebody=None, **kwargs):
         self.hist = hist
         self.prebody = prebody
+        self.preupdate = preupdate
         super().__init__(*args, **kwargs)
         pass
 
@@ -407,7 +408,13 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
             auth = 'anonymous'
             pass
 
-        ## Fetch the message appropriate to the client, and send it.
+        ## If specified, perform some rapid, current population of the
+        ## history.  New data should have a very recent timestamp.
+        if callable(self.preupdate):
+            self.preupdate()
+            pass
+
+        ## Form the message appropriate to the client, and send it.
         logging.info('Forming metrics message for %s' % auth)
         body, ts0, ts1 = self.hist.get_message(auth)
 
