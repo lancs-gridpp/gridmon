@@ -49,6 +49,8 @@ def get_pools(args=[]):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 universal_newlines=True)
         return set([ i.strip() for i in proc.stdout.readlines() ])
+    except KeyboardInterrupt as e:
+        raise e
     except FileNotFoundError:
         logging.error('Command not found: %s' % cmd)
     except:
@@ -69,6 +71,8 @@ def get_inconsistent_pgs(pools, args=[]):
             for pgid in doc:
                 groups.add(pgid)
                 continue
+        except KeyboardInterrupt as e:
+            raise e
         except FileNotFoundError:
             logging.error('Command not found: %s' % cmd)
         except json.decoder.JSONDecodeError:
@@ -86,6 +90,8 @@ def get_status(args=[]):
         logging.debug('Command: %s' % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         return json.loads(proc.stdout.read().decode("utf-8"))
+    except KeyboardInterrupt as e:
+        raise e
     except FileNotFoundError:
         logging.error('Command not found: %s' % cmd)
     except json.decoder.JSONDecodeError:
@@ -153,6 +159,8 @@ def get_osd_complaints(pgids, args=[]):
                         continue
                     continue
                 continue
+        except KeyboardInterrupt as e:
+            raise e
         except FileNotFoundError:
             logging.error('Command not found: %s' % cmd)
         except json.decoder.JSONDecodeError:
@@ -188,6 +196,132 @@ def get_osd_complaints_as_metrics(args=[]):
     msg += convert_osd_complaints_to_metrics(complaints)
     msg += convert_status_to_metrics(status)
     return msg
+
+class CephHealthMetricPusher:
+    def __init__(self, hist, cmdpfx=[], limit=None):
+        self.cmdpfx = cmdpfx
+        self.hist = hist
+        self.disk_limit = limit
+        pass
+
+    def update(self):
+        osds = get_osd_set(args=self.cmdpfx)
+        if osds is None:
+            return
+        limit = self.disk_limit
+        for osd in osds:
+            ## Get metrics for one OSD, and write them into the
+            ## history.
+            mets = get_osd_disk_metrics(osd, args=self.cmdpfx)
+            if mets is None:
+                continue
+            self.hist.install(mets)
+            if limit is not None:
+                limit -= 1
+                if limit == 0:
+                    break
+                pass
+            continue
+        pass
+
+    pass
+
+def get_osd_set(args=[]):
+    cmd = args + [ 'ceph', 'osd', 'ls', '--format=json' ]
+    try:
+        logging.debug('Command: %s' % cmd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        return json.loads(proc.stdout.read().decode("utf-8"))
+    except KeyboardInterrupt as e:
+        raise e
+    except FileNotFoundError:
+        logging.error('Command not found: %s' % cmd)
+    except json.decoder.JSONDecodeError:
+        logging.error('No JSON data from %s' % cmd)
+    except:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
+        pass
+    return None
+
+_scsi_metrics = [
+    ('correction_algorithm_invocations', 'invoked', int),
+    ('errors_corrected_by_eccdelayed', 'eccdelayed', int),
+    ('errors_corrected_by_eccfast', 'eccfast', int),
+    ('errors_corrected_by_rereads_rewrites', 'rerw', int),
+    ('gigabytes_processed', 'processed', float),
+    ('total_errors_corrected', 'corrected', int),
+    ('total_uncorrected_errors', 'uncorrected', int),
+]
+
+def get_osd_disk_metrics(osd, args=[]):
+    cmd = args + [ 'ceph', 'device', 'query-daemon-health-metrics',
+                   '--format=json', 'osd.%d' % osd ]
+    try:
+        logging.debug('Command: %s' % cmd)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        doc = json.loads(proc.stdout.read().decode("utf-8"))
+        result = { }
+        for devid, ent in doc.items():
+            ## Get the timestamp.
+            lct = ent.get('local_time')
+            if lct is None:
+                continue
+            ts = lct.get('time_t')
+            if ts is None:
+                continue
+
+            ## Get the SCSI fields.
+            out = { }
+            dfl = ent.get('scsi_grown_defect_list')
+            if dfl is not None:
+                out['defects'] = dfl
+                pass
+            log = ent.get('scsi_error_counter_log', { })
+            for mode, membs in log.items():
+                for src, dst, proc in _scsi_metrics:
+                    val = membs.get(src)
+                    if val is None:
+                        continue
+                    val = proc(val)
+                    out.setdefault(dst, { })[mode] = val
+                    continue
+                continue
+
+            ## No fields?  Not worth reporting.
+            if len(out) == 0:
+                continue
+
+            ## Get additional information about this device.
+            adorn = { }
+            cmd = args + [ 'ceph', 'device', 'info', '--format=json', devid ]
+            logging.debug('Command: %s' % cmd)
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            devdoc = json.loads(proc.stdout.read().decode("utf-8"))
+            out['host'] = devdoc['location'][0]['host']
+            pathtxt = devdoc['location'][0]['path']
+            mt = _devpathfmt.match(pathtxt)
+            if mt is not None:
+                (path,) = mt.groups()
+                if path is not None:
+                    out['path'] = path
+                    pass
+                pass
+
+            result.setdefault(int(ts), { }).setdefault(devid, out)
+            continue
+        return result
+    except KeyboardInterrupt as e:
+        raise e
+    except FileNotFoundError:
+        logging.error('Command not found: %s' % cmd)
+    except json.decoder.JSONDecodeError:
+        logging.error('No JSON data from %s' % cmd)
+    except:
+        logging.error(traceback.format_exc())
+        logging.error('Failed to execute %s' % cmd)
+        pass
+    return None
 
 _devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
 
@@ -268,6 +402,8 @@ def get_device_metrics(result, devid, args=[], start=None, end=None, adorn=None)
                 mod = True
                 pass
             continue
+    except KeyboardInterrupt as e:
+        raise e
     except json.decoder.JSONDecodeError:
         logging.error('No JSON data for %s from %s' % (pgid, cmd))
     except:
@@ -399,24 +535,28 @@ if __name__ == '__main__':
 
     http_host = "localhost"
     http_port = 8799
-    horizon = 60 * 60 * 24 * 3
+    horizon = 30
     lag = 20
     silent = False
+    metrics_endpoint = None
     disk_limit = None
+    skip = True
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     schedule = set()
-    opts, args = gnu_getopt(sys.argv[1:], "zh:l:T:t:s:",
-                            [ 'disk-limit=', 'log=', 'log-file=' ])
+    opts, args = gnu_getopt(sys.argv[1:], "zh:l:T:t:s:M:",
+                            [ 'disk-limit=', 'log=', 'log-file=', 'now' ])
     for opt, val in opts:
         if opt == '-h':
-            horizon = int(val) * 60 * 60 * 24
+            horizon = int(val)
         elif opt == '-l':
             lag = int(val)
         elif opt == '-z':
             silent = True
+        elif opt == '--now':
+            skip = False
         elif opt == '-s':
             tod = get_tod_offset(val)
             if tod is None:
@@ -426,6 +566,8 @@ if __name__ == '__main__':
             schedule.add(tod)
         elif opt == '-T':
             http_host = val
+        elif opt == '-M':
+            metrics_endpoint = val
         elif opt == '-t':
             http_port = int(val)
         elif opt == '--log':
@@ -481,7 +623,19 @@ if __name__ == '__main__':
                 continue
         return best
 
-    cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
+    ## Define a remote-write endpoint, and an object to pull disc
+    ## metrics on command, and remote-write them immediately to that
+    ## endpoint.
+    rmw = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                      schema=schema,
+                                      job='cephhealth',
+                                      expiry=horizon)
+    pusher = CephHealthMetricPusher(rmw, cmdpfx=args, limit=disk_limit)
+
+    ## Define how to get on-demand metrics.  Use a separate thread to
+    ## run the server, which we can stop by calling
+    ## webserver.shutdown().
+    # cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
     methist = metrics.MetricHistory(schema, horizon=horizon)
     nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
@@ -498,6 +652,10 @@ if __name__ == '__main__':
             pass
         sys.exit(1)
         pass
+    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                args=(webserver,),
+                                daemon=True)
+    srv_thrd.start()
 
     logging.info('Schedule: %s' % [
         '%02d:%02d:%02d' % (int(x / 3600),
@@ -511,47 +669,34 @@ if __name__ == '__main__':
         delay = start - now
         return delay > 0
 
-    def keep_polling(hist, coll, schedule):
-        global disk_limit
-        try:
-            while hist.check():
-                logging.info('Getting latest data')
-                new_data = coll.update(limit=disk_limit)
-                hist.install(new_data)
-                logging.info('Installed')
-                start = get_next_in_schedule(schedule)
-                lim = datetime.datetime.fromtimestamp(start)
-                logging.info('Waiting until %s in %s' % \
-                             (lim,
-                              datetime.timedelta(seconds=start - time.time())))
-                while check_delay(hist, start):
-                    time.sleep(1)
-                    pass
-                continue
-        except InterruptedError:
-            pass
-        except KeyboardInterrupt:
-            pass
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            pass
-        logging.info('Polling halted')
-        hist.halt()
-        pass
-
-    poll_thrd = threading.Thread(target=keep_polling,
-                                 args=(methist, cephcoll, schedule))
-    poll_thrd.start()
-
     try:
-        webserver.serve_forever()
+        while methist.check():
+            if skip:
+                skip = False
+            else:
+                ## Get data now, and push it.
+                logging.info('Getting latest data')
+                pusher.update()
+                logging.info('Installed')
+
+            ## Work out when we do this again.
+            start = get_next_in_schedule(schedule)
+            lim = datetime.datetime.fromtimestamp(start)
+            logging.info('Waiting until %s in %s' % \
+                         (lim,
+                          datetime.timedelta(seconds=start - time.time())))
+            while check_delay(methist, start):
+                time.sleep(1)
+                continue
+    except InterruptedError:
+        pass
     except KeyboardInterrupt:
         pass
     except Exception as e:
         logging.error(traceback.format_exc())
         sys.exit(1)
+    finally:
+        logging.info('Polling halted')
+        methist.halt()
+        webserver.shutdown()
         pass
-    logging.info('HTTP halted')
-
-    methist.halt()
-    pass
