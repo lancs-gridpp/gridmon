@@ -244,28 +244,37 @@ Note that the deprecated fields `host` and `name` are incorporated into the `xrd
 ## Ceph disc health metrics exporter
 
 Ceph can be made to collect SMART metrics to ascertain the health of its discs.
-`cephhealth-exporter` pulls these metrics at a scheduled time, and makes them available to Prometheus.
-At the scheduled time, it performs this command:
+`cephhealth-exporter` pulls these metrics at a scheduled time, and pushes them into Prometheus.
+At the scheduled time, it performs this command to identify all OSD numbers:
 
 ```
-ceph device ls --format=json
+ceph osd ls --format=json
 ```
 
-Using the output, it forms a list of devices indexed by device id with the format `MAKE_MODEL_SERIAL`, and invokes the following on each one:
+For each OSD number `NUM`, it invokes the following on each one:
 
 ```
-ceph device get-health-metrics --format=json DEVID
+ceph device query-daemon-health-metrics --format=json osd.NUM
 ```
 
-From the last entry of the result, it forms the following metrics, each with a `devid` label:
+The result is a map from a device id, usually in the form `MAKE_MODEL_SERIAL`, to various device metrics.
+The following are extracted from SCSI devices, each indexed by a `devid` label:
 
 - `cephhealth_scsi_grown_defect_list_total` &ndash; the `scsi_grown_defect_list` reading; a counter, also with a `_created` time, which is always 0
 - `cephhealth_scsi_uncorrected_total` &ndash; the `scsi_error_counter_log` reading; a counter, also with a `_created` time, which is always 0; a `mode` label distingishes between `read`, `write` and `verify`
-- `cephhealth_metadata` &ndash; always 1; includes the label `path` giving the value of `location` with the `/dev/disk/by-path/` prefix lopped off
 
-These metrics are cached based on the timestamp that the `ceph` command supplies with the data.
+These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint.
+This process can take a second or so per disc, so remote-writing ensures that the metrics for each disc are delivered to Prometheus in a timely manner.
+
+The process establishes a scraping endpoint for metrics that can be obtained relatively quickly:
+
+- `cephhealth_disk_fitting` (formerly `cephhealth_metadata`; still present, but deprecated) &ndash; always 1; includes `devid`; includes the label `path` giving the value of `location` with the `/dev/disk/by-path/` prefix lopped off
+- `cephhealth_status_check` &ndash; a gauge in the cluster health status as reported by `ceph status`; includes a label `type` indicating what is being counted, e.g., `PG_NOT_DEEP_SCRUBBED`
+- `cephhealth_osd_pg_complaint` &ndash; always 1; includes `ceph_daemon` in the form `osd.NUM`, indicating which OSD is complaining; includes `pg_id`, the PG id being complained about; includes `pool_id`, the pool to which the PG belongs
+
 They can then be scraped by Prometheus in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md).
-Because they are normally obtained once per day, you will probably need to use `last_over_time(cephhealth_metadata[25h])` to ensure they are detected.
+Obtaining these metrics dynamically is not exactly instantaneous, so a scrape interval of at least 5 minutes is recommended.
+For a large interval (say, an hour), you will probably need to use `last_over_time(cephhealth_status_check[70m])` to ensure they are detected.
 
 The `devid` label can be correlated with the `device_ids` label of `ceph_disk_occupation` metrics supplied by Ceph itself.
 However, `device_ids` must be processed first to get a match.
@@ -283,7 +292,7 @@ The following arguments are accepted:
 - `-l *int*` &ndash; the number of seconds of lag; default 20
 - `-s *HH:MM*` &ndash; Add the time of day to the daily schedule.
   Ceph is scanned at each scheduled time.
-- `-h *int*` &ndash; days of horizon, beyond which metrics are discarded; 3 is the default
+- `-h *int*` &ndash; seconds of horizon, beyond which metrics are discarded; 30 is the default
 - `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
 - `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
@@ -293,24 +302,12 @@ The following arguments are accepted:
 - `--log-file=*file*` &ndash; Append logging to a file.
 - `--disk-limit=*num*` &ndash; Stop after getting non-empty data from this many discs.
   This is intended mainly for debugging on a small scale, without having to wait six minutes to scrape 700 discs!
+- `--now` &ndash; Perform a single scrape of the discs immediately, then settle into the configured schedule.
 
 Any remaining arguments are prefixed to the executed commands.
 This allows the script to run on a different host to Ceph, and SSH into it, for example.
 Use `--` if any of the arguments could be mistaken for switches to this script.
 
-
-### Future directions
-
-A future version will instead obtain its own current metrics with commands such as:
-
-```
-ceph device query-daemon-health-metrics osd.312
-```
-
-This yields largely the same data as `ceph device get-health-metrics`, except it also gives details of the database device.
-The advantage is that the data returned is current, and could be immediately pushed to Prometheus via its remote-write interface.
-In contrast, `get-health-metrics` returns historical data, which might be too old by the time the exporter has obtained it, and Prometheus has asked for it.
-(We have observed that discs for the first or last 30-or-so OSDs sometimes do not get exported, because the scan of Ceph or Prometheus's scrape of the script started too late.)
 
 ## XRootD-Prometheus bridge
 
