@@ -102,18 +102,17 @@ def get_status(args=[]):
         pass
     return None
 
-def convert_status_to_metrics(status):
+def get_status_metrics(args=[]):
+    status = get_status(args=args)
+    result = { }
     if status is None:
-        return ''
+        return result
     hth = status.get('health')
     if hth is None:
-        return ''
+        return result
     cks = hth.get('checks')
     if cks is None:
-        return ''
-    msg = ''
-    msg += '# TYPE cephhealth_status_check gauge\n'
-    msg += '# HELP counted check status or something\n'
+        return result
     for k, v in cks.items():
         smy = v.get('summary')
         if smy is None:
@@ -121,19 +120,42 @@ def convert_status_to_metrics(status):
         cnt = smy.get('count')
         if cnt is None:
             continue
-        msg += 'cephhealth_status_check{'
-        msg += 'type="%s"' % k
-        # sev = v.get('severity')
-        # if sev is not None:
-        #     msg += ',severity="%s"' % sev
-        #     pass
-        # mut = v.get('muted')
-        # if mut is not None:
-        #     msg += ',muted="%s"' % mut
-        #     pass
-        msg += '} %d\n' % cnt
+        result[k] = { 'count': cnt }
         continue
-    return msg
+    return result
+
+# def convert_status_to_metrics(status):
+#     if status is None:
+#         return ''
+#     hth = status.get('health')
+#     if hth is None:
+#         return ''
+#     cks = hth.get('checks')
+#     if cks is None:
+#         return ''
+#     msg = ''
+#     msg += '# TYPE cephhealth_status_check gauge\n'
+#     msg += '# HELP counted check status or something\n'
+#     for k, v in cks.items():
+#         smy = v.get('summary')
+#         if smy is None:
+#             continue
+#         cnt = smy.get('count')
+#         if cnt is None:
+#             continue
+#         msg += 'cephhealth_status_check{'
+#         msg += 'type="%s"' % k
+#         # sev = v.get('severity')
+#         # if sev is not None:
+#         #     msg += ',severity="%s"' % sev
+#         #     pass
+#         # mut = v.get('muted')
+#         # if mut is not None:
+#         #     msg += ',muted="%s"' % mut
+#         #     pass
+#         msg += '} %d\n' % cnt
+#         continue
+#     return msg
 
 _pgidfmt = re.compile(r'([0-9]+)\.(.+)')
 
@@ -172,30 +194,32 @@ def get_osd_complaints(pgids, args=[]):
         continue
     return osds
 
-def convert_osd_complaints_to_metrics(complaints):
-    msg = ''
-    msg += '# TYPE cephhealth_osd_pg_complaint info\n'
-    msg += '# HELP cephhealth_osd_pg_complaint ' + \
-        'PGs referencing OSDs with errors\n'
-    for osdid in complaints:
-        elem = complaints[osdid]
-        for pool in elem:
-            for pgid in elem[pool]:
-                msg += ('cephhealth_osd_pg_complaint{ceph_daemon="osd.%d"' +
-                        ',pool_id="%d",pg_id="%s"} 1\n') % (osdid, pool, pgid)
-            continue
-        continue
-    return msg
 
-def get_osd_complaints_as_metrics(args=[]):
-    pools = get_pools(args=args)
-    pgids = get_inconsistent_pgs(pools, args=args)
-    complaints = get_osd_complaints(pgids, args=args)
-    status = get_status(args=args)
-    msg = ''
-    msg += convert_osd_complaints_to_metrics(complaints)
-    msg += convert_status_to_metrics(status)
-    return msg
+
+# def convert_osd_complaints_to_metrics(complaints):
+#     msg = ''
+#     msg += '# TYPE cephhealth_osd_pg_complaint info\n'
+#     msg += '# HELP cephhealth_osd_pg_complaint ' + \
+#         'PGs referencing OSDs with errors\n'
+#     for osdid in complaints:
+#         elem = complaints[osdid]
+#         for pool in elem:
+#             for pgid in elem[pool]:
+#                 msg += ('cephhealth_osd_pg_complaint{ceph_daemon="osd.%d"' +
+#                         ',pool_id="%d",pg_id="%s"} 1\n') % (osdid, pool, pgid)
+#             continue
+#         continue
+#     return msg
+
+# def get_osd_complaints_as_metrics(args=[]):
+#     pools = get_pools(args=args)
+#     pgids = get_inconsistent_pgs(pools, args=args)
+#     complaints = get_osd_complaints(pgids, args=args)
+#     status = get_status(args=args)
+#     msg = ''
+#     msg += convert_osd_complaints_to_metrics(complaints)
+#     msg += convert_status_to_metrics(status)
+#     return msg
 
 class CephHealthMetricPusher:
     def __init__(self, hist, cmdpfx=[], limit=None):
@@ -457,8 +481,90 @@ class CephHealthCollector:
 
     pass
 
+def update_live_metrics(hist, args=[]):
+    data = { }
 
-schema = [
+    ## Get complaints that OSDs have about PGs.
+    pools = get_pools(args=args)
+    pgids = get_inconsistent_pgs(pools, args=args)
+    data['osds'] = get_osd_complaints(pgids, args=args)
+
+    ## Get metadata about discs.
+    data['disks'] = get_device_set(args=args)
+
+    ## Get general health status.
+    data['checks'] = get_status_metrics(args=args)
+
+    ## Record this data as almost immediate metrics.
+    now = int(time.time() * 1000) / 1000
+    rec = { now: data }
+    hist.install(rec)
+    pass
+
+pull_schema = [
+    {
+        'base': 'cephhealth_status_check',
+        'type': 'gauge',
+        'help': 'counted check status or something',
+        'select': lambda e: [ (t,) for t in e['checks'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d['checks'][t[0]]['count']),
+        },
+        'attrs': {
+            'type': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_osd_pg_complaint',
+        'type': 'info',
+        'help': 'PGs referencing OSDs with errors',
+        'select': lambda e: [ (osd, pg) for osd in e['osds']
+                              if 'pg_complaints' in e['osds'][osd]
+                              for pg in e['osds'][osd]['pg_complaints'] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'ceph_daemon': ('osd.%d', lambda t, d: t[0]),
+            'pg_id': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: d['osds'][t[0]]
+                        ['pg_complaints'][t[1]]['pool_id']),
+        },
+    },
+
+    {
+        'base': 'cephhealth_metadata',
+        'help': 'DEPRECATED use cephhealth_disk_fitting instead',
+        'type': 'info',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'path' in e['disks'][t] ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+            'path': ('%s', lambda t, d: d['disks'][t[0]]['path']),
+        },
+    },
+
+    {
+        'base': 'cephhealth_disk_fitting',
+        'help': 'SCSI path to device within its host',
+        'type': 'info',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'path' in e['disks'][t] ],
+        'samples': {
+            '': ('%d', lambda t, d: 1),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+            'path': ('%s', lambda t, d: d['disks'][t[0]]['path']),
+        },
+    },
+]
+
+push_schema = [
     {
         'base': 'cephhealth_scsi_grown_defect_list',
         'type': 'counter',
@@ -627,7 +733,7 @@ if __name__ == '__main__':
     ## metrics on command, and remote-write them immediately to that
     ## endpoint.
     rmw = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                      schema=schema,
+                                      schema=push_schema,
                                       job='cephhealth',
                                       expiry=horizon)
     pusher = CephHealthMetricPusher(rmw, cmdpfx=args, limit=disk_limit)
@@ -636,11 +742,12 @@ if __name__ == '__main__':
     ## run the server, which we can stop by calling
     ## webserver.shutdown().
     # cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
-    methist = metrics.MetricHistory(schema, horizon=horizon)
-    nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
+    methist = metrics.MetricHistory(pull_schema, horizon=horizon)
+    updater = functools.partial(update_live_metrics, methist, args=args)
+    #nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
                                         hist=methist,
-                                        prebody=nowmets)
+                                        prescrape=updater)
     try:
         webserver = HTTPServer((http_host, http_port), partial_handler)
     except OSError as e:
