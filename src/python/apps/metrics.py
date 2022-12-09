@@ -394,10 +394,10 @@ class MetricHistory:
 
 
 class MetricsHTTPHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, hist=None, preupdate=None, prebody=None, **kwargs):
+    def __init__(self, *args, hist=None, prescrape=None, prebody=None, **kwargs):
         self.hist = hist
         self.prebody = prebody
-        self.preupdate = preupdate
+        self.prescrape = prescrape
         super().__init__(*args, **kwargs)
         pass
 
@@ -410,8 +410,8 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
 
         ## If specified, perform some rapid, current population of the
         ## history.  New data should have a very recent timestamp.
-        if callable(self.preupdate):
-            self.preupdate()
+        if callable(self.prescrape):
+            self.prescrape(self)
             pass
 
         ## Form the message appropriate to the client, and send it.
