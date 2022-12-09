@@ -316,23 +316,11 @@ def get_osd_disk_metrics(osd, args=[]):
             if len(out) == 0:
                 continue
 
-            ## Get additional information about this device.
-            adorn = { }
-            cmd = args + [ 'ceph', 'device', 'info', '--format=json', devid ]
-            logging.debug('Command: %s' % cmd)
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            devdoc = json.loads(proc.stdout.read().decode("utf-8"))
-            out['host'] = devdoc['location'][0]['host']
-            pathtxt = devdoc['location'][0]['path']
-            mt = _devpathfmt.match(pathtxt)
-            if mt is not None:
-                (path,) = mt.groups()
-                if path is not None:
-                    out['path'] = path
-                    pass
-                pass
-
-            result.setdefault(int(ts), { }).setdefault(devid, out)
+            result.setdefault(int(ts), {
+                'disks': { },
+                'checks': { },
+                'osds': { },
+            })['disks'].setdefault(devid, out)
             continue
         return result
     except KeyboardInterrupt as e:
@@ -501,7 +489,7 @@ def update_live_metrics(hist, args=[]):
     hist.install(rec)
     pass
 
-pull_schema = [
+schema = [
     {
         'base': 'cephhealth_status_check',
         'type': 'gauge',
@@ -562,17 +550,15 @@ pull_schema = [
             'path': ('%s', lambda t, d: d['disks'][t[0]]['path']),
         },
     },
-]
 
-push_schema = [
     {
         'base': 'cephhealth_scsi_grown_defect_list',
         'type': 'counter',
         'help': 'number of defects',
-        'select': lambda e: [ (t,) for t in e
-                               if 'defects' in e[t] ],
+        'select': lambda e: [ (t,) for t in e['disks']
+                               if 'defects' in e['disks'][t] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]]['defects']),
+            '_total': ('%d', lambda t, d: d['disks'][t[0]]['defects']),
             '_created': ('%d', lambda t, d: 0),
         },
         'attrs': {
@@ -584,30 +570,16 @@ push_schema = [
         'base': 'cephhealth_scsi_uncorrected',
         'type': 'counter',
         'help': 'uncorrected errors',
-        'select': lambda e: [ (t, m) for t in e
-                              if 'uncorrected' in e[t]
-                              for m in e[t]['uncorrected'] ],
+        'select': lambda e: [ (t, m) for t in e['disks']
+                              if 'uncorrected' in e['disks'][t]
+                              for m in e['disks'][t]['uncorrected'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]]['uncorrected'][t[1]]),
+            '_total': ('%d', lambda t, d: d['disks'][t[0]]['uncorrected'][t[1]]),
             '_created': ('%d', lambda t, d: 0),
         },
         'attrs': {
             'devid': ('%s', lambda t, d: t[0]),
             'mode': ('%s', lambda t, d: t[1]),
-        },
-    },
-
-    {
-        'base': 'cephhealth_metadata',
-        'type': 'info',
-        'select': lambda e: [ (t,) for t in e
-                              if 'path' in e[t] ],
-        'samples': {
-            '': ('%d', lambda t, d: 1),
-        },
-        'attrs': {
-            'devid': ('%s', lambda t, d: t[0]),
-            'path': ('%s', lambda t, d: d[t[0]]['path']),
         },
     },
 ]
@@ -733,7 +705,7 @@ if __name__ == '__main__':
     ## metrics on command, and remote-write them immediately to that
     ## endpoint.
     rmw = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                      schema=push_schema,
+                                      schema=schema,
                                       job='cephhealth',
                                       expiry=horizon)
     pusher = CephHealthMetricPusher(rmw, cmdpfx=args, limit=disk_limit)
@@ -742,7 +714,7 @@ if __name__ == '__main__':
     ## run the server, which we can stop by calling
     ## webserver.shutdown().
     # cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
-    methist = metrics.MetricHistory(pull_schema, horizon=horizon)
+    methist = metrics.MetricHistory(schema, horizon=horizon)
     updater = functools.partial(update_live_metrics, methist, args=args)
     #nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
     partial_handler = functools.partial(metrics.MetricsHTTPHandler,
