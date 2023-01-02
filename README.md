@@ -272,7 +272,7 @@ At the scheduled time, it performs this command to identify all OSD numbers:
 ceph osd ls --format=json
 ```
 
-For each OSD number `NUM`, it invokes the following on each one:
+For each OSD number `NUM`, it invokes the following:
 
 ```
 ceph device query-daemon-health-metrics --format=json osd.NUM
