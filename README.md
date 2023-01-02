@@ -111,6 +111,15 @@ The following keys are recognized:
 All node names must be unique.
 All interface names must be unique.
 
+A `sites` top-level map entry may exist, with site names as keys.
+Each value is also a map in which the sole key `domains` is recognized.
+Its value is an array of domain names associated with the site.
+
+
+A `site_groups` top-level map entry may exist, with a site groups name as keys.
+Each value is an array of site names or group names belonging to the site.
+
+
 Interfaces are pinged every minute.
 If a response is obtained, an `ip_ping_milliseconds` gauge is generated, and the `ip_up` gauge has the value `1`.
 Otherwise, `ip_up` is `0`, and no `ip_ping_milliseconds` metric is generated.
@@ -240,6 +249,18 @@ Only one metric is actually defined:
   - `node` &ndash; the name of the machine on which the XRootD instance runs
 
 Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
+
+#### Site metrics
+
+The following metrics are generated from the `sites` and `site_groups` configuration:
+
+- `site_domain` has the value `1`, and attributes `site` and `domain`, indicating that the domain belongs to the site.
+
+- `site_group_depth` has a positive integer value, and attributes `site` and `group`, indicating that the site is part of the group.
+  The value is the depth within the group, `1` indicating that the site is a direct member.
+  
+- `site_subgroup_depth` has a positive integer value, and attributes `group` and `subgroup`, indicating that the latter is a group and a member of the former.
+  The value is the depth of the latter within the group, `1` indicating that the subgroup is a direct member.
 
 ## Ceph disc health metrics exporter
 

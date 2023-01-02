@@ -230,7 +230,128 @@ schema = [
             # 'exported_instance': ('%s', lambda t, d: t[0]),
         },
     },
+
+    {
+        'base': 'site_subgroup_depth',
+        'help': 'depth of group within another',
+        'type': 'gauge',
+        'select': lambda e: [ (p, c) for p in e.get('groups', { })
+                              for c in e['groups'][p]['subs'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d['groups'][t[0]]['subs'][t[1]]),
+        },
+        'attrs': {
+            'group': ('%s', lambda t, d: t[0]),
+            'subgroup': ('%s', lambda t, d: t[1]),
+        },
+    },
+
+    {
+        'base': 'site_group_depth',
+        'help': 'depth of site within a group',
+        'type': 'gauge',
+        'select': lambda e: [ (p, c) for p in e.get('groups', { })
+                              for c in e['groups'][p]['sites'] ],
+        'samples': {
+            '': ('%d', lambda t, d: d['groups'][t[0]]['sites'][t[1]]),
+        },
+        'attrs': {
+            'group': ('%s', lambda t, d: t[0]),
+            'site': ('%s', lambda t, d: t[1]),
+        },
+    },
+
+    {
+        'base': 'site_domain',
+        'help': 'site ownership of domain name',
+        'type': 'info',
+        'select': lambda e: [ (s, d) for s in e.get('sites', { })
+                              for d in e['sites'][s]['domains'] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'site': ('%s', lambda t, d: t[0]),
+            'domain': ('%s', lambda t, d: t[1]),
+        },
+    },
 ]
+
+def update_live_metrics(hist, confs):
+    ## Read site and site-group specs from -f arguments.
+    sites = { }
+    group_specs = { }
+    for arg in confs:
+        with open(arg, 'r') as fh:
+            doc = yaml.load(fh, Loader=yaml.SafeLoader)
+            merge(sites, doc.get('sites', { }), mismatch=+1)
+            merge(group_specs, doc.get('site_groups', { }), mismatch=+1)
+            pass
+        continue
+
+    ## Separate group member references into sites and subgroups.
+    groups = { }
+    unprop = set()
+    for group_name, membs in group_specs.items():
+        grp = groups.setdefault(group_name, { 'sites': { }, 'subs': { } })
+        for memb in membs:
+            grp['sites' if memb in sites else 'subs'][memb] = 1
+            unprop.add(group_name)
+            continue
+        continue
+
+    ## Resolve group membership.  For every group, make all its
+    ## members indirect members of every group that contains it.
+    while unprop:
+        for grp_name in unprop.copy():
+            grp_data = groups[grp_name]
+            for par_name, par_data in groups.items():
+                if grp_name not in par_data['subs']:
+                    continue
+                ## par_name contains grp_name.
+                if grp_name == par_name:
+                    raise RuntimeError('group contains itself: %s' % grp_name)
+
+                ## Propagate members of grp_name to par_name.
+                for kind in [ 'sites', 'subs' ]:
+                    for site, dep in grp_data[kind].items():
+                        ## The depth of these propagations is one more
+                        ## than what's recorded so far.
+                        dep += 1
+
+                        ## Is it already there, and at the same or
+                        ## shallower depth?  If so, do nothing;
+                        ## otherwise, replace with the new depth, and mark the .
+                        pdep = par_data[kind].get(site)
+                        if pdep is None or pdep > dep:
+                            par_data[kind][site] = dep
+                            unprop.add(par_name)
+                            pass
+                        continue
+                    continue
+                continue
+            unprop.remove(grp_name)
+            continue
+        continue
+
+    ## Create an entry for right now.
+    data = { }
+    nd = data[int(time.time() * 1000) / 1000.0] = { }
+
+    ## Populate site data.
+    sd = nd.setdefault('sites', { })
+    for site_name, site_data in sites.items():
+        sdom = sd.setdefault(site_name, { }).setdefault('domains', set())
+        for domain in site_data.get('domains', [ ]):
+            sdom.add(domain)
+            continue
+        continue
+
+    ## Populate site grouping data.
+    nd['groups'] = groups
+
+    hist.install(data)
+    pass
 
 if __name__ == '__main__':
     from getopt import getopt
@@ -311,7 +432,10 @@ if __name__ == '__main__':
     ## Serve the history on demand.  Even if we don't store anything
     ## in the history, the HELP, TYPE and UNIT strings are exposed,
     ## which doesn't seem to be possible with remote-write.
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
+    updater = functools.partial(update_live_metrics, methist, confs)
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=methist,
+                                        prescrape=updater)
     try:
         webserver = HTTPServer((http_host, http_port), partial_handler)
     except OSError as e:
