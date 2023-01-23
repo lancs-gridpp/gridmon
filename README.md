@@ -242,13 +242,12 @@ Only one metric is actually defined:
 
 - `xrootd_expect` always has the value 1, and the following additional labels:
 
-  - `host` (deprecated) &ndash; the hostname that the XRootD instance deduced by scanning local interfaces
-
-  - `name` (deprecated) &ndash; the name of the XRootD instance within its host
-  
   - `node` &ndash; the name of the machine on which the XRootD instance runs
+  
+  - `pgm` &ndash; the value `xrootd`
 
-Note that the deprecated fields `host` and `name` are incorporated into the `xrdid` field, and can be otherwise derived by combining with the `xrootd_meta` metric provided by the XRootD-Prometheus bridge.
+In future versions, it will be possible to have multiple `pgm` values on the same node, e.g., `xrootd` and `cmsd`.
+
 
 #### Site metrics
 
@@ -364,7 +363,7 @@ XRootD documents this variable with &#2194;, which is taken to mean that the val
 In contrast, the variable `buff.reqs` lacks this (or any) mark, so it is treated as a counter, and is represented as two metrics, `xrootd_buff_req_total` (the value of the variable) and `xrootd_buff_req_created` (the Unix timestamp of when it was last reset to zero).
 
 Note that the translation of many metrics has not yet been implemented.
-The following have been implemented, and are indexed by the properties `host` and `name` (taken from the `<stats id="info">` element):
+The following have been implemented, and are indexed by the label `xrdid` (formed as `name@host` from the `name` and `host` elements of `<stats id="info">`):
 
 - `xrootd_buff_adj_total` &ndash; adjustments to the buffer profile
 - `xrootd_buff_buffs` &ndash; number of allocated buffers
@@ -439,7 +438,7 @@ The following metrics offer metadata:
 
 - `xrootd_ofs_meta_info` &ndash; holds reporter's role as property `role`
 
-In addition to `host` and `name`, the following are defined to have `lp` and `rp` properties:
+In addition to `xrdid`, the following labels are defined to have `lp` and `rp` properties:
 
 - `xrootd_oss_paths_free_bytes` &ndash; free space
 - `xrootd_oss_paths_tot_bytes` &ndash; capacity
