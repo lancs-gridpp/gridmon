@@ -1531,10 +1531,10 @@ class ReportReceiver:
             return
 
         pgm = tree.attrib['pgm']
-        if pgm != 'xrootd':
-            logging.warning('Ignored non-xrootd program %s from %s:%d' %
-                            ((pgm,) + addr))
-            return
+        # if pgm != 'xrootd':
+        #     logging.warning('Ignored non-xrootd program %s from %s:%d' %
+        #                     ((pgm,) + addr))
+        #     return
 
         ## Extract timestamp data.
         timestamp = int(tree.attrib['tod'])
