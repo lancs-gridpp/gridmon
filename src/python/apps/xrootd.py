@@ -48,8 +48,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['buff']['mem']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -64,8 +64,8 @@ schema = [
             '': ('%d', lambda t, d: 1),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -81,8 +81,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['buff']['buffs']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -99,8 +99,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -117,8 +117,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -134,8 +134,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['link']['num']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -153,8 +153,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -171,8 +171,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -189,8 +189,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -207,8 +207,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -225,8 +225,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -243,8 +243,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -262,8 +262,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -281,8 +281,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -299,8 +299,8 @@ schema = [
             '': ('%.6f', lambda t, d: d[t[0:3]]['sgen']['et'] / 1e6),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -317,8 +317,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['sgen']['toe']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -334,8 +334,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['sgen']['as']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -351,8 +351,8 @@ schema = [
             '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['idle']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -368,8 +368,8 @@ schema = [
             '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['inq']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -386,8 +386,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -404,8 +404,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -422,8 +422,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -440,8 +440,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -457,8 +457,8 @@ schema = [
             '': ('%.6f', lambda t, d: d[t[0:3]]['sched']['threads']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -475,8 +475,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -492,8 +492,8 @@ schema = [
             '': ('%.6f', lambda t, d: d[t[0:3]]['poll']['att']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -510,8 +510,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -528,8 +528,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -546,8 +546,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -565,8 +565,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -584,8 +584,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -601,8 +601,8 @@ schema = [
             '': ('%d', lambda t, d: 1),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'role': ('%s', lambda t, d: d[t[0:3]]['ofs']['role']),
@@ -619,8 +619,8 @@ schema = [
             '': ('%d', lambda t, d: 1),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'role': ('%s', lambda t, d: d[t[0:3]]['cms']['role']),
@@ -636,8 +636,8 @@ schema = [
             '': ('%d', lambda t, d: 1),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'site': ('%s', lambda t, d: d[t[0:3]].get('site')),
@@ -656,8 +656,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['ofs']['han']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -673,8 +673,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opp']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -690,8 +690,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opw']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -707,8 +707,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['ofs']['opr']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -725,8 +725,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -743,8 +743,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -761,8 +761,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -779,8 +779,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -797,8 +797,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -815,8 +815,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -833,8 +833,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -851,8 +851,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -871,8 +871,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -891,8 +891,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -911,8 +911,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -931,8 +931,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -950,8 +950,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -969,8 +969,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -988,8 +988,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1007,8 +1007,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1027,8 +1027,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1047,8 +1047,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1067,8 +1067,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1087,8 +1087,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1107,8 +1107,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1127,8 +1127,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1147,8 +1147,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1167,8 +1167,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1187,8 +1187,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1207,8 +1207,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1227,8 +1227,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1247,8 +1247,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1267,8 +1267,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1287,8 +1287,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1307,8 +1307,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1327,8 +1327,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1347,8 +1347,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1367,8 +1367,8 @@ schema = [
             '_created': ('%.3f', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1384,8 +1384,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['start']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
@@ -1405,8 +1405,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['free']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'lp': ('%s', lambda t, d: t[3]),
@@ -1428,8 +1428,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['tot']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'lp': ('%s', lambda t, d: t[3]),
@@ -1451,8 +1451,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ifr']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'lp': ('%s', lambda t, d: t[3]),
@@ -1474,8 +1474,8 @@ schema = [
             '': ('%d', lambda t, d: d[t[0:3]]['oss']['paths'][t[3]]['ino']),
         },
         'attrs': {
-            'host': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: t[1]),
+            # 'host': ('%s', lambda t, d: t[0]),
+            # 'name': ('%s', lambda t, d: t[1]),
             'pgm': ('%s', lambda t, d: t[2]),
             'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
             'lp': ('%s', lambda t, d: t[3]),
