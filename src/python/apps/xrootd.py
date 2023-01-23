@@ -614,7 +614,7 @@ schema = [
         'type': 'info',
         'help': 'CMS metadata',
         'select': lambda e: [ t for t in e
-                              if 'cms' in e[t] and 'role' in e[t]['ofs'] ],
+                              if 'cms' in e[t] and 'role' in e[t]['cms'] ],
         'samples': {
             '': ('%d', lambda t, d: 1),
         },
