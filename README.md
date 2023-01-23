@@ -183,7 +183,7 @@ Three groups of metrics are generated, with the following prefixes:
 
 - `ip_` metrics with the same `iface` label describe an IP interface of a machine (which may have several such interfaces).
 
-- `xrootd_` metrics with the same `xrdid` label describe an XRootD instance.
+- `xrootd_` metrics with the same `xrdid` and `pgm` labels describe an XRootD program instance.
 
 #### Machine metrics
 
@@ -393,6 +393,7 @@ The following have been implemented, and are indexed by the label `xrdid` (forme
 - `xrootd_ofs_tpc_grnt_total` &ndash; TPCs allowed
 - `xrootd_ofs_tpc_deny_total` &ndash; TPCs denied
 - `xrootd_ofs_tpc_err_total` &ndash; TPCs that failed
+- `xrootd_cms_meta` &ndash; CMS metadata
 - `xrootd_poll_att` &ndash; file descriptors attached for polling
 - `xrootd_poll_en_total` &ndash; poll-enable operations
 - `xrootd_poll_ev_total` &ndash; polling events
