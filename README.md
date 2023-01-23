@@ -105,7 +105,9 @@ The following keys are recognized:
   Each role generates an `ip_role` metric.
   Additionally, a role of `xroot` identifies the device that XRootD uses to determine its full name.
 - `xroots` &ndash; This lists names of XRootD instances expected to be running on the node.
-  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`.
+  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `xrootd`.
+- `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
+  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `cmsd`.
 - `enabled` &ndash; Assumed `true` if absent, this allows a node to be ignored from the configuration.
 
 All node names must be unique.
