@@ -37,10 +37,11 @@ schema = [
     {
         'base': 'xrootd_expect',
         'help': 'metadata for an XRootD server expected to exist',
-        'select': lambda e: [ (n, i) for n in e.get('node', { })
+        'select': lambda e: [ (n, i, p) for n in e.get('node', { })
                               if 'xroots' in e['node'][n]
                               and 'xroot-host' in e['node'][n]
-                              for i in e['node'][n]['xroots'] ],
+                              for i in e['node'][n]['xroots']
+                              for p in e['node'][n]['xroots'][i]['pgms'] ],
         'samples': {
             '': 1,
         },
@@ -48,7 +49,7 @@ schema = [
             'node': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[1],
                       lambda t, d: d['node'][t[0]]['xroot-host']),
-            'pgm': 'xrootd',
+            'pgm': lambda t, d: t[2],
 
             ## deprecated
             # 'name': ('%s', lambda t, d: t[1]),
@@ -542,9 +543,14 @@ if __name__ == '__main__':
                 ## Process XRootD expectations.
                 if 'xroot' in iroles:
                     nent['xroot-host'] = list(iroles['xroot'])[0]
-                    xrds = nent.setdefault('xroots', set())
+                    xrds = nent.setdefault('xroots', { })
                     for xname in nspec.get('xroots', { }):
-                        xrds.add(xname)
+                        xrds.setdefault(xname, { }) \
+                            .setdefault('pgms', set()).add('xrootd')
+                        continue
+                    for xname in nspec.get('cmses', { }):
+                        xrds.setdefault(xname, { }) \
+                            .setdefault('pgms', set()).add('cmsd')
                         continue
                     pass
                 continue
