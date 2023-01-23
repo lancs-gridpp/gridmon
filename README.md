@@ -442,10 +442,12 @@ In addition to `xrdid`, the following labels are defined to have `lp` and `rp` p
 
 - `xrootd_oss_paths_free_bytes` &ndash; free space
 - `xrootd_oss_paths_tot_bytes` &ndash; capacity
-- `xrootd_oss_paths_ifr_inodes` &ndash; free inodes (TODO: This comes up as -1, probably meaning the information isn't available.  It should therefore not exist as a metric.)
+- `xrootd_oss_paths_ifr_inodes` &ndash; free inodes (TODO: This comes up as -1, probably meaning the information isn't available.
+  It should therefore not exist as a metric.)
 - `xrootd_oss_paths_ino_inodes` &ndash; total inodes
 
-(It's not clear which of `lp` and `rp` should be considered 'key fields', so both are included for now.  A future version might drop one, and provide it as metadata.)
+(It's not clear which of `lp` and `rp` should be considered 'key fields', so both are included for now.
+A future version might drop one, and provide it as metadata.)
 
 ## PerfSONAR statistics
 
