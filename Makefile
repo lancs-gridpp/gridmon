@@ -17,6 +17,7 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 hidden_scripts += perfsonar-stats
 hidden_scripts += static-metrics
 hidden_scripts += xrootd-stats
+hidden_scripts += xrootd-detail
 hidden_scripts += qstats-exporter
 hidden_scripts += cephhealth-exporter
 hidden_scripts += ip-statics-exporter
