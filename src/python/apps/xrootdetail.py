@@ -35,11 +35,41 @@ import traceback
 import socketserver
 import functools
 import struct
+import re
+import urllib
+from pprint import pprint
+
+_userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
+_uriarg_fmt = re.compile(r'&([^=]+)=([^&]+)')
+
+def _parse_monmapinfo(text):
+    lines = text.splitlines()
+    prot, user, pid, sid, host = _userid_fmt.match(lines[0]).groups()
+    args = { }
+    for it in _uriarg_fmt.finditer(lines[1]):
+        name = it.group(1)
+        value = it.group(2)
+        args[name] = value
+        continue
+    return {
+        'prot': prot,
+        'user': user,
+        'pid': pid,
+        'sid': sid,
+        'host': host,
+        'args': args,
+    }
+    
 
 class Detailer:
     def __init__(self):
-        ## We map from client host/port.
+        ## We map from client host/port to Peer.
         self.peers = { }
+
+        ## When we get an identity, we map it to the client host/port
+        ## here.  If the old value is different, we purge the old
+        ## value from self.peers.
+        self.names = { }
         pass
 
     class Peer:
@@ -51,7 +81,9 @@ class Detailer:
             pass
 
         def record(self, code, pseq, data):
-            if self.pseq is not None:
+            if self.pseq is None:
+                self.pseq = pseq
+            else:
                 if pseq - self.pseq < 0:
                     ## This is too old!
                     return
@@ -73,7 +105,16 @@ class Detailer:
             return
 
         def process(self, code, data):
+            if code in '=dipux':
+                return self.process_mapping(code, data)
             ## TODO
+            return
+
+        def process_mapping(self, code, data):
+            dictid = struct.unpack('>I', data[0:4])[0]
+            info = _parse_monmapinfo(data[4:].decode('us-ascii'))
+            print('Mapping "%s": %d=' % (code, dictid))
+            pprint(info)
             return
 
         pass
