@@ -39,30 +39,60 @@ import re
 import urllib
 import time
 import sys
+from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
-_uriarg_fmt = re.compile(r'&([^=]+)=([^&]+)')
-
+_uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
+_spaces = re.compile(r'\s+')
+    
 def _parse_monmapinfo(text):
     lines = text.splitlines()
     prot, user, pid, sid, host = _userid_fmt.match(lines[0]).groups()
-    args = { }
-    for it in _uriarg_fmt.finditer(lines[1]):
-        name = it.group(1)
-        value = it.group(2)
-        args[name] = value
-        continue
-    return {
+    result = {
         'prot': prot,
         'user': user,
         'pid': pid,
         'sid': sid,
         'host': host,
-        'args': args,
     }
-    
+    for line in lines[1:]:
+        if len(line) == 0 or line[0] != '&':
+            result['path'] = line
+            continue
+        args = { }
+        for it in _uriarg_fmt.finditer(line):
+            name = it.group(1)
+            value = it.group(2)
+            args[name] = value
+            continue
+        if 'o' in args and 'r' in args and 'g' in args:
+            oa = _spaces.split(args['o'])
+            ra = _spaces.split(args['r'])
+            ga = _spaces.split(args['g'])
+            if len(oa) == len(ra) and len(oa) == len(ga):
+                orga = []
+                for i in range(0, len(oa)):
+                    ov = None if oa[i] == 'NULL' else oa[i]
+                    rv = None if ra[i] == 'NULL' else ra[i]
+                    gv = None if ga[i] == 'NULL' else ga[i]
+                    orge = {
+                        'g': gv,
+                        'r': rv,
+                        'o': ov,
+                    }
+                    orga.append(frozendict(orge))
+                    continue
+                args['or'] = tuple(orga)
+                del args['o']
+                del args['r']
+                del args['g']
+                pass
+            pass
+        result['args'] = args
+        continue
+    return frozendict(result)
 
 class Detailer:
     def __init__(self):
@@ -74,7 +104,15 @@ class Detailer:
         ## value from self.peers.
         self.names = { }
 
-        self.timeout = 2
+        ## Set the timeout for missing sequence numbers.  Remember
+        ## when we last purged them.
+        self.seq_timeout = 2
+        self.seq_ts = time.time()
+
+        ## Set the timeout for ids.  Remember when we last purged
+        ## them.
+        self.id_timeout = 10
+        self.id_ts = time.time()
         pass
 
     class Peer:
@@ -85,15 +123,21 @@ class Detailer:
             self.pseq = None
             self.cache = { }
             self.expiries = { }
-            self.last_time = time.time()
+            self.ids = { }
             pass
 
-        def clear(now):
+        def seq_clear(self, now):
             ## TODO: Clear out expired stuff.
             pass
 
+        def id_clear(self, now):
+            for k in [ k for k, v in self.ids.items() if now > v["expiry"] ]:
+                self.ids.pop(k, None)
+                continue
+            pass
+
         def record(self, now, pseq, code, data):
-            expiry = now + self.outer.timeout
+            expiry = now + self.outer.seq_timeout
 
             if self.pseq is None:
                 self.pseq = pseq
@@ -102,13 +146,12 @@ class Detailer:
                 ## the sequence number range should be cleared.
                 for i in range(0, 128):
                     cand = (i + 64) % 256
-                    if cand in self.cache:
-                        code, data = self.cache[cand]
-                        del self.cache[cand]
-                        del self.expiries[cand]
-                        if code is not None:
-                            self.process(cand, code, data)
-                            pass
+                    # logging.info('%s:%d #%d purge' % (self.addr + (cand,)))
+                    ce = self.cache.pop(cand, None)
+                    self.expiries.pop(cand, None)
+                    if ce is not None:
+                        code, data = ce
+                        self.process(now, cand, code, data)
                         if cand == self.pseq:
                             self.pseq += 1
                             pass
@@ -122,87 +165,122 @@ class Detailer:
             ## Set expiries.
             for i in range(0, (256 + pseq - self.pseq) % 256):
                 cand = (self.pseq + i) % 256
+                # logging.info('%s:%d #%d set-expiry' % (self.addr + (cand,)))
                 if cand not in self.expiries:
                     self.expiries[cand] = expiry
                     pass
                 continue
 
             ## Process all messages before any gaps.
-            while self.pseq in self.cache or self.self.pseq in self.expiries:
-                if self.pseq in self.cache:
-                    code, data = self.cache[self.pseq]
-                    del self.cache[self.pseq]
-                    self.process(self.pseq, code, data)
-                else:
-                    got = self.expiries[self.pseq]
+            while True:
+                # logging.info('%s:%d #%d complete' % (self.addr + (self.pseq,)))
+                ce = self.cache.pop(self.pseq, None)
+                got = self.expiries.pop(self.pseq, None)
+                if ce is not None:
+                    code, data = ce
+                    self.process(now, self.pseq, code, data)
+                elif got is not None:
                     if now < got:
                         break
-                    pass
-                del self.expiries[self.pseq]
+                else:
+                    break
                 self.pseq += 1
                 self.pseq %= 256
                 continue
             return
 
-        def process(self, pseq, code, data):
-            logging.info('processing %s:%d@%d' % (self.addr + (pseq,)))
+        def process(self, now, pseq, code, data):
+            # logging.info('%s:%d #%d processing' % (self.addr + (pseq,)))
             if code in '=dipux':
-                return self.process_mapping(code, data)
+                return self.process_mapping(now, code, data)
+
             ## TODO
+
+            logging.error('%s:%d seq=%d mt=%s ev=unk-code' %
+                          (self.addr + (pseq, code)))
             return
 
-        def process_mapping(self, code, data):
+        def process_mapping(self, now, code, data):
             dictid = struct.unpack('>I', data[0:4])[0]
             info = _parse_monmapinfo(data[4:].decode('us-ascii'))
-            print('Mapping "%s": %d=' % (code, dictid))
-            pprint(info)
+            if code in '=px':
+                print('Mapping mt=%s %d=' % (code, dictid))
+                pprint(info)
+            else:
+                if dictid in self.ids:
+                    logging.info('%s:%d ev=dup-dict mt=%s id=%d' %
+                                 (self.addr + (code, dictid,)))
+                    pass
+                self.ids[dictid] = {
+                    "expiry": now + self.outer.id_timeout,
+                    "code": code,
+                    "info": info,
+                }
+                pass
             return
 
         pass
 
     def record(self, addr, data):
-        ## TODO: Check if addr[0] is in permitted set.
-
-        ## Valid messages have an 8-byte header.
-        if len(data) < 8:
-            return
-
-        ## Decode the header.
-        code = data[0:1].decode('ascii')
-        if code not in '=dfgiprtux':
-            return
-        pseq = int(data[1])
-        plen = struct.unpack('>H', data[2:4])[0]
-        stod = struct.unpack('>I', data[4:8])[0]
-
-        ## Valid messages have the specified length.
-        if len(data) != plen:
-            logging.info('Length mismatch: %x:%x' % (plen, len(data)))
-            return
-
-        ## Locate the peer record.  Replace with a new one if the
-        ## start time has increased.
-        peer = self.peers.get(addr)
-        if peer is None or stod > peer.stod:
-            peer = self.Peer(self, stod, addr)
-            self.peers[addr] = peer
-            pass
-
-        ## Ignore messages from old instances.
-        if stod < peer.stod:
-            return
-
-        ## Submit the message to be incorporated into the peer record.
-        logging.info('From %s:%d' % addr)
         now = time.time()
-        peer.record(now, pseq, code, data[8:])
+        try:
+            ## TODO: Check if addr[0] is in permitted set.
 
-        if now - self.last_time > self.expiry:
-            for addr, peer in self.peers.items():
-                peer.clear(now)
-                continue
+            ## Valid messages have an 8-byte header.
+            if len(data) < 8:
+                return
+
+            ## Decode the header.
+            code = data[0:1].decode('ascii')
+            if code not in '=dfgiprtux':
+                return
+            pseq = int(data[1])
+            plen = struct.unpack('>H', data[2:4])[0]
+            stod = struct.unpack('>I', data[4:8])[0]
+
+            ## Locate the peer record.  Replace with a new one if the
+            ## start time has increased.
+            peer = self.peers.get(addr)
+            if peer is None or stod > peer.stod:
+                logging.info('%s:%d ev=new-entry' % addr)
+                peer = self.Peer(self, stod, addr)
+                self.peers[addr] = peer
+                pass
+
+            ## Ignore messages from old instances.
+            if stod < peer.stod:
+                return
+
+            ## Valid messages have the specified length.
+            if len(data) != plen:
+                logging.info(('%s:%d seq=%d mt=%s ev=len-mismatch ' +
+                              'hdr=%s exp=%x got=%x') %
+                             (addr + (pseq, code, data[0:8].hex(),
+                                      plen, len(data))))
+                return
+
+            ## Submit the message to be incorporated into the peer
+            ## record.
+            # logging.info('%s:%d seq=%d code mt=%s' % (addr + (pseq, code)))
+            # logging.info('bytes: %s' % data)
+            peer.record(now, pseq, code, data[8:])
+        finally:
+            if now - self.seq_ts > self.seq_timeout:
+                # logging.info('ev=seq-purge')
+                for addr, peer in self.peers.items():
+                    peer.seq_clear(now)
+                    continue
+                self.seq_ts = now
+                pass
+
+            if now - self.id_ts > self.id_timeout:
+                # logging.info('ev=id-purge')
+                for addr, peer in self.peers.items():
+                    peer.id_clear(now)
+                    continue
+                self.id_ts = now
+                pass
             pass
-        self.last_time = now
         return
 
     class Handler(socketserver.DatagramRequestHandler):
@@ -264,6 +342,7 @@ if __name__ == '__main__':
     detailer = Detailer()
     try:
         with socketserver.UDPServer(bindaddr, detailer.handler()) as server:
+            server.max_packet_size = 64 * 1024
             logging.info('Started')
             server.serve_forever()
             pass
