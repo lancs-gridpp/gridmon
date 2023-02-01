@@ -37,7 +37,10 @@ import functools
 import struct
 import re
 import urllib
+import time
+import sys
 from pprint import pprint
+from getopt import gnu_getopt
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]+)')
@@ -70,41 +73,79 @@ class Detailer:
         ## here.  If the old value is different, we purge the old
         ## value from self.peers.
         self.names = { }
+
+        self.timeout = 2
         pass
 
     class Peer:
-        def __init__(self, outer, stod):
+        def __init__(self, outer, stod, addr):
             self.outer = outer
             self.stod = stod
+            self.addr = addr
             self.pseq = None
             self.cache = { }
+            self.expiries = { }
+            self.last_time = time.time()
             pass
 
-        def record(self, code, pseq, data):
+        def clear(now):
+            ## TODO: Clear out expired stuff.
+            pass
+
+        def record(self, now, pseq, code, data):
+            expiry = now + self.outer.timeout
+
             if self.pseq is None:
                 self.pseq = pseq
             else:
-                if pseq - self.pseq < 0:
-                    ## This is too old!
-                    return
-                if pseq in self.cache:
-                    ## This is a duplicate!
-                    return
+                ## Flush out really old stuff.  The opposite half of
+                ## the sequence number range should be cleared.
+                for i in range(0, 128):
+                    cand = (i + 64) % 256
+                    if cand in self.cache:
+                        code, data = self.cache[cand]
+                        del self.cache[cand]
+                        del self.expiries[cand]
+                        if code is not None:
+                            self.process(cand, code, data)
+                            pass
+                        if cand == self.pseq:
+                            self.pseq += 1
+                            pass
+                        pass
+                    continue
                 pass
 
             ## Store the message for processing.
             self.cache[pseq] = (code, data)
 
+            ## Set expiries.
+            for i in range(0, (256 + pseq - self.pseq) % 256):
+                cand = (self.pseq + i) % 256
+                if cand not in self.expiries:
+                    self.expiries[cand] = expiry
+                    pass
+                continue
+
             ## Process all messages before any gaps.
-            while self.pseq in self.cache:
-                code, data = self.cache[self.pseq]
-                self.process(code, data)
+            while self.pseq in self.cache or self.self.pseq in self.expiries:
+                if self.pseq in self.cache:
+                    code, data = self.cache[self.pseq]
+                    del self.cache[self.pseq]
+                    self.process(self.pseq, code, data)
+                else:
+                    got = self.expiries[self.pseq]
+                    if now < got:
+                        break
+                    pass
+                del self.expiries[self.pseq]
                 self.pseq += 1
                 self.pseq %= 256
                 continue
             return
 
-        def process(self, code, data):
+        def process(self, pseq, code, data):
+            logging.info('processing %s:%d@%d' % (self.addr + (pseq,)))
             if code in '=dipux':
                 return self.process_mapping(code, data)
             ## TODO
@@ -139,20 +180,29 @@ class Detailer:
             logging.info('Length mismatch: %x:%x' % (plen, len(data)))
             return
 
-        ## Locate the peer record.
+        ## Locate the peer record.  Replace with a new one if the
+        ## start time has increased.
         peer = self.peers.get(addr)
         if peer is None or stod > peer.stod:
-            peer = self.Peer(self, stod)
+            peer = self.Peer(self, stod, addr)
             self.peers[addr] = peer
             pass
 
-        ## Ignore out-of-date messages.
+        ## Ignore messages from old instances.
         if stod < peer.stod:
             return
 
         ## Submit the message to be incorporated into the peer record.
         logging.info('From %s:%d' % addr)
-        peer.record(code, pseq, data[8:])
+        now = time.time()
+        peer.record(now, pseq, code, data[8:])
+
+        if now - self.last_time > self.expiry:
+            for addr, peer in self.peers.items():
+                peer.clear(now)
+                continue
+            pass
+        self.last_time = now
         return
 
     class Handler(socketserver.DatagramRequestHandler):
@@ -172,8 +222,46 @@ class Detailer:
     pass
 
 if __name__ == '__main__':
+    udp_host = ''
+    udp_port = 9486
+    silent = False
+    log_params = {
+        'format': '%(asctime)s %(message)s',
+        'datefmt': '%Y-%d-%mT%H:%M:%S',
+    }
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:",
+                            [ 'log=', 'log-file=' ])
+    for opt, val in opts:
+        if opt == '-U':
+            udp_host = val
+        elif opt == '-u':
+            udp_port = int(val)
+        elif opt == '-z':
+            silent = True
+        elif opt == '--log':
+            log_params['level'] = getattr(logging, val.upper(), None)
+            if not isinstance(log_params['level'], int):
+                sys.stderr.write('bad log level [%s]\n' % val)
+                sys.exit(1)
+                pass
+            pass
+        elif opt == '--log-file':
+            log_params['filename'] = val
+            pass
+        continue
+
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
+        pass
+
+    logging.basicConfig(**log_params)
+
+    bindaddr = (udp_host, udp_port)
     detailer = Detailer()
-    bindaddr = ('', 9486)
     try:
         with socketserver.UDPServer(bindaddr, detailer.handler()) as server:
             logging.info('Started')
