@@ -111,7 +111,7 @@ class Detailer:
 
         ## Set the timeout for ids.  Remember when we last purged
         ## them.
-        self.id_timeout = 10
+        self.id_timeout = 5 * 60
         self.id_ts = time.time()
         pass
 
