@@ -1891,62 +1891,61 @@ if __name__ == '__main__':
             pass
         continue
 
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
+        pass
+
+    logging.basicConfig(**log_params)
+    if 'filename' in log_params:
+        def handler(signum, frame):
+            logging.root.handlers = []
+            logging.basicConfig(**log_params)
+            logging.info('rotation')
+            pass
+        signal.signal(signal.SIGHUP, handler)
+        pass
+
+    ## Record XRootD stats history, indexed by timestamp and instance.
+    ## Alternatively, prepare to push stats as soon as they're
+    ## converted.
+    rmw = history = metrics.MetricHistory(schema, horizon=horizon)
+    if endpoint is not None:
+        rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
+                                          schema=schema,
+                                          job='xrootd',
+                                          expiry=10*60)
+    elif fake_data:
+        history.install(sample)
+        receiver = None
+        pass
+
+    ## Serve the history on demand.  Even if we don't store anything
+    ## in the history, the HELP, TYPE and UNIT strings are exposed,
+    ## which doesn't seem to be possible with remote-write.
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=history)
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+    logging.info('Created HTTP server on http://%s:%d' %
+                 (http_host, http_port))
+
+    if endpoint is not None or not fake_data:
+        ## Create a UDP socket to listen on, convert XML stats from
+        ## XRootD into timestamped metrics, and drop them into the
+        ## history/remote writer.
+        logging.info('Creating UDP XRootD receiver on %s:%d' %
+                     (udp_host, udp_port))
+        receiver = ReportReceiver((udp_host, udp_port), rmw)
+        pass
+
     try:
         if pidfile is not None:
             with open(pidfile, "w") as f:
                 f.write('%d\n' % os.getpid())
                 pass
-            pass
-
-        if silent:
-            with open('/dev/null', 'w') as devnull:
-                fd = devnull.fileno()
-                os.dup2(fd, sys.stdout.fileno())
-                os.dup2(fd, sys.stderr.fileno())
-                pass
-            pass
-
-        logging.basicConfig(**log_params)
-        if 'filename' in log_params:
-            def handler(signum, frame):
-                logging.root.handlers = []
-                logging.basicConfig(**log_params)
-                logging.info('rotation')
-                pass
-            signal.signal(signal.SIGHUP, handler)
-            pass
-
-        ## Record XRootD stats history, indexed by timestamp and
-        ## instance.  Alternatively, prepare to push stats as soon as
-        ## they're converted.
-        rmw = history = metrics.MetricHistory(schema, horizon=horizon)
-        if endpoint is not None:
-            rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
-                                              schema=schema,
-                                              job='xrootd',
-                                              expiry=10*60)
-        elif fake_data:
-            history.install(sample)
-            receiver = None
-            pass
-
-        ## Serve the history on demand.  Even if we don't store
-        ## anything in the history, the HELP, TYPE and UNIT strings
-        ## are exposed, which doesn't seem to be possible with
-        ## remote-write.
-        partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                            hist=history)
-        webserver = HTTPServer((http_host, http_port), partial_handler)
-        logging.info('Created HTTP server on http://%s:%d' %
-                     (http_host, http_port))
-
-        if endpoint is not None or not fake_data:
-            ## Create a UDP socket to listen on, convert XML stats
-            ## from XRootD into timestamped metrics, and drop them
-            ## into the history/remote writer.
-            logging.info('Creating UDP XRootD receiver on %s:%d' %
-                         (udp_host, udp_port))
-            receiver = ReportReceiver((udp_host, udp_port), rmw)
             pass
 
         ## Use a separate thread to run the server, which we can stop

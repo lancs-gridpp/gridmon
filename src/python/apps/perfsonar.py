@@ -532,56 +532,56 @@ if __name__ == "__main__":
             pass
         continue
 
+    if silent:
+        with open('/dev/null', 'w') as devnull:
+            fd = devnull.fileno()
+            os.dup2(fd, sys.stdout.fileno())
+            os.dup2(fd, sys.stderr.fileno())
+            pass
+        pass
+
+    logging.basicConfig(**log_params)
+    if 'filename' in log_params:
+        def handler(signum, frame):
+            logging.root.handlers = []
+            logging.basicConfig(**log_params)
+            logging.info('rotation')
+            pass
+        signal.signal(signal.SIGHUP, handler)
+        pass
+
+    methist = metrics.MetricHistory(schema, horizon=horizon)
+    perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
+    if metrics_endpoint is None:
+        hist = methist
+    else:
+        hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                           schema=schema,
+                                           job='perfsonar',
+                                           expiry=10*60)
+        pass
+
+    ## Serve the history on demand.  Even if we don't store anything
+    ## in the history, the HELP, TYPE and UNIT strings are exposed,
+    ## which doesn't seem to be possible with remote-write.
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
+    try:
+        webserver = HTTPServer((http_host, http_port), partial_handler)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                             (http_host, http_port))
+        else:
+            logging.error(traceback.format_exc())
+            pass
+        sys.exit(1)
+        pass
+
     try:
         if pidfile is not None:
             with open(pidfile, "w") as f:
                 f.write('%d\n' % os.getpid())
                 pass
-            pass
-
-        if silent:
-            with open('/dev/null', 'w') as devnull:
-                fd = devnull.fileno()
-                os.dup2(fd, sys.stdout.fileno())
-                os.dup2(fd, sys.stderr.fileno())
-                pass
-            pass
-
-        logging.basicConfig(**log_params)
-        if 'filename' in log_params:
-            def handler(signum, frame):
-                logging.root.handlers = []
-                logging.basicConfig(**log_params)
-                logging.info('rotation')
-                pass
-            signal.signal(signal.SIGHUP, handler)
-            pass
-
-        methist = metrics.MetricHistory(schema, horizon=horizon)
-        perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
-        if metrics_endpoint is None:
-            hist = methist
-        else:
-            hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                               schema=schema,
-                                               job='perfsonar',
-                                               expiry=10*60)
-            pass
-
-        ## Serve the history on demand.  Even if we don't store anything
-        ## in the history, the HELP, TYPE and UNIT strings are exposed,
-        ## which doesn't seem to be possible with remote-write.
-        partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
-        try:
-            webserver = HTTPServer((http_host, http_port), partial_handler)
-        except OSError as e:
-            if e.errno == errno.EADDRINUSE:
-                sys.stderr.write('Stopping: address in use: %s:%d\n' % \
-                                 (http_host, http_port))
-            else:
-                logging.error(traceback.format_exc())
-                pass
-            sys.exit(1)
             pass
 
         ## Use a separate thread to run the server, which we can stop by
