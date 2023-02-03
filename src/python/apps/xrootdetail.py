@@ -113,6 +113,39 @@ class Detailer:
         ## them.
         self.id_timeout = 5 * 60
         self.id_ts = time.time()
+
+        self.output_enabled = True
+        pass
+
+    def check_identity(self):
+        ## Go through all peers.  If any are unidentified, halt all
+        ## output.
+        for addr, peer in self.peers.items():
+            if not peer.is_identified():
+                self.output_enabled = False
+                return
+            continue
+        self.output_enabled = True
+        for addr, peer in self.peers.items():
+            peer.continue_output()
+            continue
+        return
+
+    def record_identity(self, host, inst, pgm, peer):
+        ## Check to see if anything has changed.
+        key = (host, inst, pgm)
+        old_addr = self.names.get(key)
+        if old_addr is not None:
+            old = self.peers.get(old_addr)
+            if old is not None and old == peer:
+                return
+
+        ## Replace the old entry.
+        self.names[key] = peer
+        self.peers.pop(old_addr, None)
+        if old is not None:
+            old.discard()
+            pass
         pass
 
     class Peer:
@@ -126,8 +159,62 @@ class Detailer:
             self.ids = { }
             pass
 
+        def is_identified(self):
+            return self.host is not None
+
+        def continue_output(self):
+            pass
+
+        def set_identity(self, host, inst, pgm):
+            if self.host is not None:
+                ## TODO: Should really check that the details haven't
+                ## changed.
+                return
+
+            ## Record our new details.
+            self.host = host
+            self.inst = inst
+            self.pgm = pgm
+
+            ## Make sure any old records with our id are discarded.
+            self.outer.record_identity(host, inst, pgm, self)
+
+            ## Check to see if we can start reporting again.
+            self.outer.check_identity()
+            pass
+
+        def discard():
+            ## TODO: Maybe flush out any old data?
+            pass
+
         def seq_clear(self, now):
-            ## TODO: Clear out expired stuff.
+            if self.pseq is None:
+                return
+
+            ## Clear out expired stuff.
+            while True:
+                ce = self.cache.get(self.pseq)
+                if ce is not None:
+                    code, data, ts = ce
+                    if ts > now:
+                        break
+                    self.process(ts, self.pseq, code, data)
+                    del self.cache[self.pseq]
+                    self.expiries.pop(self.pseq, None)
+                    self.pseq += 1
+                    self.pseq %= 256
+                    continue
+
+                ee = self.expiries.get(self.pseq)
+                if ee is not None:
+                    if ee > now:
+                        break
+                    del self.expiries[self.pseq]
+                    self.pseq += 1
+                    self.pseq %= 256
+                    continue
+
+                break
             pass
 
         def id_clear(self, now):
@@ -145,13 +232,13 @@ class Detailer:
                 ## Flush out really old stuff.  The opposite half of
                 ## the sequence number range should be cleared.
                 for i in range(0, 128):
-                    cand = (i + 64) % 256
+                    cand = (pseq + i + 64) % 256
                     # logging.info('%s:%d #%d purge' % (self.addr + (cand,)))
                     ce = self.cache.pop(cand, None)
                     self.expiries.pop(cand, None)
                     if ce is not None:
-                        code, data = ce
-                        self.process(now, cand, code, data)
+                        code, data, ts = ce
+                        self.process(ts, cand, code, data)
                         if cand == self.pseq:
                             self.pseq += 1
                             pass
@@ -160,7 +247,7 @@ class Detailer:
                 pass
 
             ## Store the message for processing.
-            self.cache[pseq] = (code, data)
+            self.cache[pseq] = (code, data, now)
 
             ## Set expiries.
             for i in range(0, (256 + pseq - self.pseq) % 256):
@@ -203,8 +290,12 @@ class Detailer:
         def process_mapping(self, now, code, data):
             dictid = struct.unpack('>I', data[0:4])[0]
             info = _parse_monmapinfo(data[4:].decode('us-ascii'))
-            if code in '=px':
-                print('Mapping mt=%s %d=' % (code, dictid))
+            if code == '=':
+                return self.set_identity(info['host'],
+                                         info['args']['inst'],
+                                         info['args']['pgm'])
+            elif code in 'px':
+                print('Unused mapping mt=%s %d=' % (code, dictid))
                 pprint(info)
             else:
                 if dictid in self.ids:
@@ -245,10 +336,9 @@ class Detailer:
                 logging.info('%s:%d ev=new-entry' % addr)
                 peer = self.Peer(self, stod, addr)
                 self.peers[addr] = peer
-                pass
-
-            ## Ignore messages from old instances.
-            if stod < peer.stod:
+                self.check_identity()
+            elif stod < peer.stod:
+                ## Ignore messages from old instances.
                 return
 
             ## Valid messages have the specified length.
