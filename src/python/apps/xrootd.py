@@ -1713,6 +1713,7 @@ if __name__ == '__main__':
     import functools
     import sys
     import os
+    import signal
     from getopt import getopt
 
     ## Local libraries
@@ -1848,12 +1849,13 @@ if __name__ == '__main__':
     silent = False
     fake_data = False
     endpoint = None
+    pidfile = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X",
-                        [ 'log=', 'log-file=' ])
+                        [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
@@ -1878,70 +1880,97 @@ if __name__ == '__main__':
             pass
         elif opt == '--log-file':
             log_params['filename'] = val
+        elif opt == '--pid-file':
+            if not val.endswith('.pid'):
+                sys.stderr.write('pid filename %s must end with .pid\n' % val)
+                sys.exit(1)
+                pass
+            pidfile = val
         elif opt == '-X':
             fake_data = True
             pass
         continue
 
-    if silent:
-        with open('/dev/null', 'w') as devnull:
-            fd = devnull.fileno()
-            os.dup2(fd, sys.stdout.fileno())
-            os.dup2(fd, sys.stderr.fileno())
+    try:
+        if pidfile is not None:
+            with open(pidfile, "w") as f:
+                f.write('%d\n' % os.getpid())
+                pass
+            pass
+
+        if silent:
+            with open('/dev/null', 'w') as devnull:
+                fd = devnull.fileno()
+                os.dup2(fd, sys.stdout.fileno())
+                os.dup2(fd, sys.stderr.fileno())
+                pass
+            pass
+
+        logging.basicConfig(**log_params)
+        if 'filename' in log_params:
+            def handler(signum, frame):
+                logging.root.handlers = []
+                logging.basicConfig(**log_params)
+                logging.info('rotation')
+                pass
+            signal.signal(signal.SIGHUP, handler)
+            pass
+
+        ## Record XRootD stats history, indexed by timestamp and
+        ## instance.  Alternatively, prepare to push stats as soon as
+        ## they're converted.
+        rmw = history = metrics.MetricHistory(schema, horizon=horizon)
+        if endpoint is not None:
+            rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
+                                              schema=schema,
+                                              job='xrootd',
+                                              expiry=10*60)
+        elif fake_data:
+            history.install(sample)
+            receiver = None
+            pass
+
+        ## Serve the history on demand.  Even if we don't store
+        ## anything in the history, the HELP, TYPE and UNIT strings
+        ## are exposed, which doesn't seem to be possible with
+        ## remote-write.
+        partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                            hist=history)
+        webserver = HTTPServer((http_host, http_port), partial_handler)
+        logging.info('Created HTTP server on http://%s:%d' %
+                     (http_host, http_port))
+
+        if endpoint is not None or not fake_data:
+            ## Create a UDP socket to listen on, convert XML stats
+            ## from XRootD into timestamped metrics, and drop them
+            ## into the history/remote writer.
+            logging.info('Creating UDP XRootD receiver on %s:%d' %
+                         (udp_host, udp_port))
+            receiver = ReportReceiver((udp_host, udp_port), rmw)
+            pass
+
+        ## Use a separate thread to run the server, which we can stop
+        ## by calling shutdown().
+        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                    args=(webserver,))
+        srv_thrd.start()
+
+        try:
+            receiver.keep_polling()
+        except KeyboardInterrupt:
+            pass
+
+        history.halt()
+        logging.info('Halted history')
+        webserver.shutdown()
+        logging.info('Halted webserver')
+        receiver.halt()
+        logging.info('Halted receiver')
+        webserver.server_close()
+        logging.info('Server stopped.')
+    finally:
+        if pidfile is not None:
+            os.remove(pidfile)
             pass
         pass
-
-    logging.basicConfig(**log_params)
-
-    ## Record XRootD stats history, indexed by timestamp and instance.
-    ## Alternatively, prepare to push stats as soon as they're
-    ## converted.
-    rmw = history = metrics.MetricHistory(schema, horizon=horizon)
-    if endpoint is not None:
-        rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
-                                          schema=schema,
-                                          job='xrootd',
-                                          expiry=10*60)
-    elif fake_data:
-        history.install(sample)
-        receiver = None
-        pass
-
-    ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT strings are exposed,
-    ## which doesn't seem to be possible with remote-write.
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                        hist=history)
-    webserver = HTTPServer((http_host, http_port), partial_handler)
-    logging.info('Created HTTP server on http://%s:%d' %
-                 (http_host, http_port))
-
-    if endpoint is not None or not fake_data:
-        ## Create a UDP socket to listen on, convert XML stats from
-        ## XRootD into timestamped metrics, and drop them into the
-        ## history/remote writer.
-        logging.info('Creating UDP XRootD receiver on %s:%d' %
-                     (udp_host, udp_port))
-        receiver = ReportReceiver((udp_host, udp_port), rmw)
-        pass
-
-    ## Use a separate thread to run the server, which we can stop by
-    ## calling shutdown().
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,))
-    srv_thrd.start()
-
-    try:
-        receiver.keep_polling()
-    except KeyboardInterrupt:
-        pass
-
-    history.halt()
-    logging.info('Halted history')
-    webserver.shutdown()
-    logging.info('Halted webserver')
-    receiver.halt()
-    logging.info('Halted receiver')
-    webserver.server_close()
-    logging.info('Server stopped.')
     pass

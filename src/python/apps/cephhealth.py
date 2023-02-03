@@ -589,6 +589,7 @@ if __name__ == '__main__':
     from http.server import HTTPServer
     import threading
     import os
+    import signal
     import pprint
     import subprocess
     import errno
@@ -619,13 +620,15 @@ if __name__ == '__main__':
     metrics_endpoint = None
     disk_limit = None
     skip = True
+    pidfile = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     schedule = set()
     opts, args = gnu_getopt(sys.argv[1:], "zh:l:T:t:s:M:",
-                            [ 'disk-limit=', 'log=', 'log-file=', 'now' ])
+                            [ 'disk-limit=', 'log=', 'log-file=', 'now',
+                              'pid-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val)
@@ -657,6 +660,12 @@ if __name__ == '__main__':
             pass
         elif opt == '--log-file':
             log_params['filename'] = val
+        elif opt == '--pid-file':
+            if not val.endswith('.pid'):
+                sys.stderr.write('pid filename %s must end with .pid\n' % val)
+                sys.exit(1)
+                pass
+            pidfile = val
         elif opt == '--disk-limit':
             disk_limit = int(val)
             pass
@@ -670,112 +679,133 @@ if __name__ == '__main__':
         schedule.add(tod)
         pass
 
-    if silent:
-        with open('/dev/null', 'w') as devnull:
-            fd = devnull.fileno()
-            os.dup2(fd, sys.stdout.fileno())
-            os.dup2(fd, sys.stderr.fileno())
-            pass
-        pass
-
-    logging.basicConfig(**log_params)
-
-    def get_next_in_schedule(schedule):
-        ## What time is it now?  When did this day start?  When does
-        ## tomorrow start?
-        calnow = datetime.datetime.now(tz=datetime.timezone.utc)
-        caltoday = datetime.datetime(calnow.year, calnow.month, calnow.day,
-                                     tzinfo=datetime.timezone.utc)
-        tod = (calnow - caltoday).total_seconds()
-        caltomorrow = caltoday + datetime.timedelta(days=1)
-        tomorrow = datetime.datetime.timestamp(caltomorrow)
-        today = datetime.datetime.timestamp(caltoday)
-
-        ## Try each time of day in the schedule, to see whether it is next
-        ## today or tomorrow.
-        best = None
-        for scand in schedule:
-            cand = scand + (tomorrow if scand < tod else today)
-            if best is None or cand < best:
-                best = cand
-                continue
-        return best
-
-    ## Define a remote-write endpoint, and an object to pull disc
-    ## metrics on command, and remote-write them immediately to that
-    ## endpoint.
-    rmw = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                      schema=schema,
-                                      job='cephhealth',
-                                      expiry=horizon)
-    pusher = CephHealthMetricPusher(rmw, cmdpfx=args, limit=disk_limit)
-
-    ## Define how to get on-demand metrics.  Use a separate thread to
-    ## run the server, which we can stop by calling
-    ## webserver.shutdown().
-    # cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
-    methist = metrics.MetricHistory(schema, horizon=horizon)
-    updater = functools.partial(update_live_metrics, methist, args=args)
-    #nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                        hist=methist,
-                                        prescrape=updater)
     try:
-        webserver = HTTPServer((http_host, http_port), partial_handler)
-    except OSError as e:
-        if e.errno == errno.EADDRINUSE:
-            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
-                             (http_host, http_port))
-        else:
-            logging.error(traceback.format_exc())
+        if pidfile is not None:
+            with open(pidfile, "w") as f:
+                f.write('%d\n' % os.getpid())
+                pass
             pass
-        sys.exit(1)
-        pass
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,),
-                                daemon=True)
-    srv_thrd.start()
 
-    logging.info('Schedule: %s' % [
-        '%02d:%02d:%02d' % (int(x / 3600),
-                            int(x / 60) % 60,
-                            x % 60) for x in schedule ])
+        if silent:
+            with open('/dev/null', 'w') as devnull:
+                fd = devnull.fileno()
+                os.dup2(fd, sys.stdout.fileno())
+                os.dup2(fd, sys.stderr.fileno())
+                pass
+            pass
 
-    def check_delay(hist, start):
-        if not hist.check():
-            return False
-        now = int(time.time())
-        delay = start - now
-        return delay > 0
+        logging.basicConfig(**log_params)
+        if 'filename' in log_params:
+            def handler(signum, frame):
+                logging.root.handlers = []
+                logging.basicConfig(**log_params)
+                logging.info('rotation')
+                pass
+            signal.signal(signal.SIGHUP, handler)
+            pass
 
-    try:
-        while methist.check():
-            if skip:
-                skip = False
+        def get_next_in_schedule(schedule):
+            ## What time is it now?  When did this day start?  When does
+            ## tomorrow start?
+            calnow = datetime.datetime.now(tz=datetime.timezone.utc)
+            caltoday = datetime.datetime(calnow.year, calnow.month, calnow.day,
+                                         tzinfo=datetime.timezone.utc)
+            tod = (calnow - caltoday).total_seconds()
+            caltomorrow = caltoday + datetime.timedelta(days=1)
+            tomorrow = datetime.datetime.timestamp(caltomorrow)
+            today = datetime.datetime.timestamp(caltoday)
+
+            ## Try each time of day in the schedule, to see whether it is next
+            ## today or tomorrow.
+            best = None
+            for scand in schedule:
+                cand = scand + (tomorrow if scand < tod else today)
+                if best is None or cand < best:
+                    best = cand
+                    continue
+            return best
+
+        ## Define a remote-write endpoint, and an object to pull disc
+        ## metrics on command, and remote-write them immediately to that
+        ## endpoint.
+        rmw = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                          schema=schema,
+                                          job='cephhealth',
+                                          expiry=horizon)
+        pusher = CephHealthMetricPusher(rmw, cmdpfx=args, limit=disk_limit)
+
+        ## Define how to get on-demand metrics.  Use a separate thread to
+        ## run the server, which we can stop by calling
+        ## webserver.shutdown().
+        # cephcoll = CephHealthCollector(args, lag=lag, horizon=horizon)
+        methist = metrics.MetricHistory(schema, horizon=horizon)
+        updater = functools.partial(update_live_metrics, methist, args=args)
+        #nowmets = functools.partial(get_osd_complaints_as_metrics, args=args)
+        partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                            hist=methist,
+                                            prescrape=updater)
+        try:
+            webserver = HTTPServer((http_host, http_port), partial_handler)
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                                 (http_host, http_port))
             else:
-                ## Get data now, and push it.
-                logging.info('Getting latest data')
-                pusher.update()
-                logging.info('Installed')
+                logging.error(traceback.format_exc())
+                pass
+            sys.exit(1)
+            pass
+        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                    args=(webserver,),
+                                    daemon=True)
+        srv_thrd.start()
 
-            ## Work out when we do this again.
-            start = get_next_in_schedule(schedule)
-            lim = datetime.datetime.fromtimestamp(start)
-            logging.info('Waiting until %s in %s' % \
-                         (lim,
-                          datetime.timedelta(seconds=start - time.time())))
-            while check_delay(methist, start):
-                time.sleep(1)
-                continue
-    except InterruptedError:
-        pass
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        sys.exit(1)
+        logging.info('Schedule: %s' % [
+            '%02d:%02d:%02d' % (int(x / 3600),
+                                int(x / 60) % 60,
+                                x % 60) for x in schedule ])
+
+        def check_delay(hist, start):
+            if not hist.check():
+                return False
+            now = int(time.time())
+            delay = start - now
+            return delay > 0
+
+        try:
+            while methist.check():
+                if skip:
+                    skip = False
+                else:
+                    ## Get data now, and push it.
+                    logging.info('Getting latest data')
+                    pusher.update()
+                    logging.info('Installed')
+
+                ## Work out when we do this again.
+                start = get_next_in_schedule(schedule)
+                lim = datetime.datetime.fromtimestamp(start)
+                logging.info('Waiting until %s in %s' % \
+                             (lim,
+                              datetime.timedelta(seconds=start - time.time())))
+                while check_delay(methist, start):
+                    time.sleep(1)
+                    continue
+        except InterruptedError:
+            pass
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            sys.exit(1)
+        finally:
+            logging.info('Polling halted')
+            methist.halt()
+            webserver.shutdown()
+            pass
     finally:
-        logging.info('Polling halted')
-        methist.halt()
-        webserver.shutdown()
+        if pidfile is not None:
+            os.remove(pidfile)
+            pass
         pass
+    pass

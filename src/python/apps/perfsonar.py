@@ -472,6 +472,7 @@ if __name__ == "__main__":
     import threading
     import errno
     import os
+    import signal
 
     ## Local libraries
     import metrics
@@ -485,12 +486,13 @@ if __name__ == "__main__":
     lag = 20
     fore = 0
     aft = 60
+    pidfile = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     opts, args = getopt(sys.argv[1:], "zh:t:T:E:M:S:l:f:a:",
-                        [ 'log=', 'log-file=' ])
+                        [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-h':
             horizon = int(val) * 60
@@ -519,95 +521,121 @@ if __name__ == "__main__":
             pass
         elif opt == '--log-file':
             log_params['filename'] = val
+        elif opt == '--pid-file':
+            if not val.endswith('.pid'):
+                sys.stderr.write('pid filename %s must end with .pid\n' % val)
+                sys.exit(1)
+                pass
+            pidfile = val
         elif opt == '-S':
             endpoint = 'https://' + val + '/esmond/perfsonar/archive/'
             pass
         continue
 
-    if silent:
-        with open('/dev/null', 'w') as devnull:
-            fd = devnull.fileno()
-            os.dup2(fd, sys.stdout.fileno())
-            os.dup2(fd, sys.stderr.fileno())
-            pass
-        pass
-
-    logging.basicConfig(**log_params)
-
-    methist = metrics.MetricHistory(schema, horizon=horizon)
-    perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
-    if metrics_endpoint is None:
-        hist = methist
-    else:
-        hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                           schema=schema,
-                                           job='perfsonar',
-                                           expiry=10*60)
-        pass
-
-    ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT strings are exposed,
-    ## which doesn't seem to be possible with remote-write.
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
     try:
-        webserver = HTTPServer((http_host, http_port), partial_handler)
-    except OSError as e:
-        if e.errno == errno.EADDRINUSE:
-            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
-                             (http_host, http_port))
+        if pidfile is not None:
+            with open(pidfile, "w") as f:
+                f.write('%d\n' % os.getpid())
+                pass
+            pass
+
+        if silent:
+            with open('/dev/null', 'w') as devnull:
+                fd = devnull.fileno()
+                os.dup2(fd, sys.stdout.fileno())
+                os.dup2(fd, sys.stderr.fileno())
+                pass
+            pass
+
+        logging.basicConfig(**log_params)
+        if 'filename' in log_params:
+            def handler(signum, frame):
+                logging.root.handlers = []
+                logging.basicConfig(**log_params)
+                logging.info('rotation')
+                pass
+            signal.signal(signal.SIGHUP, handler)
+            pass
+
+        methist = metrics.MetricHistory(schema, horizon=horizon)
+        perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
+        if metrics_endpoint is None:
+            hist = methist
         else:
-            logging.error(traceback.format_exc())
+            hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                               schema=schema,
+                                               job='perfsonar',
+                                               expiry=10*60)
             pass
-        sys.exit(1)
-        pass
 
-    ## Use a separate thread to run the server, which we can stop by
-    ## calling shutdown().
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,),
-                                daemon=True)
-    srv_thrd.start()
-
-    def check_delay(hist, start):
-        if not hist.check():
-            return False
-        now = int(time.time())
-        delay = start - now
-        return delay > 0
-
-    def keep_polling(hist, coll):
+        ## Serve the history on demand.  Even if we don't store anything
+        ## in the history, the HELP, TYPE and UNIT strings are exposed,
+        ## which doesn't seem to be possible with remote-write.
+        partial_handler = functools.partial(metrics.MetricsHTTPHandler, hist=methist)
         try:
-            while hist.check():
-                logging.info('Getting latest data')
-                start = int(time.time()) + 30
-                new_data = coll.update()
-                hist.install(new_data)
-                logging.info('Installed')
-                while check_delay(hist, start):
-                    time.sleep(1)
-                    pass
-                continue
-        except InterruptedError:
+            webserver = HTTPServer((http_host, http_port), partial_handler)
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                                 (http_host, http_port))
+            else:
+                logging.error(traceback.format_exc())
+                pass
+            sys.exit(1)
             pass
+
+        ## Use a separate thread to run the server, which we can stop by
+        ## calling shutdown().
+        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                    args=(webserver,),
+                                    daemon=True)
+        srv_thrd.start()
+
+        def check_delay(hist, start):
+            if not hist.check():
+                return False
+            now = int(time.time())
+            delay = start - now
+            return delay > 0
+
+        def keep_polling(hist, coll):
+            try:
+                while hist.check():
+                    logging.info('Getting latest data')
+                    start = int(time.time()) + 30
+                    new_data = coll.update()
+                    hist.install(new_data)
+                    logging.info('Installed')
+                    while check_delay(hist, start):
+                        time.sleep(1)
+                        pass
+                    continue
+            except InterruptedError:
+                pass
+            except KeyboardInterrupt:
+                pass
+            except Exception as e:
+                logging.error(traceback.format_exc())
+                pass
+            logging.info('Polling halted')
+            pass
+
+        try:
+            keep_polling(hist, perfcoll)
         except KeyboardInterrupt:
             pass
         except Exception as e:
             logging.error(traceback.format_exc())
+            sys.exit(1)
             pass
-        logging.info('Polling halted')
-        pass
 
-    try:
-        keep_polling(hist, perfcoll)
-    except KeyboardInterrupt:
+        methist.halt()
+        logging.info('Halted history')
+        webserver.server_close()
+        logging.info('Server stopped.')
+    finally:
+        if pidfile is not None:
+            os.remove(pidfile)
+            pass
         pass
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        sys.exit(1)
-        pass
-
-    methist.halt()
-    logging.info('Halted history')
-    webserver.server_close()
-    logging.info('Server stopped.')
     pass

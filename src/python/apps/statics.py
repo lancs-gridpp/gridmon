@@ -359,6 +359,7 @@ if __name__ == '__main__':
     import yaml
     import sys
     import os
+    import signal
     import time
     import subprocess
     import re
@@ -377,13 +378,14 @@ if __name__ == '__main__':
     silent = False
     horizon = 120
     metrics_endpoint = None
+    pidfile = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     confs = list()
     opts, args = getopt(sys.argv[1:], "zh:t:T:M:f:",
-                        [ 'log=', 'log-file=' ])
+                        [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-z':
             silent = True
@@ -404,175 +406,200 @@ if __name__ == '__main__':
                 sys.exit(1)
                 pass
             pass
+        elif opt == '--pid-file':
+            if not val.endswith('.pid'):
+                sys.stderr.write('pid filename %s must end with .pid\n' % val)
+                sys.exit(1)
+                pass
+            pidfile = val
         elif opt == '--log-file':
             log_params['filename'] = val
             pass
         continue
 
-    if silent:
-        with open('/dev/null', 'w') as devnull:
-            fd = devnull.fileno()
-            os.dup2(fd, sys.stdout.fileno())
-            os.dup2(fd, sys.stderr.fileno())
-            pass
-        pass
-
-    logging.basicConfig(**log_params)
-
-
-    ## Serve HTTP metric documentation.
-    methist = metrics.MetricHistory(schema, horizon=horizon)
-    if metrics_endpoint is None:
-        hist = methist
-    else:
-        hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                           schema=schema,
-                                           job='statics', expiry=horizon)
-        pass
-
-    ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT strings are exposed,
-    ## which doesn't seem to be possible with remote-write.
-    updater = functools.partial(update_live_metrics, methist, confs)
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                        hist=methist,
-                                        prescrape=updater)
     try:
-        webserver = HTTPServer((http_host, http_port), partial_handler)
-    except OSError as e:
-        if e.errno == errno.EADDRINUSE:
-            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
-                             (http_host, http_port))
-        else:
-            logging.error(traceback.format_exc())
-            pass
-        sys.exit(1)
-        pass
-
-    ## Use a separate thread to run the server, which we can stop by
-    ## calling shutdown().
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,),
-                                daemon=True)
-    srv_thrd.start()
-
-    pingfmt = re.compile(r'rtt min/avg/max/mdev = ' +
-                         r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+)/' +
-                         r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+) ms')
-    tbase = time.time()
-    try:
-        while True:
-            ## Read machine specs from -f arguments.
-            specs = { }
-            for arg in confs:
-                with open(arg, 'r') as fh:
-                    doc = yaml.load(fh, Loader=yaml.SafeLoader)
-                    merge(specs, doc.get('machines', { }), mismatch=+1)
-                    pass
-                continue
-
-            ## Prepare to gather metrics.
-            beat = int(time.time() * 1000) / 1000.0
-            logging.info('Starting sweep')
-            data = { }
-            data.setdefault(beat, { })['heartbeat'] = beat
-
-            ## Ping all interfaces.
-            for node, nspec in specs.items():
-                if not nspec.get('enabled', True):
-                    continue
-                for iface, sub in nspec.get('interfaces', { }).items():
-                    cmd = [ 'ping', '-c', '1', '-w', '1', iface ]
-                    logging.info('Ping %s of %s' % (iface, node))
-                    logging.debug('Command: %s' % cmd)
-                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                            universal_newlines=True)
-                    lines = proc.stdout.readlines()
-                    rc = proc.wait()
-                    assert rc is not None
-                    pt = int(time.time() * 1000) / 1000.0
-                    entry = data.setdefault(pt, { })
-                    nent = entry.setdefault('node', { }).setdefault(node, { })
-                    ient = nent.setdefault('iface', { }).setdefault(iface, { })
-                    if rc == 0:
-                        mt = pingfmt.match(lines[-1])
-                        if mt is not None:
-                            ient['rtt'] = float(mt.group(1))
-                            ient['up'] = 1
-                            pass
-                        pass
-                    else:
-                        logging.debug('No pong for %s of %s' % (iface, node))
-                        ient['up'] = 0
-                        pass
-                    continue
-                continue
-
-            ## Add in the static metrics.
-            entry = data.setdefault(int(time.time() * 1000) / 1000.0, { })
-            for node, nspec in specs.items():
-                if not nspec.get('enabled', True):
-                    continue
-
-                nent = entry.setdefault('node', { }).setdefault(node, { })
-
-                for k in [ 'building', 'room', 'rack', 'level', 'osds' ]:
-                    if k in nspec:
-                        nent[k] = nspec[k]
-                        pass
-                    continue
-                nent['roles'] = set(nspec.get('roles', [ ]))
-                nent['static'] = True
-
-                ## Get sets of interfaces with specific roles.  Also, copy
-                ## other attributes.
-                iroles = { }
-                for iface, sub in nspec.get('interfaces', { }).items():
-                    for role in sub.get('roles', [ ]):
-                        iroles.setdefault(role, set()).add(iface)
-                        continue
-                    ient = nent.setdefault('iface', { }).setdefault(iface, { })
-                    for k in [ 'network', 'device' ]:
-                        if k in sub:
-                            ient[k] = sub[k]
-                            pass
-                        continue
-                    ient['roles'] = set(sub.get('roles', [ ]))
-                    continue
-
-                ## Process XRootD expectations.
-                if 'xroot' in iroles:
-                    nent['xroot-host'] = list(iroles['xroot'])[0]
-                    xrds = nent.setdefault('xroots', { })
-                    for xname in nspec.get('xroots', { }):
-                        xrds.setdefault(xname, { }) \
-                            .setdefault('pgms', set()).add('xrootd')
-                        continue
-                    for xname in nspec.get('cmses', { }):
-                        xrds.setdefault(xname, { }) \
-                            .setdefault('pgms', set()).add('cmsd')
-                        continue
-                    pass
-                continue
-
-            logging.info('Sweep complete')
-            hist.install(data)
-
-            ## Wait up to a minute before the next run.
-            tbase += 60
-            rem = tbase - time.time()
-            if rem > 0:
-                time.sleep(rem)
+        if pidfile is not None:
+            with open(pidfile, "w") as f:
+                f.write('%d\n' % os.getpid())
                 pass
+            pass
 
-            continue
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        sys.exit(1)
-        pass
+        if silent:
+            with open('/dev/null', 'w') as devnull:
+                fd = devnull.fileno()
+                os.dup2(fd, sys.stdout.fileno())
+                os.dup2(fd, sys.stderr.fileno())
+                pass
+            pass
 
-    methist.halt()
-    webserver.server_close()
+        logging.basicConfig(**log_params)
+        if 'filename' in log_params:
+            def handler(signum, frame):
+                logging.root.handlers = []
+                logging.basicConfig(**log_params)
+                logging.info('rotation')
+                pass
+            signal.signal(signal.SIGHUP, handler)
+            pass
+
+        ## Serve HTTP metric documentation.
+        methist = metrics.MetricHistory(schema, horizon=horizon)
+        if metrics_endpoint is None:
+            hist = methist
+        else:
+            hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                               schema=schema,
+                                               job='statics', expiry=horizon)
+            pass
+
+        ## Serve the history on demand.  Even if we don't store anything
+        ## in the history, the HELP, TYPE and UNIT strings are exposed,
+        ## which doesn't seem to be possible with remote-write.
+        updater = functools.partial(update_live_metrics, methist, confs)
+        partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                            hist=methist,
+                                            prescrape=updater)
+        try:
+            webserver = HTTPServer((http_host, http_port), partial_handler)
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                                 (http_host, http_port))
+            else:
+                logging.error(traceback.format_exc())
+                pass
+            sys.exit(1)
+            pass
+
+        ## Use a separate thread to run the server, which we can stop by
+        ## calling shutdown().
+        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                    args=(webserver,),
+                                    daemon=True)
+        srv_thrd.start()
+
+        pingfmt = re.compile(r'rtt min/avg/max/mdev = ' +
+                             r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+)/' +
+                             r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+) ms')
+        tbase = time.time()
+        try:
+            while True:
+                ## Read machine specs from -f arguments.
+                specs = { }
+                for arg in confs:
+                    with open(arg, 'r') as fh:
+                        doc = yaml.load(fh, Loader=yaml.SafeLoader)
+                        merge(specs, doc.get('machines', { }), mismatch=+1)
+                        pass
+                    continue
+
+                ## Prepare to gather metrics.
+                beat = int(time.time() * 1000) / 1000.0
+                logging.info('Starting sweep')
+                data = { }
+                data.setdefault(beat, { })['heartbeat'] = beat
+
+                ## Ping all interfaces.
+                for node, nspec in specs.items():
+                    if not nspec.get('enabled', True):
+                        continue
+                    for iface, sub in nspec.get('interfaces', { }).items():
+                        cmd = [ 'ping', '-c', '1', '-w', '1', iface ]
+                        logging.info('Ping %s of %s' % (iface, node))
+                        logging.debug('Command: %s' % cmd)
+                        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                                universal_newlines=True)
+                        lines = proc.stdout.readlines()
+                        rc = proc.wait()
+                        assert rc is not None
+                        pt = int(time.time() * 1000) / 1000.0
+                        entry = data.setdefault(pt, { })
+                        nent = entry.setdefault('node', { }).setdefault(node, { })
+                        ient = nent.setdefault('iface', { }).setdefault(iface, { })
+                        if rc == 0:
+                            mt = pingfmt.match(lines[-1])
+                            if mt is not None:
+                                ient['rtt'] = float(mt.group(1))
+                                ient['up'] = 1
+                                pass
+                            pass
+                        else:
+                            logging.debug('No pong for %s of %s' % (iface, node))
+                            ient['up'] = 0
+                            pass
+                        continue
+                    continue
+
+                ## Add in the static metrics.
+                entry = data.setdefault(int(time.time() * 1000) / 1000.0, { })
+                for node, nspec in specs.items():
+                    if not nspec.get('enabled', True):
+                        continue
+
+                    nent = entry.setdefault('node', { }).setdefault(node, { })
+
+                    for k in [ 'building', 'room', 'rack', 'level', 'osds' ]:
+                        if k in nspec:
+                            nent[k] = nspec[k]
+                            pass
+                        continue
+                    nent['roles'] = set(nspec.get('roles', [ ]))
+                    nent['static'] = True
+
+                    ## Get sets of interfaces with specific roles.  Also, copy
+                    ## other attributes.
+                    iroles = { }
+                    for iface, sub in nspec.get('interfaces', { }).items():
+                        for role in sub.get('roles', [ ]):
+                            iroles.setdefault(role, set()).add(iface)
+                            continue
+                        ient = nent.setdefault('iface', { }).setdefault(iface, { })
+                        for k in [ 'network', 'device' ]:
+                            if k in sub:
+                                ient[k] = sub[k]
+                                pass
+                            continue
+                        ient['roles'] = set(sub.get('roles', [ ]))
+                        continue
+
+                    ## Process XRootD expectations.
+                    if 'xroot' in iroles:
+                        nent['xroot-host'] = list(iroles['xroot'])[0]
+                        xrds = nent.setdefault('xroots', { })
+                        for xname in nspec.get('xroots', { }):
+                            xrds.setdefault(xname, { }) \
+                                .setdefault('pgms', set()).add('xrootd')
+                            continue
+                        for xname in nspec.get('cmses', { }):
+                            xrds.setdefault(xname, { }) \
+                                .setdefault('pgms', set()).add('cmsd')
+                            continue
+                        pass
+                    continue
+
+                logging.info('Sweep complete')
+                hist.install(data)
+
+                ## Wait up to a minute before the next run.
+                tbase += 60
+                rem = tbase - time.time()
+                if rem > 0:
+                    time.sleep(rem)
+                    pass
+
+                continue
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            sys.exit(1)
+            pass
+
+        methist.halt()
+        webserver.server_close()
+    finally:
+        if pidfile is not None:
+            os.remove(pidfile)
+            pass
+        pass
     pass
