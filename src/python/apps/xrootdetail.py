@@ -154,6 +154,7 @@ class Detailer:
             self.stod = stod
             self.addr = addr
             self.pseq = None
+            self.host = None
             self.cache = { }
             self.expiries = { }
             self.ids = { }
