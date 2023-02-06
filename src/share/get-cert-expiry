@@ -32,6 +32,46 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export PYTHONPATH="${0%/*}/python3/apps.zip"
-export GRIDMON_SHAREDIR="${0%/*}"
-exec python3 -m statics "$@"
+RHOST="$HOSTNAME"
+while [ $# -gt 0 ] ; do
+    arg="$1" ; shift
+    case "$arg" in
+	(--name=*)
+	    SERVER="${arg#*=}"
+	    ;;
+
+	(--connect=*)
+	    if [[ "${arg#*=}" =~ ^([^:]+)(:([0-9]+))?$ ]] ; then
+		RHOST="${BASH_REMATCH[1]}"
+		RPORT="${BASH_REMATCH[3]}"
+	    else
+		printf >&2 '%s: bad connect address: %s\n' "$0" "${arg#*=}"
+		exit 1
+	    fi
+	    ;;
+
+	(--no-name)
+	    unset SERVER
+	    ;;
+
+	(-*)
+	    printf >&2 '%s: unknown switch %s\n' "$0" "$arg"
+	    exit 1
+	    ;;
+
+	(*)
+	    printf >&2 '%s: unknown argument %s\n' "$0" "$arg"
+	    exit 1
+	    ;;
+    esac
+done
+
+ARGS=()
+ARGS+=( -connect "$RHOST"${RPORT:+:"$RPORT"} )
+ARGS+=( -servername "${SERVER:-"${RHOST}"}" )
+# declare -p ARGS
+
+DATETXT="$(true | openssl s_client "${ARGS[@]}" 2> /dev/null | \
+openssl x509 -noout -dates | grep notAfter | cut -d= -f2)"
+if [ -z "$DATETXT" ] ; then exit 1 ; fi
+date '+%s' -d "$DATETXT"

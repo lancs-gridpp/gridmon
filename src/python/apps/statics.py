@@ -78,6 +78,31 @@ schema = [
     },
 
     {
+        'base': 'ssl_expiry',
+        'help': 'time of SSL certificate expiry',
+        'type': 'counter',
+        'unit': 'seconds',
+        'select': lambda e: \
+        [ (n, i, p, c) for n in e.get('node', { })
+          if 'iface' in e['node'][n]
+          for i in e['node'][n]['iface']
+          if 'ssl' in e['node'][n]['iface'][i]
+          for p in e['node'][n]['iface'][i]['ssl']
+          for c in e['node'][n]['iface'][i]['ssl'][p]
+          if 'expiry' in e['node'][n]['iface'][i]['ssl'][p][c] ],
+        'samples': {
+            '': ('%.3f',
+                 lambda t, d: d['node'][t[0]]['iface'][t[1]]['ssl'] \
+                 [t[2]][t[3]]['expiry']),
+        },
+        'attrs': {
+            'iface': ('%s', lambda t, d: t[1]),
+            'port': ('%s', lambda t, d: t[2]),
+            'cert': ('%s', lambda t, d: t[3]),
+        },
+    },
+
+    {
         'base': 'ip_ping',
         'help': 'RTT to IP',
         'type': 'gauge',
@@ -375,6 +400,7 @@ if __name__ == '__main__':
 
     http_host = "localhost"
     http_port = 9363
+    ssl_interval = 6 * 60 * 60
     silent = False
     horizon = 120
     metrics_endpoint = None
@@ -464,6 +490,9 @@ if __name__ == '__main__':
         sys.exit(1)
         pass
 
+    share_dir = os.environ['GRIDMON_SHAREDIR']
+    cert_exp_cmd = os.path.join(share_dir, 'get-cert-expiry')
+
     try:
         if pidfile is not None:
             with open(pidfile, "w") as f:
@@ -481,7 +510,8 @@ if __name__ == '__main__':
         pingfmt = re.compile(r'rtt min/avg/max/mdev = ' +
                              r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+)/' +
                              r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+) ms')
-        tbase = time.time()
+        tbase = int(time.time() * 1000) / 1000.0
+        sslbase = tbase - ssl_interval
         try:
             while True:
                 ## Read machine specs from -f arguments.
@@ -498,6 +528,13 @@ if __name__ == '__main__':
                 logging.info('Starting sweep')
                 data = { }
                 data.setdefault(beat, { })['heartbeat'] = beat
+
+                if beat - sslbase >= ssl_interval:
+                    sslbase += ssl_interval
+                    do_ssl = True
+                else:
+                    do_ssl = False
+                    pass
 
                 ## Ping all interfaces.
                 for node, nspec in specs.items():
@@ -526,6 +563,37 @@ if __name__ == '__main__':
                         else:
                             logging.debug('No pong for %s of %s' % (iface, node))
                             ient['up'] = 0
+                            pass
+                        from pprint import pprint
+                        if do_ssl:
+                            sslent = ient.setdefault('ssl', { })
+                            for sslch in sub.get('ssl-checks', []):
+                                port = sslch.get('port')
+                                port = 443 if port is None else int(port)
+                                name = sslch.get('name', iface)
+                                addr = iface + ':' + str(port)
+                                cmd = [ cert_exp_cmd, '--connect=' + addr,
+                                        '--name=' + name ]
+                                logging.debug('ssl cmd: %s' % cmd)
+                                proc = subprocess.Popen(cmd,
+                                                        stdout=subprocess.PIPE,
+                                                        universal_newlines=True)
+                                lines = proc.stdout.readlines()
+                                rc = proc.wait()
+                                assert rc is not None
+                                certent = sslent.setdefault(port, { }) \
+                                    .setdefault(name, { })
+                                certent['error'] = rc
+                                if rc == 0 and len(lines) > 0:
+                                    exptime = int(lines[0])
+                                    certent['expiry'] = exptime
+                                    logging.info('%s:%d (%s) = %d' %
+                                                 (iface, port, name, exptime))
+                                    pass
+                                continue
+                            pass
+                        else:
+                            logging.info('no ssl now')
                             pass
                         continue
                     continue
