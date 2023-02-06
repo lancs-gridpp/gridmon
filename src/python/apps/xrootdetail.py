@@ -265,7 +265,7 @@ class Detailer:
                 ce = self.cache.pop(self.pseq, None)
                 got = self.expiries.pop(self.pseq, None)
                 if ce is not None:
-                    code, data = ce
+                    code, data, ts = ce
                     self.process(now, self.pseq, code, data)
                 elif got is not None:
                     if now < got:
