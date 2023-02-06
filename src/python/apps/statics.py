@@ -592,9 +592,6 @@ if __name__ == '__main__':
                                     pass
                                 continue
                             pass
-                        else:
-                            logging.info('no ssl now')
-                            pass
                         continue
                     continue
 
