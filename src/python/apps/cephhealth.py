@@ -483,6 +483,8 @@ def update_live_metrics(hist, args=[]):
     ## Get general health status.
     data['checks'] = get_status_metrics(args=args)
 
+    ## TODO: Get details from ceph health detail --format=json.
+
     ## Record this data as almost immediate metrics.
     now = int(time.time() * 1000) / 1000
     rec = { now: data }
