@@ -43,6 +43,7 @@ from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
 
+
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
 _spaces = re.compile(r'\s+')
@@ -87,7 +88,7 @@ def _parse_monmapinfo(text):
                         'r': rv,
                         'o': ov,
                     }
-                    orga.append(frozendict(orge))
+                    orga.append(orge)
                     continue
                 args['or'] = tuple(orga)
                 del args['o']
@@ -97,8 +98,72 @@ def _parse_monmapinfo(text):
             pass
         result['args'] = args
         continue
-    return frozendict(result)
+    return result
 
+def _decode_mapping(stod, code, pseq, data):
+    dictid = struct.unpack('>I', data[0:4])[0]
+    info = _parse_monmapinfo(data[4:].decode('us-ascii'))
+    status = 'server-id' if code == '=' else \
+        'user-path-id' if code == 'd' else \
+        'user-info-id' if code == 'i' else \
+        'log-auth-id' if code == 'u' else \
+        'user-info-id' if code == 'p' else \
+        'xfer-id' if code == 'x' else None
+    assert status is not None
+    return {
+        'stod': stod,
+        'seq': pseq,
+        'status': status,
+        'data': {
+            'info': info,
+            'dictid': dictid,
+        },
+    }
+
+def _decode_packet(data):
+    ## Valid messages have an 8-byte header.
+    if len(data) < 8:
+        return {
+            'stod': stod,
+            'seq': pseq,
+            'status': 'too-short',
+            'data': {
+                'unparsed': data,
+            },
+        }
+
+    ## Decode the header.
+    code = data[0:1].decode('ascii')
+    # if code not in '=dfgiprtux':
+    #     return
+    pseq = int(data[1])
+    plen = struct.unpack('>H', data[2:4])[0]
+    stod = struct.unpack('>I', data[4:8])[0]
+
+    if len(data) != plen:
+        return {
+            'stod': stod,
+            'seq': pseq,
+            'status': 'len-mismatch',
+            'data': {
+                'expected': plen,
+                'unparsed': data[8:],
+                'code': code,
+            },
+        }
+
+    if code in '=dipux':
+        return _decode_mapping(stod, code, pseq, data[8:])
+
+    return {
+        'stod': stod,
+        'seq': pseq,
+        'status': 'unrecognized',
+        'data': {
+            'unparsed': data[8:],
+            'code': code,
+        },
+    }
 
 
 class Peer:
@@ -119,9 +184,11 @@ class Peer:
         ## the expiry time.
         self.pseq = None
         self.plim = None
-        self.pmax = 200
+        self.pmax = 32
         self.psz = 256
         self.cache = [ None ] * self.psz
+
+        self.expected = None
 
         ## Learn identities supplied by the server, as specified by
         ## monitor mapping messages.  Index is the dictid.  Values are
@@ -167,133 +234,91 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
-    def seq_clear(self, now):
-        logging.debug('%s:%d pseq=%d plim=%d (pre-clear)' %
+    def seq_clear(self, now, stop_if_early=False, cur=None):
+        logging.debug('peer=%s:%d ev=clear pseq=%d plim=%d)' %
                       (self.addr + (self.pseq, self.plim)))
         assert self.offset(self.plim) <= self.pmax
 
         ## Clear out expired stuff.
-        while self.pseq != self.plim:
-            ce = self.cache[self.pseq]
-            if ce is None:
-                break
-            elif type(ce) is tuple:
-                code, data, ts = ce
-                self.decode(ts, self.pseq, code, data)
-            elif ce is not None:
-                if ce > now:
-                    break
-                pass
-            self.cache[self.pseq] = None
-            self.pseq = self.advance(self.pseq, 1)
-            continue
+        try:
+            while self.pseq != self.plim and self.pseq != cur:
+                advance = False
+                ce = self.cache[self.pseq]
+                assert ce is not None
+                # if ce is None:
+                #     ## This shouldn't really happen.
+                #     assert False
+                #     # logging.debug('peer=%s:%d stop at missing %d' %
+                #     #               (self.addr + (self.pseq,)))
+                #     return
+
+                try:
+                    if type(ce) is tuple:
+                        code, data, ts, exp = ce
+                        if stop_if_early and exp > now:
+                            return
+                        advance = True
+                        self.decode(ts, self.pseq, code, data)
+                    else:
+                        if ce > now:
+                            # logging.debug('peer=%s:%d stop at expected %d' %
+                            #               (self.addr + (self.pseq,)))
+                            return
+                        advance = True
+                        pass
+                finally:
+                    if advance:
+                        self.cache[self.pseq] = None
+                        self.pseq = self.advance(self.pseq, 1)
+                        pass
+                    pass
+                continue
+        finally:
+            # logging.debug('peer=%s:%d pseq=%d plim=%d (post-clear%s)' %
+            #               (self.addr + (self.pseq, self.plim,
+            #                             ' SIE' if stop_if_early else '')))
+            pass
         pass
 
     ## Accept a packet for decoding.  If the sequence number is not
     ## the one expected, cache it in anticipation of earlier ones
     ## arriving out of order.
-    def record(self, now, pseq, code, data):
-        ## If we have to wait for other packets, at what point do we
-        ## give up?
-        expiry = now + self.detailer.seq_timeout
-
-        if self.pseq is None:
-            ## This is the very first packet.  Assume we've just
-            ## missed a few before.
-            self.plim = self.pseq = self.advance(pseq, -10)
-            logging.debug('%s:%d #%d plim=pseq=%d (initial)' %
-                          (self.addr + (pseq, self.pseq)))
-            pass
-        assert self.offset(self.plim) <= self.pmax
-
-        ## If we're outside the acceptable range, give up on missing
-        ## packets until the range engulfs the new packet's sequence
-        ## number.
-        while self.offset(pseq) > self.pmax - 1:
-            ## Pop out the expected packet, and decode if available.
-            ce = self.cache[self.pseq]
-            if type(ce) is tuple:
-                code, data, ts = ce
-                self.decode(ts, self.pseq, code, data)
-            elif ce is not None:
-                logging.warning('%s:%d #%d (abandoned on rcpt of %s)' %
-                                (self.addr + (self.pseq, pseq)))
-                pass
-            self.cache[self.pseq] = None
-
-            ## Advance to the next entry.  Also advance our limit if
-            ## we would overtake it.
-            nv = self.advance(self.pseq, 1)
-            if self.plim == self.pseq:
-                self.plim = nv
-                pass
-            self.pseq = nv
-            continue
-        assert self.offset(self.plim) <= self.pmax
-        assert self.offset(pseq) <= self.pmax
-        logging.debug('%s:%d #%d pseq=%d plim=%d (cleared until window)' %
-                      (self.addr + (pseq, self.pseq, self.plim)))
-
-        ## Store the message for decoding.
-        self.cache[pseq] = (code, data, now)
-        assert self.offset(self.plim) < self.pmax
-        logging.debug('%s:%d #%d pseq=%d plim=%d (inserted)' %
-                      (self.addr + (pseq, self.pseq, self.plim)))
-
-        ## Set expiries on missing entries just before this one.
-        while self.offset(self.plim) < self.offset(pseq):
-            self.cache[self.plim] = expiry
-            self.plim = self.advance(self.plim, 1)
-            continue
-
-        ## Step over the one we've just added.
-        if pseq == self.plim:
-            self.plim = self.advance(self.plim, 1)
-            pass
-        assert self.offset(self.plim) <= self.pmax
-        logging.debug('%s:%d #%d pseq=%d plim=%d (expiries)' %
-                      (self.addr + (pseq, self.pseq, self.plim)))
-
-        ## Decode all messages before any gaps that haven't expired.
-        self.seq_clear(now)
-        assert self.offset(self.plim) <= self.pmax
-
-        logging.debug('%s:%d #%d pseq=%d plim=%d' %
-                      (self.addr + (pseq, self.pseq, self.plim)))
-        n = self.offset(self.plim)
-        for i in range(0, n):
-            sn = self.advance(self.pseq, i)
-            ce = self.cache[sn]
-            if type(ce) is tuple:
-                msg = '%s (%d bytes)' % (code, len(data))
-            elif ce is None:
-                msg = 'None'
-            else:
-                msg = str(ce - now) + "s left"
-                pass
-            logging.debug('%s:%d [%d] = %s' % (self.addr + (sn, msg)))
-            continue
+    def record(self, now, pseq, status, parsed):
+        print('\n%d: %s' % (pseq, status))
+        pprint(parsed)
         return
 
     ## Decode the tail of a message.  Messages should be resequenced
-    ## before being delivered to this method.  'now' is the timestamp
+    ## before being delivered to this method.  'ts' is the timestamp
     ## of the message.  'pseq' is its sequence number, which should
     ## only be significant for logging.  'code' is the message type (a
     ## single character).  'data' is the remainder of the message; the
     ## first 8 bytes have been decoded.
-    def decode(self, now, pseq, code, data):
-        logging.info('%s:%d #%d ev=decoding code=%s bytes=%d' %
+    def decode(self, ts, pseq, code, data):
+        quit = False
+        if self.expected is not None and self.expected != pseq:
+            logging.warning('peer=%s:%d ev=bad-seq nseq=%d exp=%d' %
+                            (self.addr + (pseq, self.expected)))
+            quit = True
+            pass
+        self.expected = self.advance(pseq, 1)
+        logging.info('peer=%s:%d ev=dec nseq=%d c="%s" bytes=%d' %
                      (self.addr + (pseq, code, len(data))))
-        if code in '=dipux':
-            return self.decode_mapping(now, code, data)
+        try:
 
-        ## TODO
+            ## TODO
 
-        # logging.error('%s:%d seq=%d mt=%s ev=unk-code' %
-        #               (self.addr + (pseq, code)))
-        return
+            # logging.error('peer=%s:%d seq=%d mt=%s ev=unk-code' %
+            #               (self.addr + (pseq, code)))
+            return
+        finally:
+            # if quit:
+            #     logging.debug('exiting')
+            #     sys.exit(1)
+            #     pass
+            pass
 
-    def decode_mapping(self, now, code, data):
+    def decode_mapping(self, ts, code, data):
         dictid = struct.unpack('>I', data[0:4])[0]
         info = _parse_monmapinfo(data[4:].decode('us-ascii'))
         if code == '=':
@@ -305,7 +330,7 @@ class Peer:
             pprint(info)
         else:
             self.ids[dictid] = {
-                "expiry": now + self.detailer.id_timeout,
+                "expiry": ts + self.detailer.id_timeout,
                 "code": code,
                 "info": info,
             }
@@ -395,23 +420,14 @@ class Detailer:
         try:
             ## TODO: Check if addr[0] is in permitted set.
 
-            ## Valid messages have an 8-byte header.
-            if len(data) < 8:
-                return
-
-            ## Decode the header.
-            code = data[0:1].decode('ascii')
-            if code not in '=dfgiprtux':
-                return
-            pseq = int(data[1])
-            plen = struct.unpack('>H', data[2:4])[0]
-            stod = struct.unpack('>I', data[4:8])[0]
+            ## Parse the packet.
+            stod, pseq, status, parsed = _decode_packet(data)
 
             ## Locate the peer record.  Replace with a new one if the
             ## start time has increased.
             peer = self.peers.get(addr)
             if peer is None or stod > peer.stod:
-                logging.info('%s:%d ev=new-entry' % addr)
+                logging.info('peer=%s:%d ev=new-entry' % addr)
                 peer = Peer(self, stod, addr)
                 self.peers[addr] = peer
                 self.check_identity()
@@ -419,26 +435,19 @@ class Detailer:
                 ## Ignore messages from old instances.
                 return
 
-            ## Valid messages have the specified length.
-            if len(data) != plen:
-                logging.info(('%s:%d seq=%d mt=%s ev=len-mismatch ' +
-                              'hdr=%s exp=%x got=%x') %
-                             (addr + (pseq, code, data[0:8].hex(),
-                                      plen, len(data))))
-                return
-
             ## Submit the message to be incorporated into the peer
             ## record.
-            # logging.info('%s:%d seq=%d code mt=%s' % (addr + (pseq, code)))
+            # logging.info('peer=%s:%d seq=%d code mt=%s' % (addr + (pseq, code)))
             # logging.info('bytes: %s' % data)
-            peer.record(now, pseq, code, data[8:])
+            peer.record(now, pseq, status, parsed)
         finally:
-            if now - self.seq_ts > self.seq_timeout:
-                for addr, peer in self.peers.items():
-                    peer.seq_clear(self.seq_ts)
-                    continue
-                self.seq_ts = now
-                pass
+            # if now - self.seq_ts > self.seq_timeout:
+            #     logging.debug('clear out')
+            #     for addr, peer in self.peers.items():
+            #         peer.seq_clear(self.seq_ts)
+            #         continue
+            #     self.seq_ts = now
+            #     pass
 
             if now - self.id_ts > self.id_timeout:
                 for addr, peer in self.peers.items():
