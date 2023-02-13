@@ -42,7 +42,7 @@ import sys
 from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
-
+from reseq import FixedSizeResequencer as Resequencer
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
@@ -100,70 +100,279 @@ def _parse_monmapinfo(text):
         continue
     return result
 
-def _decode_mapping(stod, code, pseq, data):
-    dictid = struct.unpack('>I', data[0:4])[0]
-    info = _parse_monmapinfo(data[4:].decode('us-ascii'))
+def _decode_mapping(code, buf):
+    dictid = struct.unpack('>I', buf[0:4])[0]
+    info = _parse_monmapinfo(buf[4:].decode('us-ascii'))
     status = 'server-id' if code == '=' else \
         'user-path-id' if code == 'd' else \
         'user-info-id' if code == 'i' else \
         'log-auth-id' if code == 'u' else \
-        'user-info-id' if code == 'p' else \
+        'file-purge-id' if code == 'p' else \
         'xfer-id' if code == 'x' else None
     assert status is not None
+    return (status, { 'info': info, 'dictid': dictid })
+
+def _decode_trace(buf):
+    assert len(buf) == 16
+
+    ## OPEN
+    if buf[0] == 0x80:
+        flen = struct.unpack('>Q', buf[0:8])[0] & 0xffffffffffffff
+        dictid = struct.unpack('>I', buf[12:16])[0]
+        return ('open', { 'len': flen, 'id': dictid })
+
+    ## READV or READU
+    if buf[0] == 0x90 or buf[0] == 0x91:
+        rvid = buf[1]
+        typ = 'readv' if buf[0] == 0x90 else 'readu'
+        nseg = struct.unpack('>H', buf[2:4])[0]
+        blen = struct.unpack('>i', buf[8:12])[0]
+        dictid = struct.unpack('>I', buf[12:16])[0]
+        return (typ, { 'nsegs': nseg, 'len': blen, 'id': dictid })
+
+    ## APPID
+    if buf[0] == 0xa0:
+        name = buf[4:16].decode('us-ascii')
+        return ('appid', { 'name': name })
+
+    ## CLOSE
+    if buf[0] == 0xc0:
+        rtotsh = buf[1]
+        wtotsh = buf[2]
+        rtot = struct.unpack('>I', buf[4:8])[0] << rtotsh
+        wtot = struct.unpack('>I', buf[8:12])[0] << wtotsh
+        dictid = struct.unpack('>I', buf[12:16])[0]
+        return ('close', { 'wtot': wtot, 'rtot': rtot, 'id': dictid })
+
+    ## DISCONNECT
+    if buf[0] == 0xd0:
+        forced = (buf[1] & 0x01) != 0
+        boundp = (buf[1] & 0x02) != 0
+        dur = struct.unpack('>i', buf[8:12])[0]
+        dictid = struct.unpack('>I', buf[12:16])[0]
+        return ('disconnect', { 'dur': dur, 'id': dictid })
+
+    ## WINDOW
+    if buf[0] == 0xe0:
+        srvid = struct.unpack('>Q', buf[0:8])[0] & 0xffffffffffff
+        gapstart = struct.unpack('>I', buf[8:12])[0]
+        gapend = struct.unpack('>I', buf[12:16])[0]
+        return ('window', { 'g0': gapstart, 'g1': gapend })
+
+    ## READ/WRITE REQUEST
+    if buf[0] <= 0x7f:
+        offset = struct.unpack('>Q', buf[0:8])[0]
+        blen = struct.unpack('>i', buf[8:12])[0]
+        if blen < 0:
+            blen = -blen
+            typ = 'write'
+        else:
+            typ = 'read'
+        dictid = struct.unpack('>I', buf[12:16])[0]
+        return (typ, { 'off': offset, 'len': blen, 'id': dictid })
+
+    return ('unk', { 'dat': buf })
+
+_recTval_isClose = 0
+_recTval_isOpen = 1
+_recTval_isTime = 2
+_recTval_isXfr = 3
+_recTval_isDisc = 4
+
+def _decode_filehdr(buf):
+    recType = buf[0]
+    flags = buf[1]
+    sz = struct.unpack('>H', buf[2:4])[0]
+
+    ## isTime
+    if recType == _recTval_isTime:
+        recs = (struct.unpack('>h', buf[4:6])[0],
+                struct.unpack('>h', buf[6:8])[0])
+        return (recType, flags, sz, recs)
+
+    dictid = struct.unpack('>I', buf[4:8])[0]
+    return (recType, flags, sz, dictid)
+
+def _decode_file_time(flags, extr, buf):
+    beg = struct.unpack('>I', buf[0:4])[0]
+    end = struct.unpack('>I', buf[4:8])[0]
+    result = { 'beg': beg, 'end': end, 'nxfr': extr[0], 'nrec': extr[1] }
+    if flags & 0x01:
+        result['sid'] = struct.unpack('>Q', buf[8:16])[0]
+        pass
+    return ('time', result)
+
+def _decode_file_disc(flags, dictid, buf):
+    return ('disc', { 'user': dictid })
+
+def _decode_file_lfn(buf):
+    dictid = struct.unpack('>I', buf[0:4])[0]
+    for i in range(4, len(buf)):
+        if buf[i] == 0:
+            break
+        continue
+    lfn = buf[4:i].decode('us-ascii')
+    buf = buf[i:]
+    return ((dictid, lfn), buf)
+
+def _decode_file_open(flags, dictid, buf):
+    fsz = struct.unpack('>Q', buf[0:8])[0]
+    rw = (flags & 0x02) != 0
+    result = { 'file': dictid, 'rw': rw }
+    if flags & 0x01:
+        result['ufn'], ignored = _decode_file_lfn(buf[8:])
+        pass
+    return ('open', result)
+
+def _decode_file_ops(buf):
+    nrd = struct.unpack('>I', buf[0:4])[0]
+    nrdv = struct.unpack('>I', buf[4:8])[0]
+    nwr = struct.unpack('>I', buf[8:12])[0]
+    nseg_min = struct.unpack('>H', buf[12:14])[0]
+    nseg_max = struct.unpack('>H', buf[14:16])[0]
+    nseg = struct.unpack('>Q', buf[16:24])[0]
+    rd_min = struct.unpack('>I', buf[24:28])[0]
+    rd_max = struct.unpack('>I', buf[28:32])[0]
+    rdv_min = struct.unpack('>I', buf[32:36])[0]
+    rdv_max = struct.unpack('>I', buf[36:40])[0]
+    wr_min = struct.unpack('>I', buf[40:44])[0]
+    wr_max = struct.unpack('>I', buf[44:48])[0]
     return {
-        'stod': stod,
-        'seq': pseq,
-        'status': status,
-        'data': {
-            'info': info,
-            'dictid': dictid,
+        'readv': {
+            'calls': nrdv,
+            'size_min': rdv_min,
+            'size_max': rdv_max,
+        },
+        'segs': {
+            'total': nseg,
+            'segs_min': nseg_min,
+            'segs_max': nseg_max,
+        },
+        'read': {
+            'calls': nrd,
+            'size_min': rd_min,
+            'size_max': rd_max,
+        },
+        'write': {
+            'calls': nwr,
+            'size_min': wr_min,
+            'size_max': wr_max,
         },
     }
 
-def _decode_packet(data):
+def _decode_file_ssq(buf):
+    rd_sq = struct.unpack('>Q', buf[0:8])[0]
+    rdv_sq = struct.unpack('>Q', buf[8:16])[0]
+    seg_sq = struct.unpack('>Q', buf[16:24])[0]
+    wr_sq = struct.unpack('>Q', buf[24:32])[0]
+    return {
+        'read': { 'sqsum': rd_sq },
+        'readv': { 'sqsum': rdv_sq },
+        'segs': { 'sqsum': seg_sq },
+        'write': { 'sqsum': wr_sq },
+    }
+
+def _decode_file_close(flags, dictid, buf):
+    from utils import merge
+
+    brd = struct.unpack('>Q', buf[0:8])[0]
+    brdv = struct.unpack('>Q', buf[8:16])[0]
+    bwr = struct.unpack('>Q', buf[16:24])[0]
+    buf = buf[24:]
+    result = {
+        'file': dictid,
+        'read': { 'bytes': brd },
+        'readv': { 'bytes': brdv },
+        'write': { 'bytes': bwr },
+        'forced': (flags & 0x1) != 0,
+    }
+
+    if flags & 0x02:
+        ops = _decode_file_ops(buf)
+        merge(result, ops)
+        buf = buf[48:]
+        pass
+
+    if flags & 0x04:
+        ssq = _decode_file_ssq(buf)
+        merge(result, ssq)
+        pass
+
+    return ('close', result)
+
+def _decode_file_xfr(flags, dictid, buf):
+    brd = struct.unpack('>Q', buf[0:8])[0]
+    brdv = struct.unpack('>Q', buf[8:16])[0]
+    bwr = struct.unpack('>Q', buf[16:24])[0]
+    return ('xfr',
+            { 'file': dictid, 'read': brd, 'readv': brdv, 'write': bwr })
+
+def _decode_file_unk(typ, flags, extr, buf):
+    return ('unk' + str(typ), { 'flags': flags, 'extr': extr, 'buf': buf })
+
+def _decode_file(buf):
+    result = list()
+    while len(buf) >= 8:
+        recType, flags, sz, extr = _decode_filehdr(buf[0:8])
+        bdy = buf[8:sz]
+        buf = buf[sz:]
+        if recType == _recTval_isTime:
+            result += (_decode_file_time(flags, extr, bdy),)
+        elif recType == _recTval_isClose:
+            result += (_decode_file_close(flags, extr, bdy),)
+        elif recType == _recTval_isOpen:
+            result += (_decode_file_open(flags, extr, bdy),)
+        elif recType == _recTval_isDisc:
+            result += (_decode_file_disc(flags, extr, bdy),)
+        elif recType == _recTval_isXfr:
+            result += (_decode_file_xfr(flags, extr, bdy),)
+        else:
+            result += (_decode_file_unk(recType, flags, extr, bdy),)
+        continue
+    return ('file', { 'entries': result, 'rem': buf })
+
+def _decode_traces(buf):
+    result = list()
+    while len(buf) >= 16:
+        hdr = buf[0:16]
+        result += _decode_trace(hdr)
+        buf = buf[16:]
+        continue
+    return ('trace', { 'info': result, 'tail': buf })
+
+def _decode_packet(buf):
     ## Valid messages have an 8-byte header.
-    if len(data) < 8:
-        return {
-            'stod': stod,
-            'seq': pseq,
-            'status': 'too-short',
-            'data': {
-                'unparsed': data,
-            },
-        }
+    if len(buf) < 8:
+        return (stod, pseq, 'too-short', { 'unparsed': buf, })
 
     ## Decode the header.
-    code = data[0:1].decode('ascii')
+    code = buf[0:1].decode('ascii')
     # if code not in '=dfgiprtux':
     #     return
-    pseq = int(data[1])
-    plen = struct.unpack('>H', data[2:4])[0]
-    stod = struct.unpack('>I', data[4:8])[0]
+    pseq = int(buf[1])
+    plen = struct.unpack('>H', buf[2:4])[0]
+    stod = struct.unpack('>I', buf[4:8])[0]
 
-    if len(data) != plen:
-        return {
-            'stod': stod,
-            'seq': pseq,
-            'status': 'len-mismatch',
-            'data': {
-                'expected': plen,
-                'unparsed': data[8:],
-                'code': code,
-            },
-        }
+    if len(buf) != plen:
+        return (stod, pseq, 'len-mismatch', {
+            'expected': plen,
+            'unparsed': buf[8:],
+            'code': code,
+        })
 
     if code in '=dipux':
-        return _decode_mapping(stod, code, pseq, data[8:])
+        return (stod, pseq) + _decode_mapping(code, buf[8:])
 
-    return {
-        'stod': stod,
-        'seq': pseq,
-        'status': 'unrecognized',
-        'data': {
-            'unparsed': data[8:],
-            'code': code,
-        },
-    }
+    if code == 't':
+        return (stod, pseq) + _decode_traces(buf[8:])
+
+    if code == 'f':
+        return (stod, pseq) + _decode_file(buf[8:])
+
+    return (stod, pseq, 'unrecognized', {
+        'unparsed': buf[8:],
+        'code': code,
+    })
 
 
 class Peer:
@@ -173,22 +382,11 @@ class Peer:
         self.addr = addr
         self.host = None
 
-        ## Keep a cache of unparsed messages, indexed by sequence
-        ## number.  'pseq' is the next expected sequence number (8
-        ## bits).  Each entry in 'cache' is a tuple(code, data, ts) if
-        ## the message is present.  'code' is the message type, a
-        ## single character.  'data' is the message excluding the
-        ## header (which has already been parsed).  'ts' is the
-        ## timestamp when the message arrived.  If the message is not
-        ## present, the value is just a number (not a tuple), giving
-        ## the expiry time.
-        self.pseq = None
-        self.plim = None
-        self.pmax = 32
-        self.psz = 256
-        self.cache = [ None ] * self.psz
-
-        self.expected = None
+        ## Prepare to resequence Monitor Map messages.
+        map_action = functools.partial(Peer.act_on_map, self)
+        self.map_seq = Resequencer(256, 32, map_action,
+                                   timeout=detailer.seq_timeout,
+                                   logpfx='peer=%s:%d seq=map' % self.addr)
 
         ## Learn identities supplied by the server, as specified by
         ## monitor mapping messages.  Index is the dictid.  Values are
@@ -199,13 +397,6 @@ class Peer:
         ## specified timestamp.
         self.ids = { }
         pass
-
-    def offset(self, idx):
-        return (idx + self.psz - self.pseq) % self.psz
-
-    def advance(self, base, ln):
-        assert ln >= -self.psz
-        return (base + ln + self.psz) % self.psz
 
     ## Flush out identities with old expiry times.
     def id_clear(self, now):
@@ -234,131 +425,84 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
-    def seq_clear(self, now, stop_if_early=False, cur=None):
-        logging.debug('peer=%s:%d ev=clear pseq=%d plim=%d)' %
-                      (self.addr + (self.pseq, self.plim)))
-        assert self.offset(self.plim) <= self.pmax
-
-        ## Clear out expired stuff.
-        try:
-            while self.pseq != self.plim and self.pseq != cur:
-                advance = False
-                ce = self.cache[self.pseq]
-                assert ce is not None
-                # if ce is None:
-                #     ## This shouldn't really happen.
-                #     assert False
-                #     # logging.debug('peer=%s:%d stop at missing %d' %
-                #     #               (self.addr + (self.pseq,)))
-                #     return
-
-                try:
-                    if type(ce) is tuple:
-                        code, data, ts, exp = ce
-                        if stop_if_early and exp > now:
-                            return
-                        advance = True
-                        self.decode(ts, self.pseq, code, data)
-                    else:
-                        if ce > now:
-                            # logging.debug('peer=%s:%d stop at expected %d' %
-                            #               (self.addr + (self.pseq,)))
-                            return
-                        advance = True
-                        pass
-                finally:
-                    if advance:
-                        self.cache[self.pseq] = None
-                        self.pseq = self.advance(self.pseq, 1)
-                        pass
-                    pass
-                continue
-        finally:
-            # logging.debug('peer=%s:%d pseq=%d plim=%d (post-clear%s)' %
-            #               (self.addr + (self.pseq, self.plim,
-            #                             ' SIE' if stop_if_early else '')))
-            pass
+    def act_on_trace(self, ts, info):
+        ## TODO
         pass
 
-    ## Accept a packet for decoding.  If the sequence number is not
-    ## the one expected, cache it in anticipation of earlier ones
-    ## arriving out of order.
-    def record(self, now, pseq, status, parsed):
-        print('\n%d: %s' % (pseq, status))
-        pprint(parsed)
-        return
+    def act_on_map(self, ts, pseq, status, data):
+        logging.info('peer=%s:%d seq=map num=%d %s=%.20ss' %
+                     (self.addr + (pseq, status, data)))
 
-    ## Decode the tail of a message.  Messages should be resequenced
-    ## before being delivered to this method.  'ts' is the timestamp
-    ## of the message.  'pseq' is its sequence number, which should
-    ## only be significant for logging.  'code' is the message type (a
-    ## single character).  'data' is the remainder of the message; the
-    ## first 8 bytes have been decoded.
-    def decode(self, ts, pseq, code, data):
-        quit = False
-        if self.expected is not None and self.expected != pseq:
-            logging.warning('peer=%s:%d ev=bad-seq nseq=%d exp=%d' %
-                            (self.addr + (pseq, self.expected)))
-            quit = True
-            pass
-        self.expected = self.advance(pseq, 1)
-        logging.info('peer=%s:%d ev=dec nseq=%d c="%s" bytes=%d' %
-                     (self.addr + (pseq, code, len(data))))
-        try:
+        ## A server-id mapping has a zero dictid, and just describes
+        ## the peer in more detail.
+        if status == 'server-id':
+            dictid = data['dictid']
+            info = data['info']
+            self.detailer.record_identity(info['host'],
+                                          info['args']['inst'],
+                                          info['args']['pgm'],
+                                          self)
+            assert dictid == 0
+            return
 
+        ## An xfer-id mapping has a zero dictid, so whatever it is,
+        ## it's not actually defining a mapping.
+        if status == 'xfer-id':
+            dictid = data['dictid']
+            assert dictid == 0
             ## TODO
-
-            # logging.error('peer=%s:%d seq=%d mt=%s ev=unk-code' %
-            #               (self.addr + (pseq, code)))
             return
-        finally:
-            # if quit:
-            #     logging.debug('exiting')
-            #     sys.exit(1)
-            #     pass
-            pass
 
-    def decode_mapping(self, ts, code, data):
-        dictid = struct.unpack('>I', data[0:4])[0]
-        info = _parse_monmapinfo(data[4:].decode('us-ascii'))
-        if code == '=':
-            return self.decode_identity(info['host'],
-                                         info['args']['inst'],
-                                         info['args']['pgm'])
-        elif code in 'px':
-            print('Unused mapping mt=%s %d=' % (code, dictid))
-            pprint(info)
-        else:
-            self.ids[dictid] = {
-                "expiry": ts + self.detailer.id_timeout,
-                "code": code,
-                "info": info,
-            }
-            pass
+        ## A file-purge-id mapping has a zero dictid, so whatever it
+        ## is, it's not actually defining a mapping.
+        if status == 'file-purge-id':
+            dictid = data['dictid']
+            assert dictid == 0
+            ## TODO
+            return
+
+        ## Trace messages are not mapping messages, but they appear to
+        ## belong to the same sequence.
+        if status == 'trace':
+            info = data['info']
+            self.act_on_trace(ts, info)
+            return
+
+        ## Although there are several types of mapping, they all seem
+        ## to use the same dictionary space, so one dict is enough for
+        ## all types.
+        info = data['info']
+        dictid = data['dictid']
+        self.ids[dictid] = {
+            "expiry": ts + self.detailer.id_timeout,
+            "type": status,
+            "info": info,
+        }
         return
 
-    def decode_identity(self, host, inst, pgm):
-        if self.host is not None:
-            ## TODO: Should really check that the details haven't
-            ## changed.
+    ## Accept a decoded packet for processing.  This usually means
+    ## working out what sequence it belongs to, and submitting it for
+    ## resequencing.
+    def process(self, now, pseq, status, data):
+        ## All *-id and trace messages belong to the same sequence.
+        if status[-3:] == '-id' or status == 'trace':
+            #print('#%d %s: %s' % (pseq, status, data))
+            self.map_seq.submit(now, pseq, status, data)
             return
 
-        ## Record our new details.
-        self.host = host
-        self.inst = inst
-        self.pgm = pgm
+        if status == 'file':
+            sid = data['entries'][0][1]['sid']
+            print('#%d %s: file: sid=%012x %s' % (pseq, status, sid, data))
+            return
 
-        ## Make sure any old records with our id are discarded.
-        self.detailer.record_identity(host, inst, pgm, self)
+        if 'code' in data:
+            print('#%d %s: not handling code=%s' % (pseq, status, data['code']))
+            return
 
-        ## Check to see if we can start reporting again.
-        self.detailer.check_identity()
-        pass
+        print('#%d %s: ignored' % (pseq, status))
+        return
 
     pass
-
-
-
 
 
 class Detailer:
@@ -415,13 +559,15 @@ class Detailer:
             pass
         pass
 
-    def record(self, addr, data):
+    def record(self, addr, buf):
         now = time.time()
         try:
             ## TODO: Check if addr[0] is in permitted set.
 
             ## Parse the packet.
-            stod, pseq, status, parsed = _decode_packet(data)
+            #stod, pseq, status, parsed
+            stod, pseq, status, data = _decode_packet(buf)
+            logging.debug('%s:%d(%d) %d %s' % (addr + (stod, pseq, status)))
 
             ## Locate the peer record.  Replace with a new one if the
             ## start time has increased.
@@ -438,8 +584,11 @@ class Detailer:
             ## Submit the message to be incorporated into the peer
             ## record.
             # logging.info('peer=%s:%d seq=%d code mt=%s' % (addr + (pseq, code)))
-            # logging.info('bytes: %s' % data)
-            peer.record(now, pseq, status, parsed)
+            # logging.info('bytes: %s' % buf[:32].hex())
+            peer.process(now, pseq, status, data)
+        except Exception as e:
+            logging.error('failed to parse %s' % buf)
+            raise e
         finally:
             # if now - self.seq_ts > self.seq_timeout:
             #     logging.debug('clear out')

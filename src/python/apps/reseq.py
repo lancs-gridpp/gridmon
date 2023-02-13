@@ -30,13 +30,28 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 class FixedSizeResequencer:
-    def __init__(self, scope, window, action, timeout=3, logpfx='seq'):
+    def __init__(self, scope, window, action, timeout=3, drop=None, lost=None,
+                 init_expect=10, logpfx='seq'):
+        if scope < 1:
+            raise IndexError('scope %d must be positive' % scope)
+        if window < 1:
+            raise IndexError('window %d must be positive' % window)
+        if window >= scope:
+            raise IndexError('window %d must >= scope %d' % (window, scope))
+        if init_expect > window:
+            raise IndexError('init_expect %d must <= window %d' %
+                             (init_expect, window))
         self.pmax = window
         self.psz = scope
         self.timeout = timeout
         self.action = action
+        self.drop = drop
+        self.lost = lost
         self.logpfx = logpfx
+        self.init_expect = init_expect
 
         self.pseq = None
         self.plim = None
@@ -51,10 +66,14 @@ class FixedSizeResequencer:
         return (base + ln + self.psz) % self.psz
 
     def submit(self, now, pseq, *args, **kwargs):
+        if pseq < 0 or pseq >= self.psz:
+            raise IndexError('pseq %d not in [0, %d)' % (pseq, self.psz))
         if self.pseq is None:
             ## This is the very first entry.  Assume we've just missed
             ## a few before.
-            self.plim = self.pseq = self._advance(pseq, -10)
+            self.plim = self.pseq = self._advance(pseq, -self.init_expect)
+            logging.debug('%s ev=init pseq=%d plim=%d nseq=%d' %
+                          (self.logpfx, self.pseq, self.plim, pseq))
             pass
         assert self._offset(self.plim) <= self.pmax
 
@@ -63,7 +82,8 @@ class FixedSizeResequencer:
         ## encounter a missing entry that hasn't expired.  Stop if we
         ## meet the slot for our new entry; even if the entry has
         ## expired, let's shove it in.
-        self._clear(now, stop_if_early=True, cur=pseq)
+        #self._clear(now, stop_if_early=True, cur=pseq)
+        self._clear(now, stop_if_early=True)
 
         if self._offset(pseq) >= self.pmax:
             ## There's still time to wait for missing packets.  This
@@ -72,13 +92,17 @@ class FixedSizeResequencer:
                             (self.logpfx, self.pseq,
                              self._advance(self.pseq, self.pmax),
                              pseq))
-            self.action(now, pseq, drop=True, *args, **kwargs);
+            if self.drop is not None:
+                self.drop(now, pseq, *args, **kwargs);
+                pass
             return
 
         ## Set expiries on missing entries just before this one.
         expiry = now + self.timeout
         while self._offset(self.plim) < self._offset(pseq):
             self.cache[self.plim] = expiry
+            logging.debug('%s ev=to pseq=%d plim=%d exp=%d' %
+                          (self.logpfx, self.pseq, self.plim, expiry - now))
             self.plim = self._advance(self.plim, 1)
             continue
 
@@ -112,14 +136,14 @@ class FixedSizeResequencer:
             sn = self._advance(self.pseq, i)
             ce = self.cache[sn]
             if type(ce) is tuple:
-                code, data, ts, exp = ce
-                msg += code
+                ts, exp, oargs, okwargs = ce
+                msg += 'M'
                 pass
             elif ce is None:
                 msg += '!'
                 pass
             else:
-                msg += str(max(9, int(ce - now)))
+                msg += str(min(9, int(ce - now)))
                 pass
             continue
         logging.debug('%s ev=win pseq=%d plim=%d pat="%s"' %
@@ -127,8 +151,10 @@ class FixedSizeResequencer:
         return
 
     def _clear(self, now, stop_if_early=False, cur=None):
-        logging.debug('%s ev=clear pseq=%d plim=%d)' %
-                      (self.logpfx, self.pseq, self.plim))
+        logging.debug('%s ev=clear pseq=%d plim=%d%s%s' %
+                      (self.logpfx, self.pseq, self.plim,
+                       '' if cur is None else ' nseq=%d' % cur,
+                       ' early=yes' if stop_if_early else ''))
         assert self._offset(self.plim) <= self.pmax
 
         while self.pseq != self.plim and self.pseq != cur:
@@ -142,12 +168,14 @@ class FixedSizeResequencer:
                     if stop_if_early and exp > now:
                         return
                     adv = True
-                    self.action(ts, self.pseq, drop=False, *args, **kwargs);
+                    self.action(ts, self.pseq, *args, **kwargs);
                     pass
                 else:
                     if ce > now:
                         return
                     adv = True
+                    if self.lost is not None:
+                        self.lost(ce, self.pseq)
                     pass
             finally:
                 if adv:
@@ -157,5 +185,62 @@ class FixedSizeResequencer:
                 pass
             continue
         pass
+
+    pass
+
+if __name__ == '__main__':
+    import time
+    import random
+
+    log_params = {
+        'format': '%(asctime)s %(message)s',
+        'datefmt': '%Y-%d-%mT%H:%M:%S',
+        # 'level': logging.DEBUG,
+    }
+    logging.basicConfig(**log_params)
+
+    def action(ts, pseq, *args, **kwargs):
+        print('%9.3f %2d OKAY args=%s kwargs=%s' % (ts, pseq, args, kwargs))
+        pass
+
+    def drop(ts, pseq, *args, **kwargs):
+        print('%9.3f %2d DROP args=%s kwargs=%s' % (ts, pseq, args, kwargs))
+        pass
+
+    def lost(ts, pseq):
+        print('%9.3f %2d LOST' % (ts, pseq))
+        pass
+
+    my_seq = FixedSizeResequencer(16, 8, action,
+                                  drop=drop, lost=lost,
+                                  init_expect=4, timeout=1.5)
+    play = list()
+    play += ((12, 2.0, "sib", "choot"),)
+    play += ((10, 0.5, "heek", "trah"),)
+    play += ((13, 1.0, "dook", "woah"),)
+    play += ((15, 1.0, "dork", "wobo"),)
+    play += ((14, 1.0, "naph", "tool"),)
+    play += ((0, 1.0, "naph", "tool"),)
+    play += ((1, 1.0, "naph", "tool"),)
+    play += ((3, 1.0, "naph", "tool"),)
+    play += ((4, 1.0, "naph", "tool"),)
+    play += ((5, 1.0, "naph", "tool"),)
+    play += ((6, 1.0, "naph", "tool"),)
+    play += ((0, 1.0, "naph", "tool"),)
+    play += ((7, 1.0, "naph", "tool"),)
+    play += ((9, 1.0, "naph", "tool"),)
+    play += ((10, 1.0, "naph", "tool"),)
+    play += ((12, 1.0, "naph", "tool"),)
+    play += ((13, 1.0, "naph", "tool"),)
+    play += ((11, 1.0, "naph", "tool"),)
+    play += ((14, 1.0, "naph", "tool"),)
+    for item in play:
+        print('')
+        time.sleep(item[1])
+        now = time.time()
+        pseq = item[0]
+        rem = item[2:]
+        my_seq.submit(now, pseq, *rem)
+        continue
 
     pass
