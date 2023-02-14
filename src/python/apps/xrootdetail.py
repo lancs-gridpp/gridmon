@@ -335,7 +335,7 @@ def _decode_traces(buf):
     result = list()
     while len(buf) >= 16:
         hdr = buf[0:16]
-        result += _decode_trace(hdr)
+        result += (_decode_trace(hdr),)
         buf = buf[16:]
         continue
     return ('trace', { 'info': result, 'tail': buf })
