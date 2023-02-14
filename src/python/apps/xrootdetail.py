@@ -381,6 +381,7 @@ class Peer:
         self.stod = stod
         self.addr = addr
         self.host = None
+        self.sids = { }
 
         ## Prepare to resequence Monitor Map messages.
         map_action = functools.partial(Peer.act_on_map, self)
@@ -429,8 +430,14 @@ class Peer:
         ## TODO
         pass
 
+    def act_on_sid(self, sid, ts, pseq, status, data):
+        logging.info('peer=%s:%d seq=sid num=%d sid=%012x %s=%.30s' %
+                     (self.addr + (pseq, sid, status, data)))
+        ## TODO
+        pass
+
     def act_on_map(self, ts, pseq, status, data):
-        logging.info('peer=%s:%d seq=map num=%d %s=%.20ss' %
+        logging.info('peer=%s:%d seq=map num=%d %s=%.30s' %
                      (self.addr + (pseq, status, data)))
 
         ## A server-id mapping has a zero dictid, and just describes
@@ -492,13 +499,27 @@ class Peer:
 
         if status == 'file':
             sid = data['entries'][0][1]['sid']
-            print('#%d %s: file: sid=%012x %s' % (pseq, status, sid, data))
+            sid_data = self.sids.get(sid)
+            if sid_data is None:
+                sid_action = functools.partial(Peer.act_on_sid, self, sid)
+                seq = Resequencer(256, 32, sid_action,
+                                  timeout=detailer.seq_timeout,
+                                  logpfx='peer=%s:%d seq=map sid=%012x' %
+                                  (self.addr + (sid,)))
+                sid_data = { 'seq': seq }
+                self.sids[sid] = sid_data
+                pass
+            sid_data['seq'].submit(now, pseq, status, data)
+            #print('#%d %s: file: sid=%012x %s' % (pseq, status, sid, data))
             return
 
         if 'code' in data:
-            print('#%d %s: not handling code=%s' % (pseq, status, data['code']))
+            logging.warning('%s:%d ev=unh nseq=%d status=%s code=%s' %
+                            (self.addr % (pseq, status, data['code'])))
             return
 
+        logging.warning('%s:%d ev=ign nseq=%d status=%s' %
+                        (self.addr % (pseq, status)))
         print('#%d %s: ignored' % (pseq, status))
         return
 
