@@ -438,7 +438,7 @@ class Peer:
         pass
 
     def act_on_sid(self, sid, ts, pseq, status, data):
-        logging.info('peer=%s:%d seq=sid num=%d sid=%012x %s=%.30s' %
+        logging.debug('peer=%s:%d seq=sid num=%d sid=%012x %s=%s' %
                      (self.addr + (pseq, sid, status, data)))
 
         if status == 'file':
@@ -469,8 +469,8 @@ class Peer:
         pass
 
     def act_on_map(self, ts, pseq, status, data):
-        logging.info('peer=%s:%d seq=map num=%d %s=%.30s' %
-                     (self.addr + (pseq, status, data)))
+        logging.debug('peer=%s:%d seq=map num=%d %s=%s' %
+                      (self.addr + (pseq, status, data)))
 
         ## A server-id mapping has a zero dictid, and just describes
         ## the peer in more detail.
