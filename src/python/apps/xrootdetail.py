@@ -399,6 +399,13 @@ class Peer:
         self.ids = { }
         pass
 
+    def id_get(self, now, dictid):
+        r = self.ids.get(dictid)
+        if r is None:
+            return None
+        r['expiry'] = now + self.detailer.id_timeout
+        return r['info']
+
     ## Flush out identities with old expiry times.
     def id_clear(self, now):
         for k in [ k for k, v in self.ids.items() if now > v["expiry"] ]:
@@ -433,6 +440,31 @@ class Peer:
     def act_on_sid(self, sid, ts, pseq, status, data):
         logging.info('peer=%s:%d seq=sid num=%d sid=%012x %s=%.30s' %
                      (self.addr + (pseq, sid, status, data)))
+
+        if status == 'file':
+            for typ, ent in data['entries']:
+                if typ == 'disc':
+                    usr = self.id_get(ts, ent['user'])
+                    print('disconnect: %s' % usr)
+                    pass
+                elif typ == 'open':
+                    fil = self.id_get(ts, ent['file'])
+                    rw = ent['rw']
+                    ufn_id, ufn_p = ent.get('ufn')
+                    ufn = self.id_get(ts, ufn_id)
+                    print('open: rw=%s file=%s ufn=%s p=%s' %
+                          (rw, fil, ufn, ufn_p))
+                    pass
+                elif typ == 'close':
+                    fil = self.id_get(ts, ent.pop('file'))
+                    print('close: file=%s stats=%s' % (fil, ent))
+                    pass
+                elif typ == 'xfr':
+                    fil = self.id_get(ts, ent.pop('file'))
+                    print('xfr: file=%s stats=%s' % (fil, ent))
+                    pass
+                continue
+            pass
         ## TODO
         pass
 
