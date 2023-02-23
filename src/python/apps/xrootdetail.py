@@ -606,7 +606,7 @@ class Detailer:
 
         ## Replace the old entry.
         self.names[key] = peer
-        self.peers.pop(old_addr, None)
+        old = self.peers.pop(old_addr, None)
         if old is not None:
             old.discard()
             pass
