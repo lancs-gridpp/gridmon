@@ -39,9 +39,14 @@ import re
 import urllib
 import time
 import sys
+import json
+import signal
+import os
+from datetime import datetime
 from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
+from utils import merge
 from reseq import FixedSizeResequencer as Resequencer
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
@@ -381,6 +386,8 @@ class Peer:
         self.stod = stod
         self.addr = addr
         self.host = None
+        self.inst = None
+        self.pgm = None
         self.sids = { }
 
         ## Prepare to resequence Monitor Map messages.
@@ -418,6 +425,12 @@ class Peer:
     def is_identified(self):
         return self.host is not None
 
+    def set_identity(self, host, inst, pgm):
+        self.host = host
+        self.inst = inst
+        self.pgm = pgm
+        pass
+
     ## We are told when everyone can output again.
     def continue_output(self):
         ## TODO
@@ -433,6 +446,17 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
+    def log(self, ts, msg):
+        # if not self.is_identified():
+        #     return
+        self.detailer.log(ts, '%s@%s %s %s' %
+                          (self.inst, self.host, self.pgm, msg))
+        pass
+
+    def log_json(self, ts, data):
+        self.log(ts, json.dumps(data))
+        pass
+
     def act_on_trace(self, ts, info):
         ## TODO
         pass
@@ -442,26 +466,86 @@ class Peer:
                      (self.addr + (pseq, sid, status, data)))
 
         if status == 'file':
-            for typ, ent in data['entries']:
+            print('\nFile entries (%d):' % len(data['entries']))
+            typ, hdr = data['entries'][0]
+            assert typ == 'time'
+            t0 = hdr['beg']
+            t1 = hdr['end']
+            td = t1 - t0
+            nent = hdr['nrec']
+
+            for pos, (typ, ent) in enumerate(data['entries'][1:]):
+                ts = t0 + td * (pos / nent)
                 if typ == 'disc':
                     usr = self.id_get(ts, ent['user'])
-                    print('disconnect: %s' % usr)
+                    print('%d disconnect: %s' % (pos, usr))
+                    msg = {
+                        'ev': 'disconnnect',
+                    }
+                    if usr is not None:
+                        merge(msg, {
+                            'prot': usr['prot'],
+                            'user': usr['user'],
+                            'client_name': usr['host'],
+                            'client_addr': usr['args']['h'],
+                            'ipv': usr['args']['I'],
+                            'dn': usr['args']['m'],
+                            'auth': usr['args']['p'],
+                        })
+                        pass
+                    self.log_json(ts, msg)
                     pass
                 elif typ == 'open':
                     fil = self.id_get(ts, ent['file'])
                     rw = ent['rw']
                     ufn_id, ufn_p = ent.get('ufn')
                     ufn = self.id_get(ts, ufn_id)
-                    print('open: rw=%s file=%s ufn=%s p=%s' %
-                          (rw, fil, ufn, ufn_p))
+                    print('%d open: rw=%s file=%s ufn=%s p=%s' %
+                          (pos, rw, fil, ufn, ufn_p))
+                    msg = {
+                        'ev': 'open',
+                        'rw': rw,
+                        'path': ufn_p,
+                    }
+                    if ufn is not None:
+                        merge(msg, {
+                            'prot': ufn['prot'],
+                            'user': ufn['user'],
+                            'client_name': ufn['host'],
+                            'client_addr': ufn['args']['h'],
+                            'ipv': ufn['args']['I'],
+                            'dn': ufn['args']['m'],
+                            'auth': ufn['args']['p'],
+                        })
+                        pass
+                    self.log_json(ts, msg)
                     pass
                 elif typ == 'close':
                     fil = self.id_get(ts, ent.pop('file'))
-                    print('close: file=%s stats=%s' % (fil, ent))
+                    print('%d close: file=%s stats=%s' % (pos, fil, ent))
+                    msg = {
+                        'ev': 'close',
+                        'read_bytes': ent['read']['bytes'],
+                        'readv_bytes': ent['readv']['bytes'],
+                        'write_bytes': ent['write']['bytes'],
+                        'forced': ent['forced'],
+                    }
+                    if fil is not None:
+                        merge(msg, {
+                            'prot': fil['prot'],
+                            'user': fil['user'],
+                            'client_name': fil['host'],
+                            'path': fil['path'],
+                        })
+                        pass
+                    self.log_json(ts, msg)
                     pass
                 elif typ == 'xfr':
                     fil = self.id_get(ts, ent.pop('file'))
-                    print('xfr: file=%s stats=%s' % (fil, ent))
+                    print('%d xfr: file=%s stats=%s' % (pos, fil, ent))
+                    pass
+                elif typ == 'time':
+                    print('time: detail=%s' % ent)
                     pass
                 continue
             pass
@@ -559,7 +643,7 @@ class Peer:
 
 
 class Detailer:
-    def __init__(self):
+    def __init__(self, logname):
         ## We map from client host/port to Peer.
         self.peers = { }
 
@@ -579,6 +663,24 @@ class Detailer:
         self.id_ts = time.time()
 
         self.output_enabled = True
+
+        self.log_name = logname
+        self.out = open(self.log_name, "a")
+        pass
+
+    ## Re-open the fake log for appending, and replace our stream's FD
+    ## with the new one.  This should be called on SIGHUP to allow log
+    ## rotation.
+    def relog(self):
+        with open(self.log_name, "a") as nf:
+            fd = nf.fileno()
+            os.dup2(fd, self.out.fileno())
+            pass
+        pass
+
+    def log(self, ts, msg):
+        tst = datetime.utcfromtimestamp(ts).isoformat('T', 'milliseconds')
+        self.out.write('%s %s\n' % (tst, msg))
         pass
 
     def check_identity(self):
@@ -606,6 +708,7 @@ class Detailer:
 
         ## Replace the old entry.
         self.names[key] = peer
+        peer.set_identity(host, inst, pgm)
         old = self.peers.pop(old_addr, None)
         if old is not None:
             old.discard()
@@ -680,17 +783,20 @@ if __name__ == '__main__':
     udp_host = ''
     udp_port = 9486
     silent = False
+    fake_log = '/tmp/xrootd-detail.log'
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:",
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:o:",
                             [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-U':
             udp_host = val
         elif opt == '-u':
             udp_port = int(val)
+        elif opt == '-o':
+            fake_log = val
         elif opt == '-z':
             silent = True
         elif opt == '--log':
@@ -715,8 +821,16 @@ if __name__ == '__main__':
 
     logging.basicConfig(**log_params)
 
+    detailer = Detailer(logname=fake_log)
+    def handler(signum, frame):
+        logging.root.handlers = []
+        logging.basicConfig(**log_params)
+        logging.info('rotation')
+        detailer.relog()
+        pass
+    signal.signal(signal.SIGHUP, handler)
+
     bindaddr = (udp_host, udp_port)
-    detailer = Detailer()
     try:
         with socketserver.UDPServer(bindaddr, detailer.handler()) as server:
             server.max_packet_size = 64 * 1024
