@@ -493,6 +493,7 @@ class Peer:
                             'auth': usr['args']['p'],
                         })
                         pass
+                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
                     self.log_json(ts, msg)
                     pass
                 elif typ == 'open':
@@ -518,6 +519,7 @@ class Peer:
                             'auth': ufn['args']['p'],
                         })
                         pass
+                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
                     self.log_json(ts, msg)
                     pass
                 elif typ == 'close':
@@ -538,6 +540,7 @@ class Peer:
                             'path': fil['path'],
                         })
                         pass
+                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
                     self.log_json(ts, msg)
                     pass
                 elif typ == 'xfr':
@@ -641,9 +644,16 @@ class Peer:
 
     pass
 
+import domains
 
 class Detailer:
-    def __init__(self, logname):
+    def __init__(self, logname, domfile):
+        if domfile is None:
+            self.domains = None
+        else:
+            self.domains = domains.WatchingDomainDeriver(domfile)
+            pass
+
         ## We map from client host/port to Peer.
         self.peers = { }
 
@@ -682,6 +692,16 @@ class Detailer:
         tst = datetime.utcfromtimestamp(ts).isoformat('T', 'milliseconds')
         self.out.write('%s %s\n' % (tst, msg))
         pass
+
+    def add_domain(self, data, key_out, key_in):
+        if self.domains is None:
+            return
+        host = data.get(key_out)
+        if host is None:
+            return
+        dom = self.domains.derive(host)
+        data[key_in] = dom
+        return
 
     def check_identity(self):
         ## Go through all peers.  If any are unidentified, halt all
@@ -784,11 +804,12 @@ if __name__ == '__main__':
     udp_port = 9486
     silent = False
     fake_log = '/tmp/xrootd-detail.log'
+    domain_conf = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:o:",
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:",
                             [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-U':
@@ -797,6 +818,8 @@ if __name__ == '__main__':
             udp_port = int(val)
         elif opt == '-o':
             fake_log = val
+        elif opt == '-d':
+            domain_conf = val
         elif opt == '-z':
             silent = True
         elif opt == '--log':
@@ -821,7 +844,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(**log_params)
 
-    detailer = Detailer(logname=fake_log)
+    detailer = Detailer(logname=fake_log, domfile=domain_conf)
     def handler(signum, frame):
         logging.root.handlers = []
         logging.basicConfig(**log_params)
