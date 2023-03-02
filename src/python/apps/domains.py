@@ -34,8 +34,8 @@ import re
 
 _esc_fmt = re.compile(r'\$(\$|[0-9]|\([0-9]+\))')
 
-def derive_domain(text, tests):
-    for test in tests:
+def derive_domain(text, rules):
+    for test in rules:
         expr = re.compile(test['match'])
         mtc = expr.match(text)
         if mtc is None:
@@ -61,15 +61,38 @@ def derive_domain(text, tests):
         return res
     return None
 
-if __name__ == '__main__':
-    import sys
-    import yaml
-    with open(sys.argv[1], 'r') as fh:
-        rules = yaml.load(fh, Loader=yaml.SafeLoader)
+import os
+import yaml
+
+class WatchingDomainDeriver:
+    def __init__(self, filename):
+        self.filename = filename
+        self.rules = None
+        self.mtime = None
         pass
-    rules = rules['domains']
-    for arg in sys.argv[2:]:
-        dom = derive_domain(arg, rules)
-        print('%s -> %s' % (arg, dom))
+
+    def _update(self):
+        new_mtime = os.path.getmtime(self.filename)
+        if self.rules is not None and new_mtime <= self.mtime:
+            return
+        with open(self.filename, 'r') as fh:
+            self.rules = yaml.load(fh, Loader=yaml.SafeLoader)['domains']
+            pass
+        self.mtime = new_mtime
+        return
+
+    def derive(self, text):
+        self._update()
+        return derive_domain(text, self.rules)
+
+    pass
+
+if __name__ == '__main__':
+    import sys, readline
+    wdd = WatchingDomainDeriver(sys.argv[1])
+    for line in sys.stdin:
+        host = line.rstrip()
+        dom = wdd.derive(host)
+        print('%s -> %s' % (host, dom))
         continue
     pass
