@@ -404,6 +404,7 @@ class Peer:
         ## self.id_clear(ts) flushes out anything older than the
         ## specified timestamp.
         self.ids = { }
+        self.info('ev=new-entry')
         pass
 
     def id_get(self, now, dictid):
@@ -482,11 +483,10 @@ class Peer:
         pass
 
     def act_on_sid(self, sid, ts, pseq, status, data):
-        logging.debug('peer=%s:%d seq=sid num=%d sid=%012x %s=%s' %
-                     (self.addr + (pseq, sid, status, data)))
+        self.debug('ev=sid num=%d sid=%012x type=%s data=%s',
+                   pseq, sid, status, data)
 
         if status == 'file':
-            print('\nFile entries (%d):' % len(data['entries']))
             typ, hdr = data['entries'][0]
             assert typ == 'time'
             t0 = hdr['beg']
@@ -596,11 +596,11 @@ class Peer:
                         pass
                     pass
                 elif typ == 'xfr':
-                    fil = self.id_get(ts, ent.pop('file'))
-                    print('%d xfr: file=%s stats=%s' % (pos, fil, ent))
+                    # fil = self.id_get(ts, ent.pop('file'))
+                    # print('%d xfr: file=%s stats=%s' % (pos, fil, ent))
                     pass
                 elif typ == 'time':
-                    print('time: detail=%s' % ent)
+                    # print('time: detail=%s' % ent)
                     pass
                 continue
             if too_old > 0:
@@ -611,8 +611,7 @@ class Peer:
         pass
 
     def act_on_map(self, ts, pseq, status, data):
-        logging.debug('peer=%s:%d seq=map num=%d %s=%s' %
-                      (self.addr + (pseq, status, data)))
+        self.debug('ev=map num=%d type=%s data=%s', pseq, status, data)
 
         ## A server-id mapping has a zero dictid, and just describes
         ## the peer in more detail.
@@ -667,7 +666,7 @@ class Peer:
     def process(self, now, pseq, status, data):
         ## All *-id and trace messages belong to the same sequence.
         if status[-3:] == '-id' or status == 'trace':
-            #print('#%d %s: %s' % (pseq, status, data))
+            self.debug('sn=%d type=%s data=%s', pseq, status, data)
             self.map_seq.submit(now, pseq, status, data)
             return
 
@@ -688,13 +687,11 @@ class Peer:
             return
 
         if 'code' in data:
-            logging.warning('%s:%d ev=unh nseq=%d status=%s code=%s' %
-                            (self.addr % (pseq, status, data['code'])))
+            self.warning('ev=unh nseq=%d status=%s code=%s',
+                         pseq, status, data['code'])
             return
 
-        logging.warning('%s:%d ev=ign nseq=%d status=%s' %
-                        (self.addr % (pseq, status)))
-        print('#%d %s: ignored' % (pseq, status))
+        self.warning('ev=ign nseq=%d status=%s', pseq, status)
         return
 
     pass
@@ -829,13 +826,11 @@ class Detailer:
             ## Parse the packet.
             #stod, pseq, status, parsed
             stod, pseq, status, data = _decode_packet(buf)
-            logging.debug('%s:%d(%d) %d %s' % (addr + (stod, pseq, status)))
 
             ## Locate the peer record.  Replace with a new one if the
             ## start time has increased.
             peer = self.peers.get(addr)
             if peer is None or stod > peer.stod:
-                logging.info('peer=%s:%d ev=new-entry' % addr)
                 peer = Peer(self, stod, addr)
                 self.peers[addr] = peer
                 self.check_identity()
@@ -845,8 +840,6 @@ class Detailer:
 
             ## Submit the message to be incorporated into the peer
             ## record.
-            # logging.info('peer=%s:%d seq=%d code mt=%s' % (addr + (pseq, code)))
-            # logging.info('bytes: %s' % buf[:32].hex())
             peer.process(now, pseq, status, data)
         except Exception as e:
             logging.error('failed to parse %s' % buf)
