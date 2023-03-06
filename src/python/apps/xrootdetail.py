@@ -727,10 +727,8 @@ class Detailer:
         self.horizon = 70
         self.event_limit = time.time() - self.horizon
 
-        ## Set the timeout for missing sequence numbers.  Remember
-        ## when we last purged them.
+        ## Set the timeout for missing sequence numbers.
         self.seq_timeout = 2
-        self.seq_ts = time.time()
 
         ## Set the timeout for ids.  Remember when we last purged
         ## them.
