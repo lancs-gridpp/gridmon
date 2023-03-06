@@ -554,7 +554,6 @@ class Peer:
                     fil = self.id_get(ts, ent.pop('file'))
                     print('%d close: file=%s stats=%s' % (pos, fil, ent))
                     msg = {
-                        'ev': 'close',
                         'read_bytes': ent['read']['bytes'],
                         'readv_bytes': ent['readv']['bytes'],
                         'write_bytes': ent['write']['bytes'],
