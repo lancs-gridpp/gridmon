@@ -500,11 +500,14 @@ class Peer:
                 ts = t0 + td * (pos / nent)
                 if typ == 'disc':
                     usr = self.id_get(ts, ent['user'])
-                    print('%d disconnect: %s' % (pos, usr))
-                    msg = {
-                        'ev': 'disconnnect',
-                    }
-                    if usr is not None:
+                    # print('%d disconnect: %s' % (pos, usr))
+                    msg = { }
+                    if usr is None:
+                        self.warning('dictid=%d field=user' +
+                                     ' ev=unknown-dictid' +
+                                     ' rec=file-disconnect', ent['user'])
+                        pass
+                    else:
                         merge(msg, {
                             'prot': usr['prot'],
                             'user': usr['user'],
@@ -523,17 +526,30 @@ class Peer:
                     pass
                 elif typ == 'open':
                     fil = self.id_get(ts, ent['file'])
+                    if fil is None:
+                        self.warning('dictid=%d field=file' +
+                                     ' ev=unknown-dictid' +
+                                     ' rec=file-open', ent['file'])
+                        pass
                     rw = ent['rw']
-                    ufn_id, ufn_p = ent.get('ufn')
-                    ufn = self.id_get(ts, ufn_id)
-                    print('%d open: rw=%s file=%s ufn=%s p=%s' %
-                          (pos, rw, fil, ufn, ufn_p))
-                    msg = {
-                        'ev': 'open',
-                        'rw': rw,
-                        'path': ufn_p,
-                    }
-                    if ufn is not None:
+                    msg = { 'rw': rw }
+                    ufn_s = ent.get('ufn')
+                    if ufn_s is None:
+                        ufn = None
+                        pass
+                    else:
+                        ufn_id, ufn_p = ufn_s
+                        ufn = self.id_get(ts, ufn_id)
+                        msg['path'] = ufn_p
+                        pass
+                    if ufn is None:
+                        if ufn_s is not None:
+                            self.warning('dictid=%d field=ufn' +
+                                         ' ev=unknown-dictid' +
+                                         ' rec=file-open', ufn_id)
+                            pass
+                        pass
+                    else:
                         merge(msg, {
                             'prot': ufn['prot'],
                             'user': ufn['user'],
@@ -551,15 +567,21 @@ class Peer:
                         pass
                     pass
                 elif typ == 'close':
-                    fil = self.id_get(ts, ent.pop('file'))
-                    print('%d close: file=%s stats=%s' % (pos, fil, ent))
+                    filid = ent['file']
+                    fil = self.id_get(ts, filid)
                     msg = {
                         'read_bytes': ent['read']['bytes'],
                         'readv_bytes': ent['readv']['bytes'],
                         'write_bytes': ent['write']['bytes'],
                         'forced': ent['forced'],
                     }
-                    if fil is not None:
+                    if fil is None:
+                        self.warning('dictid=%d field=file' +
+                                     ' ev=unknown-dictid' +
+                                     ' rec=file-close', filid)
+                        pass
+                    else:
+                        self.info('got file %d', filid)
                         merge(msg, {
                             'prot': fil['prot'],
                             'user': fil['user'],
