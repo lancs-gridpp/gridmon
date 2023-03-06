@@ -471,16 +471,9 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
-    def log(self, ts, msg):
-        # if not self.is_identified():
-        #     return
-        self.detailer.log(ts, '%s@%s %s %s' %
-                          (self.inst, self.host, self.pgm, msg))
-        pass
-
-    def log_json(self, ts, data):
-        self.log(ts, json.dumps(data))
-        pass
+    def schedule_record(self, ts, ev, data):
+        return self.detailer.store_event(ts, self.inst, self.host, self.pgm,
+                                         ev, data)
 
     def act_on_trace(self, ts, info):
         ## TODO
@@ -499,6 +492,8 @@ class Peer:
             td = t1 - t0
             nent = hdr['nrec']
 
+            scheduled = 0
+            too_old = 0
             for pos, (typ, ent) in enumerate(data['entries'][1:]):
                 ts = t0 + td * (pos / nent)
                 if typ == 'disc':
@@ -519,7 +514,10 @@ class Peer:
                         })
                         pass
                     self.detailer.add_domain(msg, 'client_name', 'client_domain')
-                    self.log_json(ts, msg)
+                    scheduled += 1
+                    if self.schedule_record(ts, 'disconnect', msg):
+                        too_old += 1
+                        pass
                     pass
                 elif typ == 'open':
                     fil = self.id_get(ts, ent['file'])
@@ -545,7 +543,10 @@ class Peer:
                         })
                         pass
                     self.detailer.add_domain(msg, 'client_name', 'client_domain')
-                    self.log_json(ts, msg)
+                    scheduled += 1
+                    if self.schedule_record(ts, 'open', msg):
+                        too_old += 1
+                        pass
                     pass
                 elif typ == 'close':
                     fil = self.id_get(ts, ent.pop('file'))
@@ -566,7 +567,10 @@ class Peer:
                         })
                         pass
                     self.detailer.add_domain(msg, 'client_name', 'client_domain')
-                    self.log_json(ts, msg)
+                    scheduled += 1
+                    if self.schedule_record(ts, 'close', msg):
+                        too_old += 1
+                        pass
                     pass
                 elif typ == 'xfr':
                     fil = self.id_get(ts, ent.pop('file'))
@@ -576,6 +580,9 @@ class Peer:
                     print('time: detail=%s' % ent)
                     pass
                 continue
+            if too_old > 0:
+                self.warning('ev=old-events tried=%d missed=%d',
+                             scheduled, too_old)
             pass
         ## TODO
         pass
@@ -687,6 +694,16 @@ class Detailer:
         ## value from self.peers.
         self.names = { }
 
+        ## Maintain a sequence of parsed and restructured events.  The
+        ## key is a timestamp (integer, milliseconds), and the value
+        ## is a list of tuples (instance, host, program, event,
+        ## params).
+        self.events = { }
+
+        ## How far back do we keep events?
+        self.horizon = 70
+        self.event_limit = time.time() - self.horizon
+
         ## Set the timeout for missing sequence numbers.  Remember
         ## when we last purged them.
         self.seq_timeout = 2
@@ -701,6 +718,29 @@ class Detailer:
 
         self.log_name = logname
         self.out = open(self.log_name, "a")
+        pass
+
+    def store_event(self, ts, inst, host, pgm, ev, params):
+        ts = int(ts * 1000)
+        if ts < self.event_limit:
+            return True
+        grp = self.events.setdefault(ts, [ ])
+        grp.append((inst, host, pgm, ev, params))
+        return False
+
+    def release_events(self, ts):
+        ts = int(ts * 1000)
+        if ts < self.event_limit:
+            return
+        ks = [ k for k in self.events if k < ts ]
+        ks.sort()
+        for k in ks:
+            for inst, host, pgm, ev, params in self.events.pop(k):
+                self.log(k / 1000,
+                         '%s@%s %s %s %s' % (inst, host, pgm, ev, params))
+                continue
+            continue
+        self.event_limit = ts
         pass
 
     ## Re-open the fake log for appending, and replace our stream's FD
@@ -805,6 +845,7 @@ class Detailer:
                     continue
                 self.id_ts = now
                 pass
+            self.release_events(now - self.horizon)
             pass
         return
 
