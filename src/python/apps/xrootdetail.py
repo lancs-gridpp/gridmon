@@ -852,14 +852,6 @@ class Detailer:
             logging.error('failed to parse %s' % buf)
             raise e
         finally:
-            # if now - self.seq_ts > self.seq_timeout:
-            #     logging.debug('clear out')
-            #     for addr, peer in self.peers.items():
-            #         peer.seq_clear(self.seq_ts)
-            #         continue
-            #     self.seq_ts = now
-            #     pass
-
             if now - self.id_ts > self.id_timeout:
                 for addr, peer in self.peers.items():
                     peer.id_clear(now)
