@@ -420,6 +420,31 @@ class Peer:
             continue
         pass
 
+    def log(self, lvl, msg, *args):
+        msg = 'peer=%s:%d ' + msg
+        args = self.addr + args
+        if self.host is not None:
+            msg = 'xrdid=%s@%s pgm=%s ' + msg
+            args = (self.inst, self.host, self.pgm) + args
+            pass
+        logging.log(lvl, msg, *args)
+        pass
+
+    def critical(self, msg, *args):
+        return self.log(logging.CRITICAL, msg, *args)
+
+    def error(self, msg, *args):
+        return self.log(logging.ERROR, msg, *args)
+
+    def warning(self, msg, *args):
+        return self.log(logging.WARNING, msg, *args)
+
+    def info(self, msg, *args):
+        return self.log(logging.INFO, msg, *args)
+
+    def debug(self, msg, *args):
+        return self.log(logging.DEBUG, msg, *args)
+
     ## We are asked if we know who our peer is yet.  If not, all
     ## peers' output will be suspended.
     def is_identified(self):
