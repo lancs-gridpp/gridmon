@@ -474,9 +474,11 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
-    def schedule_record(self, ts, ev, data):
+    def schedule_record(self, ts, ev, data, ctxt={}):
+        if self.inst is None or self.host is None or self.pgm is None:
+            return False
         return self.detailer.store_event(ts, self.inst, self.host, self.pgm,
-                                         ev, data)
+                                         ev, data, ctxt)
 
     def act_on_trace(self, ts, info):
         ## TODO
@@ -695,7 +697,28 @@ class Peer:
 
     pass
 
+## Increment a counter.  'data' is a dict with 'value', 'zero' and
+## 'last' (empty on first use).  'inc' is amount to increase by.  't0'
+## is the default reset time.  't1' is now.
+def _inc_counter(t0, t1, data, inc):
+    if 'value' not in data:
+        data['value'] = 0
+        data['zero'] = t0
+        pass
+    old = data['value']
+    data['value'] += inc
+    if data['value'] >= 0x8000000000000000:
+        pdiff = 0x8000000000000000 - old
+        wdiff = data['value'] - old
+        tdiff = t1 - data['last']
+        data['zero'] = data['last'] + tdiff * (pdiff / wdiff)
+        data['value'] -= 0x8000000000000000
+        pass
+    data['last'] = t1
+    pass
+
 import domains
+import logfmt
 
 class Detailer:
     def __init__(self, logname, domfile):
@@ -704,6 +727,8 @@ class Detailer:
         else:
             self.domains = domains.WatchingDomainDeriver(domfile)
             pass
+
+        self.t0 = time.time()
 
         ## We map from client host/port to Peer.
         self.peers = { }
@@ -721,7 +746,7 @@ class Detailer:
 
         ## How far back do we keep events?
         self.horizon = 70
-        self.event_limit = time.time() - self.horizon
+        self.event_limit = self.t0 - self.horizon
 
         ## Set the timeout for missing sequence numbers.
         self.seq_timeout = 2
@@ -729,7 +754,17 @@ class Detailer:
         ## Set the timeout for ids.  Remember when we last purged
         ## them.
         self.id_timeout = 5 * 60
-        self.id_ts = time.time()
+        self.id_ts = self.t0
+
+        ## Remote-write new data at this interval.
+        self.write_interval = 60
+        self.write_ts = self.t0
+
+        ## This holds ccumulated statistics, indexed by pgm, host,
+        ## inst, client domain, stat (read, readv, write), then
+        ## 'value', 'zero' (the time of the last counter reset), and
+        ## 'last' (the time of the last increment).
+        self.stats = { }
 
         self.output_enabled = True
 
@@ -737,12 +772,12 @@ class Detailer:
         self.out = open(self.log_name, "a")
         pass
 
-    def store_event(self, ts, inst, host, pgm, ev, params):
+    def store_event(self, ts, inst, host, pgm, ev, params, ctxt):
         ts = int(ts * 1000)
         if ts < self.event_limit:
             return True
         grp = self.events.setdefault(ts, [ ])
-        grp.append((inst, host, pgm, ev, params))
+        grp.append((inst, host, pgm, ev, params, ctxt))
         return False
 
     def release_events(self, ts):
@@ -752,9 +787,25 @@ class Detailer:
         ks = [ k for k in self.events if k < ts ]
         ks.sort()
         for k in ks:
-            for inst, host, pgm, ev, params in self.events.pop(k):
-                self.log(k / 1000,
-                         '%s@%s %s %s %s' % (inst, host, pgm, ev, params))
+            for inst, host, pgm, ev, params, ctxt in self.events.pop(k):
+                t1 = k / 1000
+                self.log(t1, '%s@%s %s %s %s' %
+                         (inst, host, pgm, ev, logfmt.encode(params, ctxt)))
+                stats = self.stats.setdefault(pgm, { }) \
+                                  .setdefault(host, { }) \
+                                  .setdefault(inst, { })
+                if ev == 'close' and \
+                   'prot' in params and \
+                   'client_domain' in params:
+                    domstats = stats.setdefault(params['prot'], { }) \
+                                    .setdefault(params['client_domain'], { })
+                    cr = domstats.setdefault('read', { })
+                    crv = domstats.setdefault('readv', { })
+                    cw = domstats.setdefault('write', { })
+                    _inc_counter(self.t0, t1, cr, params['read_bytes'])
+                    _inc_counter(self.t0, t1, crv, params['readv_bytes'])
+                    _inc_counter(self.t0, t1, cw, params['write_bytes'])
+                    pass
                 continue
             continue
         self.event_limit = ts
@@ -851,6 +902,10 @@ class Detailer:
                 self.id_ts = now
                 pass
             self.release_events(now - self.horizon)
+            if now - self.write_ts > self.write_interval:
+                print('stats: %s' % self.stats)
+                self.write_ts = now
+                pass
             pass
         return
 
