@@ -581,7 +581,6 @@ class Peer:
                                      ' rec=file-close', filid)
                         pass
                     else:
-                        self.info('got file %d', filid)
                         merge(msg, {
                             'prot': fil['prot'],
                             'user': fil['user'],
