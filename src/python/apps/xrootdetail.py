@@ -721,7 +721,8 @@ import domains
 import logfmt
 
 class Detailer:
-    def __init__(self, logname, domfile):
+    def __init__(self, logname, rmw, domfile):
+        self.rmw = rmw
         if domfile is None:
             self.domains = None
         else:
@@ -903,7 +904,10 @@ class Detailer:
                 pass
             self.release_events(now - self.horizon)
             if now - self.write_ts > self.write_interval:
+                now_key = int(self.write_ts * 1000) / 1000
+                data = { now_key: self.stats }
                 print('stats: %s' % self.stats)
+                self.rmw.install(data)
                 self.write_ts = now
                 pass
             pass
@@ -925,23 +929,105 @@ class Detailer:
 
     pass
 
+schema = [
+    {
+        'base': 'xrootd_data_write',
+        'type': 'counter',
+        'unit': 'bytes',
+        'help': 'bytes received per protocol, instance, domain',
+        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              for pro in e[pgm][h][i]
+                              for d in e[pgm][h][i][pro]
+                              if 'write' in e[pgm][h][i][pro][d] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       [t[3]][t[4]]['write']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         [t[3]][t[4]]['write']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_read',
+        'type': 'counter',
+        'unit': 'bytes',
+        'help': 'bytes sent per protocol, instance, domain',
+        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              for pro in e[pgm][h][i]
+                              for d in e[pgm][h][i][pro]
+                              if 'read' in e[pgm][h][i][pro][d] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       [t[3]][t[4]]['read']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         [t[3]][t[4]]['read']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_readv',
+        'type': 'counter',
+        'unit': 'bytes',
+        'help': 'bytes sent per protocol, instance, domain',
+        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              for pro in e[pgm][h][i]
+                              for d in e[pgm][h][i][pro]
+                              if 'readv' in e[pgm][h][i][pro][d] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       [t[3]][t[4]]['readv']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         [t[3]][t[4]]['readv']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+]
+
+import metrics
+
 if __name__ == '__main__':
     udp_host = ''
     udp_port = 9486
     silent = False
     fake_log = '/tmp/xrootd-detail.log'
     domain_conf = None
+    endpoint = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:",
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:",
                             [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-U':
             udp_host = val
         elif opt == '-u':
             udp_port = int(val)
+        elif opt == '-M':
+            endpoint = val
         elif opt == '-o':
             fake_log = val
         elif opt == '-d':
@@ -970,7 +1056,12 @@ if __name__ == '__main__':
 
     logging.basicConfig(**log_params)
 
-    detailer = Detailer(logname=fake_log, domfile=domain_conf)
+    rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
+                                      schema=schema,
+                                      job='xrootd_detail',
+                                      expiry=10*60)
+
+    detailer = Detailer(logname=fake_log, rmw=rmw, domfile=domain_conf)
     def handler(signum, frame):
         logging.root.handlers = []
         logging.basicConfig(**log_params)
