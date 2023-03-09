@@ -1007,10 +1007,14 @@ schema = [
 ]
 
 import metrics
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 
 if __name__ == '__main__':
     udp_host = ''
     udp_port = 9486
+    http_host = 'localhost'
+    http_port = 8746
     silent = False
     fake_log = '/tmp/xrootd-detail.log'
     domain_conf = None
@@ -1019,7 +1023,7 @@ if __name__ == '__main__':
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:",
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:t:T:",
                             [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-U':
@@ -1034,6 +1038,10 @@ if __name__ == '__main__':
             domain_conf = val
         elif opt == '-z':
             silent = True
+        elif opt == '-t':
+            http_port = int(val)
+        elif opt == '-T':
+            http_host = val
         elif opt == '--log':
             log_params['level'] = getattr(logging, val.upper(), None)
             if not isinstance(log_params['level'], int):
@@ -1056,6 +1064,9 @@ if __name__ == '__main__':
 
     logging.basicConfig(**log_params)
 
+    ## This serves no metrics, only the documentation.
+    history = metrics.MetricHistory(schema, horizon=30)
+
     rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
                                       schema=schema,
                                       job='xrootd_detail',
@@ -1070,14 +1081,30 @@ if __name__ == '__main__':
         pass
     signal.signal(signal.SIGHUP, handler)
 
-    bindaddr = (udp_host, udp_port)
+    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                        hist=history)
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+    logging.info('Created HTTP server on http://%s:%d' %
+                 (http_host, http_port))
+
+    server = socketserver.UDPServer((udp_host, udp_port), detailer.handler())
+    server.max_packet_size = 64 * 1024
+
+    ## Use a separate thread to run the server, which we can stop by
+    ## calling shutdown().
+    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                args=(webserver,))
+    srv_thrd.start()
+
     try:
-        with socketserver.UDPServer(bindaddr, detailer.handler()) as server:
-            server.max_packet_size = 64 * 1024
-            logging.info('Started')
-            server.serve_forever()
-            pass
+        logging.info('Started')
+        server.serve_forever()
     except KeyboardInterrupt as e:
         pass
     logging.info('Stopping')
+    history.halt()
+    logging.info('Halted history')
+    webserver.shutdown()
+    webserver.server_close()
+    logging.info('Server stopped.')
     pass
