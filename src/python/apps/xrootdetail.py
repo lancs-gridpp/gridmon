@@ -906,7 +906,7 @@ class Detailer:
             if now - self.write_ts > self.write_interval:
                 now_key = self.event_limit / 1000
                 data = { now_key: self.stats }
-                print('stats: %s' % self.stats)
+                # print('stats: %s' % self.stats)
                 self.rmw.install(data)
                 self.write_ts = now
                 pass
