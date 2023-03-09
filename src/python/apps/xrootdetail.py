@@ -747,7 +747,7 @@ class Detailer:
 
         ## How far back do we keep events?
         self.horizon = 70
-        self.event_limit = self.t0 - self.horizon
+        self.event_limit = self.t0 - self.horizon * 1000
 
         ## Set the timeout for missing sequence numbers.
         self.seq_timeout = 2
@@ -904,7 +904,7 @@ class Detailer:
                 pass
             self.release_events(now - self.horizon)
             if now - self.write_ts > self.write_interval:
-                now_key = int(self.write_ts * 1000) / 1000
+                now_key = self.event_limit / 1000
                 data = { now_key: self.stats }
                 print('stats: %s' % self.stats)
                 self.rmw.install(data)
