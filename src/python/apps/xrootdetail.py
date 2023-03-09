@@ -1019,12 +1019,13 @@ if __name__ == '__main__':
     fake_log = '/tmp/xrootd-detail.log'
     domain_conf = None
     endpoint = None
+    pidfile = None
     log_params = {
         'format': '%(asctime)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:t:T:",
-                            [ 'log=', 'log-file=' ])
+                            [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-U':
             udp_host = val
@@ -1051,6 +1052,12 @@ if __name__ == '__main__':
             pass
         elif opt == '--log-file':
             log_params['filename'] = val
+        elif opt == '--pid-file':
+            if not val.endswith('.pid'):
+                sys.stderr.write('pid filename %s must end with .pid\n' % val)
+                sys.exit(1)
+                pass
+            pidfile = val
             pass
         continue
 
@@ -1090,21 +1097,34 @@ if __name__ == '__main__':
     server = socketserver.UDPServer((udp_host, udp_port), detailer.handler())
     server.max_packet_size = 64 * 1024
 
-    ## Use a separate thread to run the server, which we can stop by
-    ## calling shutdown().
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,))
-    srv_thrd.start()
-
     try:
+        if pidfile is not None:
+            with open(pidfile, "w") as f:
+                f.write('%d\n' % os.getpid())
+                pass
+            pass
+
+        ## Use a separate thread to run the server, which we can stop
+        ## by calling shutdown().
+        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                    args=(webserver,))
+        srv_thrd.start()
+
         logging.info('Started')
-        server.serve_forever()
-    except KeyboardInterrupt as e:
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt as e:
+            pass
+
+        logging.info('Stopping')
+        history.halt()
+        logging.info('Halted history')
+        webserver.shutdown()
+        webserver.server_close()
+        logging.info('Server stopped.')
+    finally:
+        if pidfile is not None:
+            os.remove(pidfile)
+            pass
         pass
-    logging.info('Stopping')
-    history.halt()
-    logging.info('Halted history')
-    webserver.shutdown()
-    webserver.server_close()
-    logging.info('Server stopped.')
     pass
