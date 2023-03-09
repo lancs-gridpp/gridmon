@@ -193,7 +193,7 @@ if __name__ == '__main__':
     import random
 
     log_params = {
-        'format': '%(asctime)s %(message)s',
+        'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
         # 'level': logging.DEBUG,
     }

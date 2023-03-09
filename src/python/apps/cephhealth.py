@@ -624,7 +624,7 @@ if __name__ == '__main__':
     skip = True
     pidfile = None
     log_params = {
-        'format': '%(asctime)s %(message)s',
+        'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     schedule = set()

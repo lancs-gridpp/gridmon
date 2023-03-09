@@ -406,7 +406,7 @@ if __name__ == '__main__':
     metrics_endpoint = None
     pidfile = None
     log_params = {
-        'format': '%(asctime)s %(message)s',
+        'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     confs = list()

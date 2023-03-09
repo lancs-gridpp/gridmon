@@ -488,7 +488,7 @@ if __name__ == "__main__":
     aft = 60
     pidfile = None
     log_params = {
-        'format': '%(asctime)s %(message)s',
+        'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     opts, args = getopt(sys.argv[1:], "zh:t:T:E:M:S:l:f:a:",

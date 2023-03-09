@@ -1851,7 +1851,7 @@ if __name__ == '__main__':
     endpoint = None
     pidfile = None
     log_params = {
-        'format': '%(asctime)s %(message)s',
+        'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
     opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X",
