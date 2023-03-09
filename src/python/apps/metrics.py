@@ -613,6 +613,10 @@ class RemoteMetricsWriter:
 
             continue
 
+        if self.endpoint is None:
+            print(rw)
+            return True
+
         ## Compress using Snappy block format.
         import snappy
         body = snappy.compress(rw.SerializeToString())
