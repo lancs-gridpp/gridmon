@@ -795,17 +795,52 @@ class Detailer:
                 stats = self.stats.setdefault(pgm, { }) \
                                   .setdefault(host, { }) \
                                   .setdefault(inst, { })
-                if ev == 'close' and \
+                if ev == 'disconnect' and \
+                   'prot' in params and \
+                   'client_domain' in params and \
+                   'ipv' in params and \
+                   'auth' in params:
+                    substats = stats.setdefault(params['prot'], { }) \
+                                    .setdefault(params['client_domain'], { }) \
+                                    .setdefault('ip_version', { }) \
+                                    .setdefault(params['ipv'], { }) \
+                                    .setdefault('auth', { }) \
+                                    .setdefault(params['auth'], { })
+                    dis = substats.setdefault('disconnects', { })
+                    _inc_counter(self.t0, t1, dis, 1)
+                    pass
+                elif ev == 'open' and \
+                   'prot' in params and \
+                   'client_domain' in params and \
+                   'ipv' in params and \
+                   'auth' in params and \
+                   'rw' in params:
+                    substats = stats.setdefault(params['prot'], { }) \
+                                    .setdefault(params['client_domain'], { }) \
+                                    .setdefault('ip_version', { }) \
+                                    .setdefault(params['ipv'], { }) \
+                                    .setdefault('auth', { }) \
+                                    .setdefault(params['auth'], { })
+                    ops = substats.setdefault('opens', { })
+                    rwops = substats.setdefault('rw-opens', { })
+                    _inc_counter(self.t0, t1, ops, 1)
+                    _inc_counter(self.t0, t1, rwops, 1 if params['rw'] else 0)
+                    pass
+                elif ev == 'close' and \
                    'prot' in params and \
                    'client_domain' in params:
-                    domstats = stats.setdefault(params['prot'], { }) \
+                    substats = stats.setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { })
-                    cr = domstats.setdefault('read', { })
-                    crv = domstats.setdefault('readv', { })
-                    cw = domstats.setdefault('write', { })
+                    cr = substats.setdefault('read', { })
+                    crv = substats.setdefault('readv', { })
+                    cw = substats.setdefault('write', { })
+                    cl = substats.setdefault('closes', { })
+                    fcl = substats.setdefault('forced-closes', { })
                     _inc_counter(self.t0, t1, cr, params['read_bytes'])
                     _inc_counter(self.t0, t1, crv, params['readv_bytes'])
                     _inc_counter(self.t0, t1, cw, params['write_bytes'])
+                    _inc_counter(self.t0, t1, cl, 1)
+                    _inc_counter(self.t0, t1, fcl, 1 if params['forced'] else 0)
                     pass
                 continue
             continue
@@ -1002,6 +1037,162 @@ schema = [
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_closes',
+        'type': 'counter',
+        'help': 'number of closes',
+        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              for pro in e[pgm][h][i]
+                              for d in e[pgm][h][i][pro]
+                              if 'closes' in e[pgm][h][i][pro][d] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       [t[3]][t[4]]['closes']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         [t[3]][t[4]]['closes']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_closes_forced',
+        'type': 'counter',
+        'help': 'number of forced closes',
+        'select': lambda e: [
+            (pgm, h, i, pro, d) for pgm in e
+            for h in e[pgm]
+            for i in e[pgm][h]
+            for pro in e[pgm][h][i]
+            for d in e[pgm][h][i][pro]
+            if 'forced-closes' in e[pgm][h][i][pro][d] and \
+            'value' in e[pgm][h][i][pro][d]['forced-closes']
+        ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       [t[3]][t[4]]['forced-closes']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         [t[3]][t[4]]['forced-closes']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_disconnects',
+        'type': 'counter',
+        'help': 'number of disconnnects',
+        'select': lambda e: [
+            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            for h in e[pgm]
+            for i in e[pgm][h]
+            for pro in e[pgm][h][i]
+            for d in e[pgm][h][i][pro]
+            if 'ip_version' in e[pgm][h][i][pro][d]
+            for ipv in e[pgm][h][i][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
+            if 'disconnects' in e[pgm][h][i][pro][d] \
+            ['ip_version'][ipv]['auth'][aut]
+        ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       ['disconnects']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         ['disconnects']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+            'ip_version': ('%s', lambda t, d: t[5]),
+            'auth': ('%s', lambda t, d: t[6]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_opens',
+        'type': 'counter',
+        'help': 'number of opens',
+        'select': lambda e: [
+            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            for h in e[pgm]
+            for i in e[pgm][h]
+            for pro in e[pgm][h][i]
+            for d in e[pgm][h][i][pro]
+            if 'ip_version' in e[pgm][h][i][pro][d]
+            for ipv in e[pgm][h][i][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
+            if 'opens' in e[pgm][h][i][pro][d] \
+            ['ip_version'][ipv]['auth'][aut]
+        ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       ['opens']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         ['opens']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+            'ip_version': ('%s', lambda t, d: t[5]),
+            'auth': ('%s', lambda t, d: t[6]),
+        },
+    },
+
+    {
+        'base': 'xrootd_data_opens_rw',
+        'type': 'counter',
+        'help': 'number of opens for read-write',
+        'select': lambda e: [
+            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            for h in e[pgm]
+            for i in e[pgm][h]
+            for pro in e[pgm][h][i]
+            for d in e[pgm][h][i][pro]
+            if 'ip_version' in e[pgm][h][i][pro][d]
+            for ipv in e[pgm][h][i][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
+            if 'rw-opens' in e[pgm][h][i][pro][d] \
+            ['ip_version'][ipv]['auth'][aut]
+        ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       ['rw-opens']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         ['rw-opens']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'protocol': ('%s', lambda t, d: t[3]),
+            'client_domain': ('%s', lambda t, d: t[4]),
+            'ip_version': ('%s', lambda t, d: t[5]),
+            'auth': ('%s', lambda t, d: t[6]),
         },
     },
 ]
