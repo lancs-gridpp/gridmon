@@ -405,6 +405,7 @@ class Peer:
         ## specified timestamp.
         self.ids = { }
         self.info('ev=new-entry')
+        self.last_id = None
         pass
 
     def id_get(self, now, dictid):
@@ -659,6 +660,17 @@ class Peer:
             "type": status,
             "info": info,
         }
+
+        if self.last_id is not None:
+            skip = dictid - self.last_id
+            if skip > 1 and skip < 0x80000000:
+                self.warning('ev=skip-dicts count=%d from=%d to=%d',
+                             skip - 1,
+                             (dictid + 1) % 0x100000000,
+                             (self.last_id + 0xffffffff) % 0x100000000)
+                pass
+            pass
+        self.last_id = dictid
         return
 
     ## Accept a decoded packet for processing.  This usually means
