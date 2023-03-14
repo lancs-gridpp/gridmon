@@ -754,7 +754,7 @@ class Detailer:
 
         ## Set the timeout for ids.  Remember when we last purged
         ## them.
-        self.id_timeout = 5 * 60
+        self.id_timeout = 30 * 60
         self.id_ts = self.t0
 
         ## Remote-write new data at this interval.
