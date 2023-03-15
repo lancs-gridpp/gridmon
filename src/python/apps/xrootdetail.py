@@ -666,8 +666,8 @@ class Peer:
             if skip > 1 and skip < 0x80000000:
                 self.warning('ev=skip-dicts count=%d from=%d to=%d',
                              skip - 1,
-                             (dictid + 1) % 0x100000000,
-                             (self.last_id + 0xffffffff) % 0x100000000)
+                             (self.last_id + 1) % 0x100000000,
+                             (dictid + 0xffffffff) % 0x100000000)
                 pass
             pass
         self.last_id = dictid
