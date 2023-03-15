@@ -509,6 +509,10 @@ class Peer:
                         self.warning('dictid=%d field=user' +
                                      ' ev=unknown-dictid' +
                                      ' rec=file-disconnect', ent['user'])
+                        self.schedule_record(ts, 'unk-dict', {
+                            'rec': 'file-disconnect',
+                            'field': 'user',
+                        }, ctxt=None)
                         pass
                     else:
                         merge(msg, {
@@ -533,6 +537,10 @@ class Peer:
                         self.warning('dictid=%d field=file' +
                                      ' ev=unknown-dictid' +
                                      ' rec=file-open', ent['file'])
+                        self.schedule_record(ts, 'unk-dict', {
+                            'rec': 'file-open',
+                            'field': 'file',
+                        }, ctxt=None)
                         pass
                     rw = ent['rw']
                     msg = { 'rw': rw }
@@ -550,6 +558,10 @@ class Peer:
                             self.warning('dictid=%d field=ufn' +
                                          ' ev=unknown-dictid' +
                                          ' rec=file-open', ufn_id)
+                            self.schedule_record(ts, 'unk-dict', {
+                                'rec': 'file-open',
+                                'field': 'ufn',
+                            }, ctxt=None)
                             pass
                         pass
                     else:
@@ -582,6 +594,10 @@ class Peer:
                         self.warning('dictid=%d field=file' +
                                      ' ev=unknown-dictid' +
                                      ' rec=file-close', filid)
+                        self.schedule_record(ts, 'unk-dict', {
+                            'rec': 'file-close',
+                            'field': 'file',
+                        }, ctxt=None)
                         pass
                     else:
                         merge(msg, {
@@ -664,10 +680,15 @@ class Peer:
         if self.last_id is not None:
             skip = dictid - self.last_id
             if skip > 1 and skip < 0x80000000:
+                id_from = (self.last_id + 1) % 0x100000000
+                id_to = (dictid + 0xffffffff) % 0x100000000
                 self.warning('ev=skip-dicts count=%d from=%d to=%d',
-                             skip - 1,
-                             (self.last_id + 1) % 0x100000000,
-                             (dictid + 0xffffffff) % 0x100000000)
+                             skip - 1, id_from, id_to)
+                self.schedule_record(ts, 'skip-dict', {
+                    'from': id_from,
+                    'to': id_to,
+                    'n': skip - 1,
+                }, ctxt=None)
                 pass
             pass
         self.last_id = dictid
@@ -802,17 +823,34 @@ class Detailer:
         for k in ks:
             for inst, host, pgm, ev, params, ctxt in self.events.pop(k):
                 t1 = k / 1000
-                self.log(t1, '%s@%s %s %s %s' %
-                         (inst, host, pgm, ev, logfmt.encode(params, ctxt)))
+                if ctxt is not None:
+                    self.log(t1, '%s@%s %s %s %s' %
+                             (inst, host, pgm, ev, logfmt.encode(params, ctxt)))
+                    pass
                 stats = self.stats.setdefault(pgm, { }) \
                                   .setdefault(host, { }) \
                                   .setdefault(inst, { })
-                if ev == 'disconnect' and \
+                if ev == 'skip-dict' and 'n' in params:
+                    substats = stats.setdefault('dicts', { })
+                    sm = substats.setdefault('skip', { })
+                    _inc_counter(self.t0, t1, sm, params['n'])
+                    pass
+                elif ev == 'unk-dict' and \
+                     'rec' in params and \
+                     'field' in params:
+                    substats = stats.setdefault('dicts', { }) \
+                                    .setdefault('unk', { }) \
+                                    .setdefault(params['rec'], { }) \
+                                    .setdefault(params['field'], { })
+                    _inc_counter(self.t0, t1, substats, 1)
+                    pass
+                elif ev == 'disconnect' and \
                    'prot' in params and \
                    'client_domain' in params and \
                    'ipv' in params and \
                    'auth' in params:
-                    substats = stats.setdefault(params['prot'], { }) \
+                    substats = stats.setdefault('prot', { }) \
+                                    .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
@@ -827,7 +865,8 @@ class Detailer:
                    'ipv' in params and \
                    'auth' in params and \
                    'rw' in params:
-                    substats = stats.setdefault(params['prot'], { }) \
+                    substats = stats.setdefault('prot', { }) \
+                                    .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
@@ -841,7 +880,8 @@ class Detailer:
                 elif ev == 'close' and \
                    'prot' in params and \
                    'client_domain' in params:
-                    substats = stats.setdefault(params['prot'], { }) \
+                    substats = stats.setdefault('prot', { }) \
+                                    .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { })
                     cr = substats.setdefault('read', { })
                     crv = substats.setdefault('readv', { })
@@ -978,6 +1018,52 @@ class Detailer:
 
 schema = [
     {
+        'base': 'xrootd_dictid_skip',
+        'type': 'counter',
+        'help': 'dictids skipped over',
+        'select': lambda e: [ (pgm, h, i) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              if 'dicts' in e[pgm][h][i]
+                              if 'skip' in e[pgm][h][i]['dicts'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       ['dicts']['skip']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         ['dicts']['skip']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+        },
+    },
+
+    {
+        'base': 'xrootd_dictid_unknown',
+        'type': 'counter',
+        'help': 'undefined referenced dictids',
+        'select': lambda e: [ (pgm, h, i, rec, f) for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              if 'dicts' in e[pgm][h][i]
+                              if 'unk' in e[pgm][h][i]['dicts']
+                              for rec in e[pgm][h][i]['dicts']['unk']
+                              for f in e[pgm][h][i]['dicts']['unk'][rec] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+                       ['dicts']['unk'][t[3]][t[4]]['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+                         ['dicts']['unk'][t[3]][t[4]]['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'record': ('%s', lambda t, d: t[3]),
+            'field': ('%s', lambda t, d: t[4]),
+        },
+    },
+
+    {
         'base': 'xrootd_data_write',
         'type': 'counter',
         'unit': 'bytes',
@@ -985,14 +1071,14 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
-                              for pro in e[pgm][h][i]
-                              for d in e[pgm][h][i][pro]
-                              if 'write' in e[pgm][h][i][pro][d] ],
+                              for pro in e[pgm][h][i]['prot']
+                              for d in e[pgm][h][i]['prot'][pro]
+                              if 'write' in e[pgm][h][i]['prot'][pro][d] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       [t[3]][t[4]]['write']['value']),
+                       ['prot'][t[3]][t[4]]['write']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         [t[3]][t[4]]['write']['zero']),
+                         ['prot'][t[3]][t[4]]['write']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -1010,14 +1096,14 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
-                              for pro in e[pgm][h][i]
-                              for d in e[pgm][h][i][pro]
-                              if 'read' in e[pgm][h][i][pro][d] ],
+                              for pro in e[pgm][h][i]['prot']
+                              for d in e[pgm][h][i]['prot'][pro]
+                              if 'read' in e[pgm][h][i]['prot'][pro][d] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       [t[3]][t[4]]['read']['value']),
+                       ['prot'][t[3]][t[4]]['read']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         [t[3]][t[4]]['read']['zero']),
+                         ['prot'][t[3]][t[4]]['read']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -1035,14 +1121,14 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
-                              for pro in e[pgm][h][i]
-                              for d in e[pgm][h][i][pro]
-                              if 'readv' in e[pgm][h][i][pro][d] ],
+                              for pro in e[pgm][h][i]['prot']
+                              for d in e[pgm][h][i]['prot'][pro]
+                              if 'readv' in e[pgm][h][i]['prot'][pro][d] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       [t[3]][t[4]]['readv']['value']),
+                       ['prot'][t[3]][t[4]]['readv']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         [t[3]][t[4]]['readv']['zero']),
+                         ['prot'][t[3]][t[4]]['readv']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -1059,14 +1145,14 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
-                              for pro in e[pgm][h][i]
-                              for d in e[pgm][h][i][pro]
-                              if 'closes' in e[pgm][h][i][pro][d] ],
+                              for pro in e[pgm][h][i]['prot']
+                              for d in e[pgm][h][i]['prot'][pro]
+                              if 'closes' in e[pgm][h][i]['prot'][pro][d] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       [t[3]][t[4]]['closes']['value']),
+                       ['prot'][t[3]][t[4]]['closes']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         [t[3]][t[4]]['closes']['zero']),
+                         ['prot'][t[3]][t[4]]['closes']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -1084,16 +1170,16 @@ schema = [
             (pgm, h, i, pro, d) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
-            for pro in e[pgm][h][i]
-            for d in e[pgm][h][i][pro]
-            if 'forced-closes' in e[pgm][h][i][pro][d] and \
-            'value' in e[pgm][h][i][pro][d]['forced-closes']
+            for pro in e[pgm][h][i]['prot']
+            for d in e[pgm][h][i]['prot'][pro]
+            if 'forced-closes' in e[pgm][h][i]['prot'][pro][d] and \
+            'value' in e[pgm][h][i]['prot'][pro][d]['forced-closes']
         ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       [t[3]][t[4]]['forced-closes']['value']),
+                       ['prot'][t[3]][t[4]]['forced-closes']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         [t[3]][t[4]]['forced-closes']['zero']),
+                         ['prot'][t[3]][t[4]]['forced-closes']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -1111,20 +1197,22 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
-            for pro in e[pgm][h][i]
-            for d in e[pgm][h][i][pro]
-            if 'ip_version' in e[pgm][h][i][pro][d]
-            for ipv in e[pgm][h][i][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
-            if 'disconnects' in e[pgm][h][i][pro][d] \
+            for pro in e[pgm][h][i]['prot']
+            for d in e[pgm][h][i]['prot'][pro]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
+            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
+            if 'disconnects' in e[pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_total': ('%d',
+                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                        ['ip_version'][t[5]]['auth'][t[6]] \
                        ['disconnects']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                          ['ip_version'][t[5]]['auth'][t[6]] \
                          ['disconnects']['zero']),
         },
@@ -1146,20 +1234,22 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
-            for pro in e[pgm][h][i]
-            for d in e[pgm][h][i][pro]
-            if 'ip_version' in e[pgm][h][i][pro][d]
-            for ipv in e[pgm][h][i][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
-            if 'opens' in e[pgm][h][i][pro][d] \
+            for pro in e[pgm][h][i]['prot']
+            for d in e[pgm][h][i]['prot'][pro]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
+            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
+            if 'opens' in e[pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_total': ('%d',
+                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                        ['ip_version'][t[5]]['auth'][t[6]] \
                        ['opens']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                          ['ip_version'][t[5]]['auth'][t[6]] \
                          ['opens']['zero']),
         },
@@ -1181,20 +1271,22 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
-            for pro in e[pgm][h][i]
-            for d in e[pgm][h][i][pro]
-            if 'ip_version' in e[pgm][h][i][pro][d]
-            for ipv in e[pgm][h][i][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i][pro][d]['ip_version'][ipv]['auth']
-            if 'rw-opens' in e[pgm][h][i][pro][d] \
+            for pro in e[pgm][h][i]['prot']
+            for d in e[pgm][h][i]['prot'][pro]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
+            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
+            if 'rw-opens' in e[pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_total': ('%d',
+                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                        ['ip_version'][t[5]]['auth'][t[6]] \
                        ['rw-opens']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]][t[3]][t[4]] \
+            '_created': ('%.3f',
+                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
                          ['ip_version'][t[5]]['auth'][t[6]] \
                          ['rw-opens']['zero']),
         },
