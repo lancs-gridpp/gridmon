@@ -525,7 +525,8 @@ class Peer:
                             'auth': usr['args']['p'],
                         })
                         pass
-                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
+                    self.detailer.add_domain(msg,
+                                             'client_name', 'client_domain')
                     scheduled += 1
                     if self.schedule_record(ts, 'disconnect', msg):
                         too_old += 1
@@ -575,7 +576,8 @@ class Peer:
                             'auth': ufn['args']['p'],
                         })
                         pass
-                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
+                    self.detailer.add_domain(msg,
+                                             'client_name', 'client_domain')
                     scheduled += 1
                     if self.schedule_record(ts, 'open', msg):
                         too_old += 1
@@ -607,7 +609,8 @@ class Peer:
                             'path': fil['path'],
                         })
                         pass
-                    self.detailer.add_domain(msg, 'client_name', 'client_domain')
+                    self.detailer.add_domain(msg,
+                                             'client_name', 'client_domain')
                     scheduled += 1
                     if self.schedule_record(ts, 'close', msg):
                         too_old += 1
@@ -624,6 +627,7 @@ class Peer:
             if too_old > 0:
                 self.warning('ev=old-events tried=%d missed=%d',
                              scheduled, too_old)
+                pass
             pass
         ## TODO
         pass
