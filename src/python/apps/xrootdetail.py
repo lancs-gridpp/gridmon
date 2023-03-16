@@ -1071,6 +1071,7 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
+                              if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
                               if 'write' in e[pgm][h][i]['prot'][pro][d] ],
@@ -1096,6 +1097,7 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
+                              if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
                               if 'read' in e[pgm][h][i]['prot'][pro][d] ],
@@ -1121,6 +1123,7 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
+                              if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
                               if 'readv' in e[pgm][h][i]['prot'][pro][d] ],
@@ -1145,6 +1148,7 @@ schema = [
         'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
+                              if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
                               if 'closes' in e[pgm][h][i]['prot'][pro][d] ],
@@ -1170,6 +1174,7 @@ schema = [
             (pgm, h, i, pro, d) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
+            if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
             if 'forced-closes' in e[pgm][h][i]['prot'][pro][d] and \
@@ -1197,6 +1202,7 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
+            if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
             if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
@@ -1234,6 +1240,7 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
+            if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
             if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
@@ -1271,6 +1278,7 @@ schema = [
             (pgm, h, i, pro, d, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
+            if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
             if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
