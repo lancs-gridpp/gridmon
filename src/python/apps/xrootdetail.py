@@ -758,7 +758,7 @@ import domains
 import logfmt
 
 class Detailer:
-    def __init__(self, logname, rmw, domfile):
+    def __init__(self, logname, rmw, domfile=None, id_timeout_min=120):
         self.rmw = rmw
         if domfile is None:
             self.domains = None
@@ -791,7 +791,7 @@ class Detailer:
 
         ## Set the timeout for ids.  Remember when we last purged
         ## them.
-        self.id_timeout = 30 * 60
+        self.id_timeout = id_timeout_min * 60
         self.id_ts = self.t0
 
         ## Remote-write new data at this interval.
@@ -1327,17 +1327,20 @@ if __name__ == '__main__':
     domain_conf = None
     endpoint = None
     pidfile = None
+    id_timeout_min = 120
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%d-%mT%H:%M:%S',
     }
-    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:t:T:",
+    opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:t:T:i:",
                             [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-U':
             udp_host = val
         elif opt == '-u':
             udp_port = int(val)
+        elif opt == '-i':
+            id_timeout_min = int(val)
         elif opt == '-M':
             endpoint = val
         elif opt == '-o':
@@ -1386,7 +1389,8 @@ if __name__ == '__main__':
                                       job='xrootd_detail',
                                       expiry=10*60)
 
-    detailer = Detailer(logname=fake_log, rmw=rmw, domfile=domain_conf)
+    detailer = Detailer(logname=fake_log, rmw=rmw, domfile=domain_conf,
+                        id_timeout_min=id_timeout_min)
     def handler(signum, frame):
         logging.root.handlers = []
         logging.basicConfig(**log_params)
