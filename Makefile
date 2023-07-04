@@ -22,6 +22,7 @@ hidden_scripts += qstats-exporter
 hidden_scripts += cephhealth-exporter
 hidden_scripts += ip-statics-exporter
 hidden_scripts += get-cert-expiry
+hidden_scripts += hammercloud-events
 
 
 BINODEPS_SHAREDIR=src/share
