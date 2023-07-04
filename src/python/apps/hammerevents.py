@@ -40,33 +40,66 @@ from getopt import gnu_getopt
 
 import metrics
 
-sfmt = r'.*\[([^\]]+)\]\s+(Auto-Excluded|reset online)\s+([-a-zA-Z0-9_]+)'
-dfmt = '%a, %d %b %Y %H:%M:%S %z'
+## Parse command-line arguments.
+endpoint = None
+queue = None
+site = None
+state = None
+opts, args = gnu_getopt(sys.argv[1:], 'M:q:s:xr')
+for opt, val in opts:
+    if opt == '-M':
+        endpoint = val
+        pass
+    elif opt == '-s':
+        site = val
+        pass
+    elif opt == '-q':
+        queue = val
+        pass
+    elif opt == '-x':
+        state = 1
+        pass
+    elif opt == '-r':
+        state = 0
+        pass
+    continue
 
-## Read the email from standard input.
-msg = email.message_from_binary_file(sys.stdin.buffer)
-
-## Decode the subject line, and match it against our expression.  If
-## there's no match, quietly exit.  Otherwise, pick out the site and
-## queue, and the new status.
-subj = ''.join([ t[0] if isinstance(t[0], str)
-                 else str(t[0], t[1] or 'US-ASCII')
-                 for t in decode_header(msg['subject']) ])
-expr = re.compile(sfmt)
-mt = expr.match(subj)
-if not mt:
-    exit(0)
+if site is not None or queue is not None or state is not None:
+    if site is None or queue is None or state is None:
+        sys.stderr.write('must specify all of -s site -q queue -x/-r\n')
+        exit(1)
+        pass
+    evtime = datetime.now()
     pass
-queue = mt.group(1)
-state = 1 if mt.group(2) == 'Auto-Excluded' else 0
-site = mt.group(3)
+else:
+    sfmt = r'.*\[([^\]]+)\]\s+(Auto-Excluded|reset online)\s+([-a-zA-Z0-9_]+)'
+    dfmt = '%a, %d %b %Y %H:%M:%S %z'
 
-## Use the Date field for the timestamp, as it's harder for us to
-## understand the timezone in the subject line.
-rawedate = ''.join([ t[0] if isinstance(t[0], str)
+    ## Read the email from standard input.
+    msg = email.message_from_binary_file(sys.stdin.buffer)
+
+    ## Decode the subject line, and match it against our expression.  If
+    ## there's no match, quietly exit.  Otherwise, pick out the site and
+    ## queue, and the new status.
+    subj = ''.join([ t[0] if isinstance(t[0], str)
                      else str(t[0], t[1] or 'US-ASCII')
-                     for t in decode_header(msg['date']) ])
-evtime = datetime.strptime(rawedate, dfmt)
+                     for t in decode_header(msg['subject']) ])
+    expr = re.compile(sfmt)
+    mt = expr.match(subj)
+    if not mt:
+        exit(0)
+        pass
+    queue = mt.group(1)
+    state = 1 if mt.group(2) == 'Auto-Excluded' else 0
+    site = mt.group(3)
+
+    ## Use the Date field for the timestamp, as it's harder for us to
+    ## understand the timezone in the subject line.
+    rawedate = ''.join([ t[0] if isinstance(t[0], str)
+                         else str(t[0], t[1] or 'US-ASCII')
+                         for t in decode_header(msg['date']) ])
+    evtime = datetime.strptime(rawedate, dfmt)
+    pass
 
 ## Create the metrics structure with a sole entry.
 data = {
@@ -76,21 +109,6 @@ data = {
         },
     },
 }
-
-## Parse command-line arguments.  If we don't get told where to push
-## the metric, just print the data to standard error output.
-endpoint = None
-opts, args = gnu_getopt(sys.argv[1:], 'M:')
-for opt, val in opts:
-    if opt == '-M':
-        endpoint = val
-        pass
-    continue
-if endpoint is None:
-    sys.stderr.write('specify remote-write endpoint with -M\n')
-    sys.stderr.write('data:\n%s\n' % pformat(data))
-    exit(1)
-    pass
 
 ## Transmit the sole value as a metric.
 schema = [
