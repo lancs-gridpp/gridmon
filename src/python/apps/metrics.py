@@ -652,7 +652,8 @@ class RemoteMetricsWriter:
                 now = time.time()
                 delay = min(random.randint(60, 120), expiry - now - 1)
                 if delay < 1:
-                    logging.error('no target %s; aborting' % (self.endpoint))
+                    logging.error('no target %s "%s"; aborting' %
+                                  (self.endpoint, e.reason))
                     return False
                 logging.warning('no target %s; retrying in %ds' % \
                                 (self.endpoint, delay))
