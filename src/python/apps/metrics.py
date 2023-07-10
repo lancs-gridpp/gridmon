@@ -624,7 +624,7 @@ class RemoteMetricsWriter:
         ## POST to the endpoint, including headers, and the protobuf
         ## message in Snappy block format.
         from urllib import request
-        from urllib.error import URLError
+        from urllib.error import URLError, HTTPError
         import random
         while True:
             try:
@@ -648,6 +648,10 @@ class RemoteMetricsWriter:
                     time.sleep(delay)
                     continue
                 return True
+            except HTTPError as e:
+                logging.error('HTTP %d (%s) from target %s; aborting' %
+                              (e.code, e.reason, self.endpoint))
+                return False
             except URLError as e:
                 now = time.time()
                 delay = min(random.randint(60, 120), expiry - now - 1)
