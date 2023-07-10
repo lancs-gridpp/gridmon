@@ -34,7 +34,7 @@ import sys
 import re
 import email
 from email.header import decode_header
-from datetime import datetime
+import datetime
 from pprint import pformat
 from getopt import gnu_getopt
 
@@ -69,10 +69,10 @@ if site is not None or queue is not None or state is not None:
         sys.stderr.write('must specify all of -s site -q queue -x/-r\n')
         exit(1)
         pass
-    evtime = datetime.now()
+    evtime = datetime.datetime.now()
     pass
 else:
-    sfmt = r'.*\[([^\]]+)\]\s+(Auto-Excluded|reset online)\s+([-a-zA-Z0-9_]+)'
+    sfmt = r'.*\[([^\]]+)\]\s+(Auto-Excluded|reset online)\s+([-a-zA-Z0-9_]+).*'
     dfmt = '%a, %d %b %Y %H:%M:%S %z'
 
     ## Read the email from standard input.
@@ -87,6 +87,7 @@ else:
     expr = re.compile(sfmt)
     mt = expr.match(subj)
     if not mt:
+        sys.stderr.write('Failed: [%s]\n' % subj)
         exit(0)
         pass
     queue = mt.group(1)
@@ -98,8 +99,12 @@ else:
     rawedate = ''.join([ t[0] if isinstance(t[0], str)
                          else str(t[0], t[1] or 'US-ASCII')
                          for t in decode_header(msg['date']) ])
-    evtime = datetime.strptime(rawedate, dfmt)
+    evtime = datetime.datetime.strptime(rawedate, dfmt)
+    evtime = datetime.datetime.fromtimestamp(evtime.timestamp(),
+                                             tz=datetime.timezone.utc)
     pass
+
+sendtime = datetime.datetime.now(tz=datetime.timezone.utc)
 
 ## Create the metrics structure with a sole entry.
 data = {
@@ -130,5 +135,16 @@ schema = [
 metrics = metrics.RemoteMetricsWriter(endpoint=endpoint,
                                       schema=schema,
                                       job='hammercloud',
-                                      expiry=10*60)
-metrics.install(data)
+                                      expiry=30)
+sys.stderr.write('%d (%s) %s/%s is %d\n' %
+                 (evtime.timestamp(),
+                  evtime.strftime('%Y-%m-%dT%H:%M:%S%z'),
+                  site, queue, state))
+if not metrics.install(data):
+    sys.stderr.write('failed to write to %s\n' % endpoint)
+    sys.stderr.write('%d seconds later than %d (%s)\n' %
+                     (sendtime.timestamp() - evtime.timestamp(),
+                      sendtime.timestamp(),
+                      sendtime.strftime('%Y-%m-%dT%H:%M:%S%z')))
+    exit(1)
+    pass
