@@ -43,7 +43,7 @@ import metrics
 ## Parse command-line arguments.
 endpoint = None
 queue = None
-site = None
+store = None
 state = None
 opts, args = gnu_getopt(sys.argv[1:], 'M:q:s:xr')
 for opt, val in opts:
@@ -51,7 +51,7 @@ for opt, val in opts:
         endpoint = val
         pass
     elif opt == '-s':
-        site = val
+        store = val
         pass
     elif opt == '-q':
         queue = val
@@ -64,9 +64,9 @@ for opt, val in opts:
         pass
     continue
 
-if site is not None or queue is not None or state is not None:
-    if site is None or queue is None or state is None:
-        sys.stderr.write('must specify all of -s site -q queue -x/-r\n')
+if store is not None or queue is not None or state is not None:
+    if store is None or queue is None or state is None:
+        sys.stderr.write('must specify all of -s store -q queue -x/-r\n')
         exit(1)
         pass
     evtime = datetime.datetime.now()
@@ -78,9 +78,9 @@ else:
     ## Read the email from standard input.
     msg = email.message_from_binary_file(sys.stdin.buffer)
 
-    ## Decode the subject line, and match it against our expression.  If
-    ## there's no match, quietly exit.  Otherwise, pick out the site and
-    ## queue, and the new status.
+    ## Decode the subject line, and match it against our expression.
+    ## If there's no match, quietly exit.  Otherwise, pick out the
+    ## store and queue, and the new status.
     subj = ''.join([ t[0] if isinstance(t[0], str)
                      else str(t[0], t[1] or 'US-ASCII')
                      for t in decode_header(msg['subject']) ])
@@ -92,7 +92,7 @@ else:
         pass
     queue = mt.group(1)
     state = 1 if mt.group(2) == 'Auto-Excluded' else 0
-    site = mt.group(3)
+    store = mt.group(3)
 
     ## Use the Date field for the timestamp, as it's harder for us to
     ## understand the timezone in the subject line.
@@ -106,10 +106,11 @@ else:
 
 sendtime = datetime.datetime.now(tz=datetime.timezone.utc)
 
-## Create the metrics structure with a sole entry.
+## Create the metrics structure with a sole entry.  The 'site' label
+## is deprecated in favour of 'store'.
 data = {
     evtime.timestamp(): {
-        (site, queue): {
+        (store, queue): {
             'state': state,
         },
     },
@@ -128,6 +129,7 @@ schema = [
         },
         'attrs': {
             'site': ('%s', lambda t, d: t[0]),
+            'store': ('%s', lambda t, d: t[0]),
             'queue': ('%s', lambda t, d: t[1]),
         },
     },
@@ -139,7 +141,7 @@ metrics = metrics.RemoteMetricsWriter(endpoint=endpoint,
 sys.stderr.write('%d (%s) %s/%s is %d\n' %
                  (evtime.timestamp(),
                   evtime.strftime('%Y-%m-%dT%H:%M:%S%z'),
-                  site, queue, state))
+                  store, queue, state))
 if not metrics.install(data):
     sys.stderr.write('failed to write to %s\n' % endpoint)
     sys.stderr.write('%d seconds later than %d (%s)\n' %
