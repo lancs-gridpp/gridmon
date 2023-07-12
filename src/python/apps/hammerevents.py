@@ -42,19 +42,19 @@ import metrics
 
 ## Parse command-line arguments.
 endpoint = None
+queue_type = None
 queue = None
-store = None
 state = None
 opts, args = gnu_getopt(sys.argv[1:], 'M:q:s:xr')
 for opt, val in opts:
     if opt == '-M':
         endpoint = val
         pass
-    elif opt == '-s':
-        store = val
-        pass
     elif opt == '-q':
         queue = val
+        pass
+    elif opt == '-t':
+        queue_type = val
         pass
     elif opt == '-x':
         state = 1
@@ -64,9 +64,9 @@ for opt, val in opts:
         pass
     continue
 
-if store is not None or queue is not None or state is not None:
-    if store is None or queue is None or state is None:
-        sys.stderr.write('must specify all of -s store -q queue -x/-r\n')
+if queue is not None or queue_type is not None or state is not None:
+    if queue is None or queue_type is None or state is None:
+        sys.stderr.write('must specify all of -q queue -t queue_type -x/-r\n')
         exit(1)
         pass
     evtime = datetime.datetime.now()
@@ -90,9 +90,9 @@ else:
         sys.stderr.write('Failed: [%s]\n' % subj)
         exit(0)
         pass
-    queue = mt.group(1)
+    queue_type = mt.group(1)
     state = 1 if mt.group(2) == 'Auto-Excluded' else 0
-    store = mt.group(3)
+    queue = mt.group(3)
 
     ## Use the Date field for the timestamp, as it's harder for us to
     ## understand the timezone in the subject line.
@@ -106,11 +106,10 @@ else:
 
 sendtime = datetime.datetime.now(tz=datetime.timezone.utc)
 
-## Create the metrics structure with a sole entry.  The 'site' label
-## is deprecated in favour of 'store'.
+## Create the metrics structure with a sole entry.
 data = {
     evtime.timestamp(): {
-        (store, queue): {
+        (queue, queue_type): {
             'state': state,
         },
     },
@@ -128,9 +127,8 @@ schema = [
             '': ('%d', lambda t, d: d[t]['state']),
         },
         'attrs': {
-            'site': ('%s', lambda t, d: t[0]),
-            'store': ('%s', lambda t, d: t[0]),
-            'queue': ('%s', lambda t, d: t[1]),
+            'queue': ('%s', lambda t, d: t[0]),
+            'queue_type': ('%s', lambda t, d: t[1]),
         },
     },
 ]
@@ -141,7 +139,7 @@ metrics = metrics.RemoteMetricsWriter(endpoint=endpoint,
 sys.stderr.write('%d (%s) %s/%s is %d\n' %
                  (evtime.timestamp(),
                   evtime.strftime('%Y-%m-%dT%H:%M:%S%z'),
-                  store, queue, state))
+                  queue, queue_type, state))
 if not metrics.install(data):
     sys.stderr.write('failed to write to %s\n' % endpoint)
     sys.stderr.write('%d seconds later than %d (%s)\n' %
