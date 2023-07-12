@@ -648,7 +648,7 @@ sudo semanage permissive -a procmail_t
 The metric generated is `hammercloud_state`, for example:
 
 ```
-hammercloud_state{queue="PANDA-QUEUE-NAME",type="TYPE"} 1
+hammercloud_state{queue="PANDA-QUEUE-NAME",queue_type="TYPE"} 1
 ```
 
 The value is `1` if the subject contains `Auto-excluded`, and `0` otherwise.
