@@ -545,7 +545,7 @@ domains:
     match: ^.*$
 ```
 
-## PerfSONAR statistics
+## PerfSONAR statistics (deprecated)
 
 The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR instance, and turns it into Prometheus-compatible metrics.
 
