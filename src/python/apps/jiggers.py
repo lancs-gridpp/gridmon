@@ -106,9 +106,7 @@ else:
     #                                          tz=datetime.timezone.utc)
     pass
 
-if len(tags) == 0:
-    tags = set('GGUS')
-    pass
+tags.add('GGUS')
 
 ticketurl = 'https://ggus.eu/index.php?mode=ticket_info&ticket_id=%d'
 vomsg = '' if voname is None else (' (VO: %s)' % voname)
