@@ -95,7 +95,8 @@ else:
     msg = mt.group('msg1') or mt.group('msg2')
     ticket = int(mt.group('ticket'))
     site = mt.group('site1') or  mt.group('site2')
-    voname = mt.group('vo1')
+    revoname = mt.group('vo1')
+    voname = voname if revoname is None else revoname
 
     ## Use the Date field for the timestamp.
     rawedate = ''.join([ t[0] if isinstance(t[0], str)
@@ -109,17 +110,19 @@ else:
 tags.add('GGUS')
 
 ticketurl = 'https://ggus.eu/index.php?mode=ticket_info&ticket_id=%d'
-vomsg = '' if voname is None else (' (VO: %s)' % voname)
 if site is not None:
     tags.add("site:" + site)
+    pass
+if voname is not None:
+    tags.add("vo:" + voname)
     pass
 data = {
     'dashboardUID': dashboard,
     'panelId': panel,
     'time': int(evtime.timestamp() * 1000),
     'tags': list(tags),
-    'text': ('<a href="' + ticketurl + '">GGUS #%d: %s%s</a>') %
-    (ticket, ticket, msg, vomsg),
+    'text': ('<a href="' + ticketurl + '">GGUS #%d: %s</a>') %
+    (ticket, ticket, msg),
 }
 
 
