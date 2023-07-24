@@ -68,6 +68,35 @@ for opt, val in opts:
         pass
     continue
 
+def find_plain_text(part, ind=''):
+    ct = part.get_content_type()
+    # print('%sgot a %s' % (ind, ct))
+
+    if ct == 'multipart/mixed':
+        for subpart in part.get_payload():
+            if subpart.get_content_disposition() is None:
+                return find_plain_text(subpart, ind + '  ')
+            continue
+        return None
+
+    if ct == 'multipart/alternative':
+        # print('%sub' % (ind,))
+        num = 0
+        for subpart in part.get_payload():
+            num += 1
+            # print('%s* %d' % (ind, num))
+            fnd = find_plain_text(subpart, ind + '  ')
+            if fnd is not None:
+                return fnd
+            continue
+        # print('%sno more' % (ind,))
+        return None
+
+    if ct == 'text/plain':
+        return part
+
+    return None
+
 if site is not None or msg is not None or ticket is not None:
     if site is None or msg is None or ticket is None:
         sys.stderr.write('must specify -s, -m and -t together\n')
@@ -94,9 +123,9 @@ else:
         pass
     msg = mt.group('msg1') or mt.group('msg2')
     ticket = int(mt.group('ticket'))
-    site = mt.group('site1') or  mt.group('site2')
-    revoname = mt.group('vo1')
-    voname = voname if revoname is None else revoname
+    #site = mt.group('site1') or  mt.group('site2')
+    #voname = mt.group('vo1')
+    #voname = voname if revoname is None else revoname
 
     ## Use the Date field for the timestamp.
     rawedate = ''.join([ t[0] if isinstance(t[0], str)
@@ -105,7 +134,35 @@ else:
     evtime = parsedate_to_datetime(rawedate)
     # evtime = datetime.datetime.fromtimestamp(evtime.timestamp(),
     #                                          tz=datetime.timezone.utc)
-    pass
+
+    ptp = find_plain_text(emsg)
+    if ptp is not None:
+        crlf = re.compile(r'\r?\n')
+        cs = ptp.get_content_charset('us-ascii')
+        tenc = ptp.get('Content-Transfer-Encoding')
+        text = ptp.get_payload(decode=True)
+        text = text.decode(cs)
+        lines = crlf.split(text)
+        lines.reverse()
+        kvpat = re.compile(r'([A-Z]+(?: [A-Z]+)*):\s*(.*)')
+        found = False
+        for line in lines:
+            m = kvpat.match(line)
+            if m is None:
+                if found:
+                    break
+                else:
+                    continue
+                pass
+            found = True
+            field = m.group(1)
+            value = m.group(2)
+            if field == 'NOTIFIED SITE' and site is None:
+                site = value
+            elif field == 'CONCERNED VO' and voname is None:
+                voname = value
+            continue
+        pass
 
 tags.add('GGUS')
 
@@ -113,7 +170,7 @@ ticketurl = 'https://ggus.eu/index.php?mode=ticket_info&ticket_id=%d'
 if site is not None:
     tags.add("site:" + site)
     pass
-if voname is not None:
+if voname is not None and voname != 'none':
     tags.add("vo:" + voname)
     pass
 data = {
