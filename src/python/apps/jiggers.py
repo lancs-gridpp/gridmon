@@ -122,15 +122,11 @@ data = {
     (ticket, ticket, msg, vomsg),
 }
 
-# from pprint import pprint
-# pprint(data)
-# print('POST that to %s' % endpoint)
-# print('Pass with %s' %  token)
-# exit(0)
 
 if endpoint is None:
-    sys.stderr.write('specify endpoint with -E or in configuration\n')
-    exit(1)
+    from pprint import pprint
+    pprint(data)
+    exit(0)
     pass
 
 from urllib import request
