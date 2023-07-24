@@ -84,7 +84,8 @@ else:
     ## store and queue, and the new status.
     subj = ''.join([ t[0] if isinstance(t[0], str)
                      else str(t[0], t[1] or 'US-ASCII')
-                     for t in decode_header(emsg['subject']) ]).replace('\n',' ')
+                     for t in decode_header(emsg['subject']) ]) \
+             .replace('\n', '')
     expr = re.compile(sfmt)
     mt = expr.match(subj)
     if not mt:
