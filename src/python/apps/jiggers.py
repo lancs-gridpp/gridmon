@@ -14,7 +14,7 @@ r'|' + \
 r'Ticket for site\s+"(?P<site2>[^"]+)"\s+"(?P<vo1>[^"]+)"' + \
 r')\s+"(?P<msg1>.*)"' + \
 r'|' + \
-r'TEAM TICKET SUBMITTED\s+-\s+(?P<site3>[^\s]+)\s+(?P<msg2>.*)' + \
+r'TEAM TICKET SUBMITTED\s+-\s+(?P<msg2>.*)' + \
 r')$'
 
 
@@ -93,7 +93,7 @@ else:
         pass
     msg = mt.group('msg1') or mt.group('msg2')
     ticket = int(mt.group('ticket'))
-    site = mt.group('site1') or  mt.group('site2') or  mt.group('site3')
+    site = mt.group('site1') or  mt.group('site2')
     voname = mt.group('vo1')
 
     ## Use the Date field for the timestamp.
@@ -111,7 +111,9 @@ if len(tags) == 0:
 
 ticketurl = 'https://ggus.eu/index.php?mode=ticket_info&ticket_id=%d'
 vomsg = '' if voname is None else (' (VO: %s)' % voname)
-tags.add("site:" + site)
+if site is not None:
+    tags.add("site:" + site)
+    pass
 data = {
     'dashboardUID': dashboard,
     'panelId': panel,
