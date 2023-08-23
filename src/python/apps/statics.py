@@ -578,8 +578,10 @@ if __name__ == '__main__':
                         assert rc is not None
                         pt = int(time.time() * 1000) / 1000.0
                         entry = data.setdefault(pt, { })
-                        nent = entry.setdefault('node', { }).setdefault(node, { })
-                        ient = nent.setdefault('iface', { }).setdefault(iface, { })
+                        nent = entry.setdefault('node', { }) \
+                                    .setdefault(node, { })
+                        ient = nent.setdefault('iface', { }) \
+                                   .setdefault(iface, { })
                         if rc == 0:
                             mt = pingfmt.match(lines[-1])
                             if mt is not None:
@@ -652,7 +654,8 @@ if __name__ == '__main__':
                         for role in sub.get('roles', [ ]):
                             iroles.setdefault(role, set()).add(iface)
                             continue
-                        ient = nent.setdefault('iface', { }).setdefault(iface, { })
+                        ient = nent.setdefault('iface', { }) \
+                                   .setdefault(iface, { })
                         for k in [ 'network', 'device' ]:
                             if k in sub:
                                 ient[k] = sub[k]
