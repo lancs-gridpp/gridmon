@@ -523,8 +523,8 @@ if __name__ == '__main__':
                         merge(specs, doc.get('machines', { }), mismatch=+1)
 
                         ## Invert the machine role implications.
-                        for role_so, role_ifs in do.get('machine_roles', { }) \
-                                                   .get('implied', { }).items():
+                        for role_so, role_ifs in doc.get('machine_roles', { }) \
+                                                    .get('implied', { }).items():
                             for role_if in role_ifs:
                                 role_impls.setdefault(role_if, set()) \
                                           .add(role_so)
