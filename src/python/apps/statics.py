@@ -37,21 +37,28 @@ schema = [
     {
         'base': 'xrootd_expect',
         'help': 'metadata for an XRootD server expected to exist',
-        'select': lambda e: [ (n, i, p) for n in e.get('node', { })
-                              if 'xroots' in e['node'][n]
-                              and 'xroot-host' in e['node'][n]
-                              for i in e['node'][n]['xroots']
-                              for p in e['node'][n]['xroots'][i]['pgms'] ],
+        'select': lambda e: [ (n, c, i, p) for n in e.get('node', { })
+                              if 'xroot-host' in e['node'][n]
+                              and 'cluster' in e['node'][n]
+                              for c in e['node'][n]['cluster']
+                              if 'xroots' in e['node'][n]['cluster'][c]
+                              for i in e['node'][n]['cluster'][c]['xroots']
+                              if 'pgms' in e['node'][n]['cluster'][c] \
+                              ['xroots'][i]
+                              for p in e['node'][n]['cluster'][c] \
+                              ['xroots'][i]['pgms'] ],
         'samples': {
             '': 1,
         },
         'attrs': {
             'node': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[1],
+            'cluster': ('%s', lambda t, d: t[1]),
+            'xrdid': ('%s@%s', lambda t, d: t[2],
                       lambda t, d: d['node'][t[0]]['xroot-host']),
-            'pgm': lambda t, d: t[2],
+            'pgm': lambda t, d: t[3],
 
             ## deprecated
+            'ceph_cluster': ('%s', lambda t, d: t[1]),
             # 'name': ('%s', lambda t, d: t[1]),
             # 'host': ('%s', lambda t, d: d['node'][t[0]]['xroot-host']),
         },
@@ -224,15 +231,19 @@ schema = [
         'base': 'machine_osd_drives',
         'help': 'how many drives are allocated as OSDs',
         'type': 'gauge',
-        'select': lambda e: [ (n,) for n in e.get('node', { })
-                              if 'osds' in e['node'][n] ],
+        'select': lambda e: [ (n, c) for n in e.get('node', { })
+                              if 'cluster' in e['node'][n]
+                              for c in e['node'][n]['cluster']
+                              if 'osds' in e['node'][n]['cluster'][c] ],
         'samples': {
-            '': ('%d', lambda t, d: d['node'][t[0]]['osds']),
+            '': ('%d', lambda t, d: d['node'][t[0]]['cluster'][t[1]]['osds']),
         },
         'attrs': {
             'node': ('%s', lambda t, d: t[0]),
+            'cluster': ('%s', lambda t, d: t[1]),
 
             ## deprecated
+            'ceph_cluster': ('%s', lambda t, d: t[1]),
             # 'exported_instance': ('%s', lambda t, d: t[0]),
         },
     },
@@ -241,18 +252,22 @@ schema = [
         'base': 'machine_role',
         'help': 'a purpose of a machine',
         'type': 'gauge',
-        'select': lambda e: [ (n, r) for n in e.get('node', { })
+        'select': lambda e: [ (n, c, r) for n in e.get('node', { })
                               if 'static' in e['node'][n]
-                              and 'roles' in e['node'][n]
-                              for r in e['node'][n]['roles'] ],
+                              and 'cluster' in e['node'][n]
+                              for c in e['node'][n]['cluster']
+                              if 'roles' in e['node'][n]['cluster'][c]
+                              for r in e['node'][n]['cluster'][c]['roles'] ],
         'samples': {
             '': 1,
         },
         'attrs': {
             'node': ('%s', lambda t, d: t[0]),
-            'role': ('%s', lambda t, d: t[1]),
+            'cluster': ('%s', lambda t, d: t[1]),
+            'role': ('%s', lambda t, d: t[2]),
 
             ## deprecated
+            'ceph_cluster': ('%s', lambda t, d: t[1]),
             # 'exported_instance': ('%s', lambda t, d: t[0]),
         },
     },
@@ -633,19 +648,28 @@ if __name__ == '__main__':
 
                     nent = entry.setdefault('node', { }).setdefault(node, { })
 
-                    for k in [ 'building', 'room', 'rack', 'level', 'osds' ]:
+                    for k in [ 'building', 'room', 'rack', 'level' ]:
                         if k in nspec:
                             nent[k] = nspec[k]
                             pass
                         continue
-                    roles = set()
-                    for role in nspec.get('roles', [ ]):
-                        roles.add(role)
-                        for oth in role_impls.get(role, [ ]):
-                            roles.add(oth)
+
+                    for clus, cspec in nspec.get('clusters', { }).items():
+                        if 'osds' in cspec:
+                            nent.setdefault('cluster', { }) \
+                                .setdefault(clus, { })['osds'] = cspec['osds']
+                            pass
+                        for role in cspec.get('roles', [ ]):
+                            rent = nent.setdefault('cluster', { }) \
+                                       .setdefault(clus, { }) \
+                                       .setdefault('roles', set())
+                            rent.add(role)
+                            for oth in role_impls.get(role, [ ]):
+                                rent.add(oth)
+                                continue
                             continue
                         continue
-                    nent['roles'] = roles
+
                     nent['static'] = True
 
                     ## Get sets of interfaces with specific roles.  Also, copy
@@ -668,14 +692,18 @@ if __name__ == '__main__':
                     ## Process XRootD expectations.
                     if 'xroot' in iroles:
                         nent['xroot-host'] = list(iroles['xroot'])[0]
-                        xrds = nent.setdefault('xroots', { })
-                        for xname in nspec.get('xroots', { }):
-                            xrds.setdefault(xname, { }) \
-                                .setdefault('pgms', set()).add('xrootd')
-                            continue
-                        for xname in nspec.get('cmses', { }):
-                            xrds.setdefault(xname, { }) \
-                                .setdefault('pgms', set()).add('cmsd')
+                        for clus, cspec in nspec.get('clusters', { }).items():
+                            xrds = nent.setdefault('cluster', { }) \
+                                       .setdefault(clus, { }) \
+                                       .setdefault('xroots', { })
+                            for xname in cspec.get('xroots', { }):
+                                xrds.setdefault(xname, { }) \
+                                    .setdefault('pgms', set()).add('xrootd')
+                                continue
+                            for xname in cspec.get('cmses', { }):
+                                xrds.setdefault(xname, { }) \
+                                    .setdefault('pgms', set()).add('cmsd')
+                                continue
                             continue
                         pass
                     continue
