@@ -596,7 +596,8 @@ if __name__ == '__main__':
                         from pprint import pprint
                         if do_ssl:
                             sslent = ient.setdefault('ssl', { })
-                            for sslch in sub.get('ssl-checks', []):
+                            for sslch in sub.get('ssl_checks',
+                                                 sub.get('ssl-checks', [])):
                                 port = sslch.get('port')
                                 port = 443 if port is None else int(port)
                                 name = sslch.get('name', iface)
