@@ -514,14 +514,41 @@ if __name__ == '__main__':
         sslbase = tbase - ssl_interval
         try:
             while True:
-                ## Read machine specs from -f arguments.
+                ## Read machine and implied roles from -f arguments.
+                role_impls = { }
                 specs = { }
                 for arg in confs:
                     with open(arg, 'r') as fh:
                         doc = yaml.load(fh, Loader=yaml.SafeLoader)
                         merge(specs, doc.get('machines', { }), mismatch=+1)
+
+                        ## Invert the machine role implications.
+                        for role_so, role_ifs in do.get('machine_roles', { }) \
+                                                   .get('implied', { }).items():
+                            for role_if in role_ifs:
+                                role_impls.setdefault(role_if, set()) \
+                                          .add(role_so)
+                                continue
+                            continue
                         pass
                     continue
+
+                ## Recursively apply role implications.
+                while True:
+                    changed = False
+                    for k, ms in role_impls.items():
+                        for ak in ms.copy():
+                            for v in role_impls.get(ak, set()):
+                                if v not in ms:
+                                    changed = True
+                                    ms.add(v)
+                                    pass
+                                continue
+                            continue
+                        continue
+                    if changed:
+                        continue
+                    break
 
                 ## Prepare to gather metrics.
                 beat = int(time.time() * 1000) / 1000.0
@@ -608,7 +635,14 @@ if __name__ == '__main__':
                             nent[k] = nspec[k]
                             pass
                         continue
-                    nent['roles'] = set(nspec.get('roles', [ ]))
+                    roles = set()
+                    for role in nspec.get('roles', [ ]):
+                        roles.add(role)
+                        for oth in role_impls.get(role, [ ]):
+                            roles.add(oth)
+                            continue
+                        continue
+                    nent['roles'] = roles
                     nent['static'] = True
 
                     ## Get sets of interfaces with specific roles.  Also, copy
