@@ -529,13 +529,14 @@ if __name__ == '__main__':
         sslbase = tbase - ssl_interval
         try:
             while True:
-                ## Read machine and implied roles from -f arguments.
+                ## Read cluster/machine specs and implied roles from
+                ## -f arguments.
                 role_impls = { }
-                specs = { }
+                mach_specs = { }
                 for arg in confs:
                     with open(arg, 'r') as fh:
                         doc = yaml.load(fh, Loader=yaml.SafeLoader)
-                        merge(specs, doc.get('machines', { }), mismatch=+1)
+                        merge(mach_specs, doc.get('machines', { }), mismatch=+1)
 
                         ## Invert the machine role implications.
                         for role_so, role_ifs in doc.get('machine_roles', { }) \
@@ -579,7 +580,7 @@ if __name__ == '__main__':
                     pass
 
                 ## Ping all interfaces.
-                for node, nspec in specs.items():
+                for node, nspec in mach_specs.items():
                     if not nspec.get('enabled', True):
                         continue
                     for iface, sub in nspec.get('interfaces', { }).items():
@@ -642,7 +643,7 @@ if __name__ == '__main__':
 
                 ## Add in the static metrics.
                 entry = data.setdefault(int(time.time() * 1000) / 1000.0, { })
-                for node, nspec in specs.items():
+                for node, nspec in mach_specs.items():
                     if not nspec.get('enabled', True):
                         continue
 
