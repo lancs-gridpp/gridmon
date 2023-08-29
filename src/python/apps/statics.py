@@ -74,7 +74,7 @@ schema = [
         },
         'attrs': {
             'cluster': ('%s', lambda t, d: t[0]),
-            'name': ('%s', lambda t, d: d['cluster'][t[0]]['name']),
+            'cluster_name': ('%s', lambda t, d: d['cluster'][t[0]]['name']),
         },
     },
 
