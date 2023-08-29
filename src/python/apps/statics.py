@@ -64,6 +64,34 @@ schema = [
         },
     },
 
+    {
+        'base': 'cluster_meta',
+        'help': 'cluster metadata',
+        'select': lambda e: [ (c,) for c in e.get('cluster', { })
+                              if 'name' in e['cluster'][c] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'cluster': ('%s', lambda t, d: t[0]),
+            'name': ('%s', lambda t, d: d['cluster'][t[0]]['name']),
+        },
+    },
+
+    {
+        'base': 'cluster_expect_ceph',
+        'help': 'present if Ceph instance expected in cluster',
+        'select': lambda e: [ (c,) for c in e.get('cluster', { })
+                              if 'ceph' in e['cluster'][c]
+                              and e['cluster'][c]['ceph'] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'cluster': ('%s', lambda t, d: t[0]),
+        },
+    },
+
     ## deprecated
     {
         'base': 'ip_ping',
@@ -322,11 +350,13 @@ def update_live_metrics(hist, confs):
     ## Read site and site-group specs from -f arguments.
     sites = { }
     group_specs = { }
+    clus_specs = { }
     for arg in confs:
         with open(arg, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
             merge(sites, doc.get('sites', { }), mismatch=+1)
             merge(group_specs, doc.get('site_groups', { }), mismatch=+1)
+            merge(clus_specs, doc.get('clusters', { }), mismatch=+1)
             pass
         continue
 
@@ -386,6 +416,15 @@ def update_live_metrics(hist, confs):
         for domain in site_data.get('domains', [ ]):
             sdom.add(domain)
             continue
+        continue
+    for clus, cspec in clus_specs.items():
+        cent = nd.setdefault('cluster', { }).setdefault(clus, { })
+        if 'name' in cspec:
+            cent['name'] = cspec['name']
+            pass
+        if 'ceph' in cspec and cspec['ceph']:
+            cent['ceph'] = True
+            pass
         continue
 
     ## Populate site grouping data.
