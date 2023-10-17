@@ -584,6 +584,41 @@ schema = [
             'mode': ('%s', lambda t, d: t[1]),
         },
     },
+
+    {
+        'base': 'cephhealth_scsi_correction_call',
+        'type': 'counter',
+        'help': 'correction-algorithm invocations',
+        'select': lambda e: [ (t, m) for t in e['disks']
+                              if 'invoked' in e['disks'][t]
+                              for m in e['disks'][t]['invoked'] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]]['invoked'][t[1]]),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+            'mode': ('%s', lambda t, d: t[1]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_scsi_corrected_volume',
+        'type': 'counter',
+        'unit': 'gigabytes',
+        'help': 'data processed by correction algorithms',
+        'select': lambda e: [ (t, m) for t in e['disks']
+                              if 'processed' in e['disks'][t]
+                              for m in e['disks'][t]['processed'] ],
+        'samples': {
+            '_total': ('%.3f', lambda t, d: d['disks'][t[0]]['processed'][t[1]]),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+            'mode': ('%s', lambda t, d: t[1]),
+        },
+    },
 ]
 
 if __name__ == '__main__':
