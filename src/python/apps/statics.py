@@ -92,25 +92,25 @@ schema = [
         },
     },
 
-    ## deprecated
-    {
-        'base': 'ip_ping',
-        'help': 'RTT to IP in ms',
-        'type': 'gauge',
-        'select': lambda e: [ (n, i) for n in e.get('node', { })
-                              if 'iface' in e['node'][n]
-                              for i in e['node'][n]['iface']
-                              if 'rtt' in e['node'][n]['iface'][i] ],
-        'samples': {
-            '': ('%.3f', lambda t, d: d['node'][t[0]]['iface'][t[1]]['rtt']),
-        },
-        'attrs': {
-            'iface': ('%s', lambda t, d: t[1]),
+    # ## deprecated
+    # {
+    #     'base': 'ip_ping',
+    #     'help': 'RTT to IP in ms',
+    #     'type': 'gauge',
+    #     'select': lambda e: [ (n, i) for n in e.get('node', { })
+    #                           if 'iface' in e['node'][n]
+    #                           for i in e['node'][n]['iface']
+    #                           if 'rtt' in e['node'][n]['iface'][i] ],
+    #     'samples': {
+    #         '': ('%.3f', lambda t, d: d['node'][t[0]]['iface'][t[1]]['rtt']),
+    #     },
+    #     'attrs': {
+    #         'iface': ('%s', lambda t, d: t[1]),
 
-            ## deprecated
-            # 'exported_instance': ('%s', lambda t, d: t[0]),
-        },
-    },
+    #         ## deprecated
+    #         # 'exported_instance': ('%s', lambda t, d: t[0]),
+    #     },
+    # },
 
     {
         'base': 'ssl_expiry',
@@ -142,15 +142,19 @@ schema = [
         'help': 'RTT to IP',
         'type': 'gauge',
         'unit': 'milliseconds',
-        'select': lambda e: [ (n, i) for n in e.get('node', { })
+        'select': lambda e: [ (n, i, v) for n in e.get('node', { })
                               if 'iface' in e['node'][n]
                               for i in e['node'][n]['iface']
-                              if 'rtt' in e['node'][n]['iface'][i] ],
+                              if 'proto' in e['node'][n]['iface'][i]
+                              for v in e['node'][n]['iface'][i]['proto']
+                              if 'rtt' in e['node'][n]['iface'][i]['proto'][v] ],
         'samples': {
-            '': ('%.3f', lambda t, d: d['node'][t[0]]['iface'][t[1]]['rtt']),
+            '': ('%.3f', lambda t, d: d['node'][t[0]]['iface'][t[1]] \
+                 ['proto'][t[2]]['rtt']),
         },
         'attrs': {
             'iface': ('%s', lambda t, d: t[1]),
+            'proto': ('%s', lambda t, d: t[2]),
         },
     },
 
@@ -158,18 +162,19 @@ schema = [
         'base': 'ip_up',
         'help': 'whether a host is reachable',
         'type': 'gauge',
-        'select': lambda e: [ (n, i) for n in e.get('node', { })
+        'select': lambda e: [ (n, i, v) for n in e.get('node', { })
                               if 'iface' in e['node'][n]
                               for i in e['node'][n]['iface']
-                              if 'up' in e['node'][n]['iface'][i] ],
+                              if 'proto' in e['node'][n]['iface'][i]
+                              for v in e['node'][n]['iface'][i]['proto']
+                              if 'up' in e['node'][n]['iface'][i]['proto'][v] ],
         'samples': {
-            '': ('%d', lambda t, d: d['node'][t[0]]['iface'][t[1]]['up']),
+            '': ('%d', lambda t, d: d['node'][t[0]]['iface'][t[1]] \
+                 ['proto'][t[2]]['up']),
         },
         'attrs': {
             'iface': ('%s', lambda t, d: t[1]),
-
-            ## deprecated
-            # 'exported_instance': ('%s', lambda t, d: t[0]),
+            'proto': ('%s', lambda t, d: t[2]),
         },
     },
 
@@ -623,31 +628,41 @@ if __name__ == '__main__':
                     if not nspec.get('enabled', True):
                         continue
                     for iface, sub in nspec.get('interfaces', { }).items():
-                        cmd = [ 'ping', '-c', '1', '-w', '1', iface ]
-                        logging.info('Ping %s of %s' % (iface, node))
-                        logging.debug('Command: %s' % cmd)
-                        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                                universal_newlines=True)
-                        lines = proc.stdout.readlines()
-                        rc = proc.wait()
-                        assert rc is not None
-                        pt = int(time.time() * 1000) / 1000.0
-                        entry = data.setdefault(pt, { })
-                        nent = entry.setdefault('node', { }) \
-                                    .setdefault(node, { })
-                        ient = nent.setdefault('iface', { }) \
-                                   .setdefault(iface, { })
-                        if rc == 0:
-                            mt = pingfmt.match(lines[-1])
-                            if mt is not None:
-                                ient['rtt'] = float(mt.group(1))
-                                ient['up'] = 1
+                        for ipv in [ 4, 6 ]:
+                            cmd = [ 'ping', '-%d' % ipv, '-c', '1',
+                                    '-w', '1', iface ]
+                            logging.info('Ping %s of %s' % (iface, node))
+                            logging.debug('Command: %s' % cmd)
+                            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                                    universal_newlines=True)
+                            lines = proc.stdout.readlines()
+                            rc = proc.wait()
+                            assert rc is not None
+                            pt = int(time.time() * 1000) / 1000.0
+                            entry = data.setdefault(pt, { })
+                            nent = entry.setdefault('node', { }) \
+                                        .setdefault(node, { })
+                            ient = nent.setdefault('iface', { }) \
+                                       .setdefault(iface, { }) \
+                                       .setdefault('proto', { }) \
+                                       .setdefault('ipv%d' % ipv, { })
+                            if rc == 0:
+                                mt = pingfmt.match(lines[-1])
+                                if mt is not None:
+                                    ient['rtt'] = float(mt.group(1))
+                                    ient['up'] = 1
+                                    pass
                                 pass
-                            pass
-                        else:
-                            logging.debug('No pong for %s of %s' % (iface, node))
-                            ient['up'] = 0
-                            pass
+                            elif rc == 2:
+                                ## The hostname did not resolve for
+                                ## the IP version.  Just ignore.
+                                pass
+                            else:
+                                logging.debug('No pong for %s (IPv%d) of %s' %
+                                              (iface, ipv, node))
+                                ient['up'] = 0
+                                pass
+                            continue
                         from pprint import pprint
                         if do_ssl:
                             sslent = ient.setdefault('ssl', { })
