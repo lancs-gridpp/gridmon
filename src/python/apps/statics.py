@@ -628,6 +628,12 @@ if __name__ == '__main__':
                     if not nspec.get('enabled', True):
                         continue
                     for iface, sub in nspec.get('interfaces', { }).items():
+                        pt = int(time.time() * 1000) / 1000.0
+                        entry = data.setdefault(pt, { })
+                        nent = entry.setdefault('node', { }) \
+                                    .setdefault(node, { })
+                        ient = nent.setdefault('iface', { }) \
+                                   .setdefault(iface, { })
                         for ipv in [ 4, 6 ]:
                             cmd = [ 'ping', '-%d' % ipv, '-c', '1',
                                     '-w', '1', iface ]
@@ -638,19 +644,13 @@ if __name__ == '__main__':
                             lines = proc.stdout.readlines()
                             rc = proc.wait()
                             assert rc is not None
-                            pt = int(time.time() * 1000) / 1000.0
-                            entry = data.setdefault(pt, { })
-                            nent = entry.setdefault('node', { }) \
-                                        .setdefault(node, { })
-                            ient = nent.setdefault('iface', { }) \
-                                       .setdefault(iface, { }) \
-                                       .setdefault('proto', { }) \
-                                       .setdefault('ipv%d' % ipv, { })
+                            ipent = ient.setdefault('proto', { }) \
+                                        .setdefault('ipv%d' % ipv, { })
                             if rc == 0:
                                 mt = pingfmt.match(lines[-1])
                                 if mt is not None:
-                                    ient['rtt'] = float(mt.group(1))
-                                    ient['up'] = 1
+                                    ipent['rtt'] = float(mt.group(1))
+                                    ipent['up'] = 1
                                     pass
                                 pass
                             elif rc == 2:
@@ -660,7 +660,7 @@ if __name__ == '__main__':
                             else:
                                 logging.debug('No pong for %s (IPv%d) of %s' %
                                               (iface, ipv, node))
-                                ient['up'] = 0
+                                ipent['up'] = 0
                                 pass
                             continue
                         from pprint import pprint
