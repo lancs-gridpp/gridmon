@@ -856,6 +856,7 @@ class Detailer:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params['user'], { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -872,6 +873,7 @@ class Detailer:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params['user'], { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -886,7 +888,8 @@ class Detailer:
                    'client_domain' in params:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
-                                    .setdefault(params['client_domain'], { })
+                                    .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params['user'], { })
                     cr = substats.setdefault('read', { })
                     crv = substats.setdefault('readv', { })
                     cw = substats.setdefault('write', { })
@@ -1072,24 +1075,26 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes received per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+        'select': lambda e: [ (pgm, h, i, pro, d, un) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
                               if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
-                              if 'write' in e[pgm][h][i]['prot'][pro][d] ],
+                              for un in e[pgm][h][i]['prot'][pro][d]
+                              if 'write' in e[pgm][h][i]['prot'][pro][d][un] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['write']['value']),
+                       ['prot'][t[3]][t[4]][t[5]]['write']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['write']['zero']),
+                         ['prot'][t[3]][t[4]][t[5]]['write']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+            'user': ('%s', lambda t, d: t[5]),
         },
     },
 
@@ -1098,24 +1103,26 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+        'select': lambda e: [ (pgm, h, i, pro, d, un) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
                               if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
-                              if 'read' in e[pgm][h][i]['prot'][pro][d] ],
+                              for un in e[pgm][h][i]['prot'][pro][d]
+                              if 'read' in e[pgm][h][i]['prot'][pro][d][un] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['read']['value']),
+                       ['prot'][t[3]][t[4]][t[5]]['read']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['read']['zero']),
+                         ['prot'][t[3]][t[4]][t[5]]['read']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+            'user': ('%s', lambda t, d: t[5]),
         },
     },
 
@@ -1124,24 +1131,26 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+        'select': lambda e: [ (pgm, h, i, pro, d, un) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
                               if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
-                              if 'readv' in e[pgm][h][i]['prot'][pro][d] ],
+                              for un in e[pgm][h][i]['prot'][pro][d]
+                              if 'readv' in e[pgm][h][i]['prot'][pro][d][un] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['readv']['value']),
+                       ['prot'][t[3]][t[4]][t[5]]['readv']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['readv']['zero']),
+                         ['prot'][t[3]][t[4]][t[5]]['readv']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+            'user': ('%s', lambda t, d: t[5]),
         },
     },
 
@@ -1149,24 +1158,26 @@ schema = [
         'base': 'xrootd_data_closes',
         'type': 'counter',
         'help': 'number of closes',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
+        'select': lambda e: [ (pgm, h, i, pro, d, un) for pgm in e
                               for h in e[pgm]
                               for i in e[pgm][h]
                               if 'prot' in e[pgm][h][i]
                               for pro in e[pgm][h][i]['prot']
                               for d in e[pgm][h][i]['prot'][pro]
-                              if 'closes' in e[pgm][h][i]['prot'][pro][d] ],
+                              for un in e[pgm][h][i]['prot'][pro][d]
+                              if 'closes' in e[pgm][h][i]['prot'][pro][d][un] ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['closes']['value']),
+                       ['prot'][t[3]][t[4]][t[5]]['closes']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['closes']['zero']),
+                         ['prot'][t[3]][t[4]][t[5]]['closes']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+            'user': ('%s', lambda t, d: t[5]),
         },
     },
 
@@ -1175,26 +1186,28 @@ schema = [
         'type': 'counter',
         'help': 'number of forced closes',
         'select': lambda e: [
-            (pgm, h, i, pro, d) for pgm in e
+            (pgm, h, i, pro, d, un) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
             if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
-            if 'forced-closes' in e[pgm][h][i]['prot'][pro][d] and \
-            'value' in e[pgm][h][i]['prot'][pro][d]['forced-closes']
+            for un in e[pgm][h][i]['prot'][pro][d]
+            if 'forced-closes' in e[pgm][h][i]['prot'][pro][d][un] and \
+            'value' in e[pgm][h][i]['prot'][pro][d][un]['forced-closes']
         ],
         'samples': {
             '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['forced-closes']['value']),
+                       ['prot'][t[3]][t[4]][t[5]]['forced-closes']['value']),
             '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['forced-closes']['zero']),
+                         ['prot'][t[3]][t[4]][t[5]]['forced-closes']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
+            'user': ('%s', lambda t, d: t[5]),
         },
     },
 
@@ -1203,27 +1216,31 @@ schema = [
         'type': 'counter',
         'help': 'number of disconnnects',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            (pgm, h, i, pro, d, un, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
             if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'disconnects' in e[pgm][h][i]['prot'][pro][d] \
+            for un in e[pgm][h][i]['prot'][pro][d]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d][un]
+            for ipv in e[pgm][h][i]['prot'][pro][d][un]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d][un]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d][un] \
+            ['ip_version'][ipv]['auth']
+            if 'disconnects' in e[pgm][h][i]['prot'][pro][d][un] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d[t[0]][t[1]][t[2]] \
+                       ['prot'][t[3]][t[4]][t[5]] \
+                       ['ip_version'][t[6]]['auth'][t[7]] \
                        ['disconnects']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d[t[0]][t[1]][t[2]] \
+                         ['prot'][t[3]][t[4]][t[5]] \
+                         ['ip_version'][t[6]]['auth'][t[7]] \
                          ['disconnects']['zero']),
         },
         'attrs': {
@@ -1231,8 +1248,9 @@ schema = [
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
+            'user': ('%s', lambda t, d: t[5]),
+            'ip_version': ('%s', lambda t, d: t[6]),
+            'auth': ('%s', lambda t, d: t[7]),
         },
     },
 
@@ -1241,27 +1259,31 @@ schema = [
         'type': 'counter',
         'help': 'number of opens',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            (pgm, h, i, pro, d, un, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
             if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'opens' in e[pgm][h][i]['prot'][pro][d] \
+            for un in e[pgm][h][i]['prot'][pro][d]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d][un]
+            for ipv in e[pgm][h][i]['prot'][pro][d][un]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d][un]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d][un] \
+            ['ip_version'][ipv]['auth']
+            if 'opens' in e[pgm][h][i]['prot'][pro][d][un] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d[t[0]][t[1]][t[2]] \
+                       ['prot'][t[3]][t[4]][t[5]] \
+                       ['ip_version'][t[6]]['auth'][t[7]] \
                        ['opens']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d[t[0]][t[1]][t[2]] \
+                         ['prot'][t[3]][t[4]][t[5]] \
+                         ['ip_version'][t[6]]['auth'][t[7]] \
                          ['opens']['zero']),
         },
         'attrs': {
@@ -1269,8 +1291,9 @@ schema = [
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
+            'user': ('%s', lambda t, d: t[5]),
+            'ip_version': ('%s', lambda t, d: t[6]),
+            'auth': ('%s', lambda t, d: t[7]),
         },
     },
 
@@ -1279,27 +1302,31 @@ schema = [
         'type': 'counter',
         'help': 'number of opens for read-write',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
+            (pgm, h, i, pro, d, un, ipv, aut) for pgm in e
             for h in e[pgm]
             for i in e[pgm][h]
             if 'prot' in e[pgm][h][i]
             for pro in e[pgm][h][i]['prot']
             for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'rw-opens' in e[pgm][h][i]['prot'][pro][d] \
+            for un in e[pgm][h][i]['prot'][pro][d]
+            if 'ip_version' in e[pgm][h][i]['prot'][pro][d][un]
+            for ipv in e[pgm][h][i]['prot'][pro][d][un]['ip_version']
+            if 'auth' in e[pgm][h][i]['prot'][pro][d][un]['ip_version'][ipv]
+            for aut in e[pgm][h][i]['prot'][pro][d][un] \
+            ['ip_version'][ipv]['auth']
+            if 'rw-opens' in e[pgm][h][i]['prot'][pro][d][un] \
             ['ip_version'][ipv]['auth'][aut]
         ],
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d[t[0]][t[1]][t[2]] \
+                       ['prot'][t[3]][t[4]][t[5]] \
+                       ['ip_version'][t[6]]['auth'][t[7]] \
                        ['rw-opens']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d[t[0]][t[1]][t[2]] \
+                         ['prot'][t[3]][t[4]][t[5]] \
+                         ['ip_version'][t[6]]['auth'][t[7]] \
                          ['rw-opens']['zero']),
         },
         'attrs': {
@@ -1307,8 +1334,9 @@ schema = [
             'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
             'protocol': ('%s', lambda t, d: t[3]),
             'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
+            'user': ('%s', lambda t, d: t[5]),
+            'ip_version': ('%s', lambda t, d: t[6]),
+            'auth': ('%s', lambda t, d: t[7]),
         },
     },
 ]
