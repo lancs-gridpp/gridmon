@@ -185,7 +185,8 @@ else:
         pass
     doc = json.loads(rsp.read().decode("utf-8"))
     #sys.stderr.write('result=%s\n' % json.dumps(doc))
-    matcher = lambda e: set(e['tags']).issuperset(required_tags)
+    matcher = lambda e: set(e['tags']).issuperset(required_tags) and \
+        ('timeEnd' not in e or e['timeEnd'] > endTime)
     matches = list(filter(matcher, doc))
     #sys.stderr.write('matches=%s\n' % json.dumps(matches))
     if len(matches) == 0:
