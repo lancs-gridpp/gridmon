@@ -63,7 +63,8 @@ for opt, val in opts:
             dashboard = doc.get('dashboard', dashboard)
             panel = doc.get('panel', panel)
             token = doc.get('token', token)
-            tags = set(doc.get('tags', tags))
+            tags.update(doc.get('tags', []))
+            tags.update(doc.get('ggus', { }).get('tags', [ ]))
             pass
         pass
     continue
