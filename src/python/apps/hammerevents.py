@@ -132,6 +132,7 @@ from urllib.parse import quote_plus
 import json
 
 required_tags = set()
+required_tags.add('HammerCloud')
 required_tags.add('site:' + queue)
 required_tags.add('queue:' + queue_type)
 
@@ -142,10 +143,9 @@ if state:
         'panelId': panel,
         'time': int(evtime.timestamp() * 1000),
         'timeEnd' : int(7258118400 * 1000), # year 2200
-        'tags': list(tags),
+        'tags': list(tags.union(required_tags)),
         'text': 'HammerCloud exclusion',
     }
-    data['tags'].update(required_tags)
     try:
         req = request.Request(endpoint, data=json.dumps(data).encode('utf-8'))
         req.add_header('Content-Type', 'application/json')
