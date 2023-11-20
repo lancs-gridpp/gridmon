@@ -188,11 +188,11 @@ else:
     matcher = lambda e: set(e['tags']).issuperset(required_tags)
     matches = list(filter(matcher, doc))
     #sys.stderr.write('matches=%s\n' % json.dumps(matches))
-    latest = max(matches, key=lambda e: e['time'])
-    if latest is None:
+    if len(matches) == 0:
         sys.stderr.write('nothing found\n')
         sys.exit(0)
         pass
+    latest = max(matches, key=lambda e: e['time'])
     #sys.stderr.write('latest=%s\n' % json.dumps(latest))
     #sys.exit(0)
     annId = latest['id']
