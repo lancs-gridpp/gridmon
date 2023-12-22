@@ -1,3 +1,12 @@
+// This was extracted and modified from
+// <https://docs.google.com/document/d/1LPhVRSFkGNSuU1fBd81ulhsCPR4hkSZyyBj1SZ8fWOM>.
+
+// It looks like an identical version 1.0 is now specified at
+// <https://prometheus.io/docs/concepts/remote_write_spec/#protocol>.
+// That documentation is (C) Prometheus Authors 2014-2023 and distributed
+// under CC-BY-4.0.  Modifications include: the addition of the syntax
+// declaration; the removal of the Send function (which wouldn't compile!?).
+
 syntax = "proto3";
 
 message WriteRequest {
