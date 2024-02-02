@@ -123,11 +123,25 @@ A `site_groups` top-level map entry may exist, with site groups' names as keys.
 Each value is an array of site names or group names belonging to the site.
 
 
-A `vos` top-level map entry may exist, with VO identifiers as keys.
-Each value is a map with `name` (a display name for the VO), `dns` (a list of DN strings), `jobs` (a map of: `users` list of usernames; and `accounts` list of account names), `transfers` (a map of: `users` list of usernames).
-A metric `vo_meta` binds label `vo_name` (the display name) to `vo_id`.
-A metric `vo_affiliation` binds label `affiliate` to `vo_id`, with label `affiliation` showing the type of relationship (`dn`, `job_user`, `job_account`, `transfer_user`).
-The value of these metrics is always `1`.
+A `clusters` top-level map entry may exist, whose keys are cluster identifiers, and whose values are maps with the following entries:
+
+- `name` &ndash; This specifies the display name for the cluster.
+  A metric `cluster_meta` is generated, with label `cluster` being the cluster identifier, and `cluster_name` being the value of this entry.
+  The value is `1`.
+- `ceph` &ndash; This boolean indicates whether a Ceph instance is expected in the cluster.
+  A metric `cluster_expect_ceph` with the `cluster` label is generated with the value `1`.
+- `vos` &ndash; This map defines a set of named VOs (the keys).
+  Each entry may contain:
+  - `name` &ndash; the display name of the VO;
+  - `dns` &ndash; a list of certificate DNs known to identify the VO;
+  - `jobs` &ndash; a map of:
+    - `users` &ndash; a list of compute usernames used by the VO;
+	- `accounts` &ndash; a list of accounts used by the VO;
+  - `transfers` &ndash; a map of:
+    - `users` &ndash; a list of file-transfer usernames used by the VO.
+  The display name is used to generate a metric `vo_meta` with `cluster` as the cluster id, `vo_id` as the VO identifier and `vo_name` as the display name.
+  The other entries generate the metric `vo_affiliation` with `cluster` and `vo_id` as before, `affiliation` as `job_user`, `job_account`, `transfer_user` or `dn`, and `affiliate` as the user name or DN.
+  The value of these metrics is always `1`.
 
 Interfaces are pinged every minute.
 If a response is obtained, an `ip_ping_milliseconds` gauge is generated, and the `ip_up` gauge has the value `1`.

@@ -359,14 +359,18 @@ schema = [
         'base': 'vo_meta',
         'help': 'VO metadata',
         'type': 'info',
-        'select': lambda e: [ (vo,) for vo in e.get('vos', { })
-                              if 'name' in e['vos'][vo] ],
+        'select': lambda e: [ (c, vo) for c in e.get('cluster', { })
+                              if 'vo' in e['cluster'][c]
+                              for vo in e['cluster'][c]['vo']
+                              if 'name' in e['cluster'][c]['vo'][vo] ],
         'samples': {
             '': 1,
         },
         'attrs': {
-            'vo_id': ('%s', lambda t, d: t[0]),
-            'vo_name': ('%s', lambda t, d: d['vos'][t[0]]['name']),
+            'cluster': ('%s', lambda t, d: t[0]),
+            'vo_id': ('%s', lambda t, d: t[1]),
+            'vo_name': ('%s', lambda t, d: d['cluster'][t[0]] \
+            ['vo'][t[1]]['name']),
         },
     },
 
@@ -374,32 +378,46 @@ schema = [
         'base': 'vo_affiliation',
         'help': 'VO member or affiliate identity',
         'type': 'info',
-        'select': lambda e: ([ (vo, 'job_user', idx)
-                              for vo in e.get('vos', { })
-                              if 'jobs' in e['vos'][vo]
-                              and 'users' in e['vos'][vo]['jobs']
-                              for idx in e['vos'][vo]['jobs']['users'] ] +
-                             [ (vo, 'job_account', idx)
-                               for vo in e.get('vos', { })
-                               if 'jobs' in e['vos'][vo]
-                               and 'accounts' in e['vos'][vo]['jobs']
-                               for idx in e['vos'][vo]['jobs']['accounts'] ] +
-                             [ (vo, 'transfer_user', idx)
-                               for vo in e.get('vos', { })
-                               if 'transfers' in e['vos'][vo]
-                               and 'users' in e['vos'][vo]['transfers']
-                               for idx in e['vos'][vo]['transfers']['users'] ] +
-                             [ (vo, 'cert', idx)
-                               for vo in e.get('vos', { })
-                               if 'dns' in e['vos'][vo]
-                               for idx in e['vos'][vo]['dns'] ]),
+        'select': lambda e: ([ (c, vo, 'job_user', idx)
+                               for c in e.get('cluster', { })
+                               if 'vo' in e['cluster'][c]
+                               for vo in e['cluster'][c]['vo']
+                               if 'jobs' in e['cluster'][c]['vo'][vo]
+                               and 'users' in e['cluster'][c]['vo'][vo]['jobs']
+                               for idx in e['cluster'][c]['vo'][vo] \
+                               ['jobs']['users'] ] +
+                             [ (c, vo, 'job_account', idx)
+                               for c in e.get('cluster', { })
+                               if 'vo' in e['cluster'][c]
+                               for vo in e['cluster'][c]['vo']
+                               if 'jobs' in e['cluster'][c]['vo'][vo]
+                               and 'accounts' in e['cluster'][c] \
+                               ['vo'][vo]['jobs']
+                               for idx in e['cluster'][c]['vo'][vo] \
+                               ['jobs']['accounts'] ] +
+                             [ (c, vo, 'transfer_user', idx)
+                               for c in e.get('cluster', { })
+                               if 'vo' in e['cluster'][c]
+                               for vo in e['cluster'][c]['vo']
+                               if 'transfers' in e['cluster'][c]['vo'][vo]
+                               and 'users' in e['cluster'][c] \
+                               ['vo'][vo]['transfers']
+                               for idx in e['cluster'][c]['vo'][vo] \
+                               ['transfers']['users'] ] +
+                             [ (c, vo, 'cert', idx)
+                               for c in e.get('cluster', { })
+                               if 'vo' in e['cluster'][c]
+                               for vo in e['cluster'][c]['vo']
+                               if 'dns' in e['cluster'][c]['vo'][vo]
+                               for idx in e['cluster'][c]['vo'][vo]['dns'] ]),
         'samples': {
             '': 1,
         },
         'attrs': {
-            'vo_id': ('%s', lambda t, d: t[0]),
-            'affiliation': ('%s', lambda t, d: t[1]),
-            'affiliate': ('%s', lambda t, d: t[2]),
+            'cluster': ('%s', lambda t, d: t[0]),
+            'vo_id': ('%s', lambda t, d: t[1]),
+            'affiliation': ('%s', lambda t, d: t[2]),
+            'affiliate': ('%s', lambda t, d: t[3]),
         },
     },
 ]
@@ -409,14 +427,12 @@ def update_live_metrics(hist, confs):
     sites = { }
     group_specs = { }
     clus_specs = { }
-    vo_specs = { }
     for arg in confs:
         with open(arg, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
             merge(sites, doc.get('sites', { }), mismatch=+1)
             merge(group_specs, doc.get('site_groups', { }), mismatch=+1)
             merge(clus_specs, doc.get('clusters', { }), mismatch=+1)
-            merge(vo_specs, doc.get('vos', { }), mismatch=+1)
             pass
         continue
 
@@ -485,13 +501,12 @@ def update_live_metrics(hist, confs):
         if 'ceph' in cspec and cspec['ceph']:
             cent['ceph'] = True
             pass
+        if 'vos' in cspec:
+            cent['vo'] = cspec['vos']
         continue
 
     ## Populate site grouping data.
     nd['groups'] = groups
-
-    ## Populate VO data.
-    nd['vos'] = vo_specs
 
     hist.install(data)
     pass
