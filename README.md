@@ -123,6 +123,12 @@ A `site_groups` top-level map entry may exist, with a site groups name as keys.
 Each value is an array of site names or group names belonging to the site.
 
 
+A `vos` top-level map entry may exist, with VO identifiers as keys.
+Each value is a map with `name` (a display name for the VO), `dns` (a list of DN strings), `jobs` (a map of: `users` list of usernames; and `accounts` list of account names), `transfers` (a map of: `users` list of usernames).
+A metric `vo_meta` binds label `vo_name` (the display name) to `vo_id`.
+A metric `vo_affiliation` binds label `affiliate` to `vo_id`, with label `affiliation` showing the type of relationship (`dn`, `job_user`, `job_account`, `transfer_user`).
+The value of these metrics is always `1`.
+
 Interfaces are pinged every minute.
 If a response is obtained, an `ip_ping_milliseconds` gauge is generated, and the `ip_up` gauge has the value `1`.
 Otherwise, `ip_up` is `0`, and no `ip_ping_milliseconds` metric is generated.
