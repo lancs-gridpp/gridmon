@@ -119,7 +119,7 @@ Each value is also a map in which the sole key `domains` is recognized.
 Its value is an array of domain names associated with the site.
 
 
-A `site_groups` top-level map entry may exist, with a site groups name as keys.
+A `site_groups` top-level map entry may exist, with site groups' names as keys.
 Each value is an array of site names or group names belonging to the site.
 
 
