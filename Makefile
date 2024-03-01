@@ -24,6 +24,7 @@ hidden_scripts += ip-statics-exporter
 hidden_scripts += get-cert-expiry
 hidden_scripts += hammercloud-events
 hidden_scripts += jiggers-events
+hidden_scripts += kafka-exporter
 
 
 BINODEPS_SHAREDIR=src/share

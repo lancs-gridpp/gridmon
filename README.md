@@ -8,8 +8,8 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 You'll also need [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/), and `defusedxml` and `frozendict` Python 3 packages, so try one of these:
 
 ```
-sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml
-sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-kafka
+sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-kafka
 ```
 
 (Technically, you'll probably only need the Python packages to run some of the scripts, not to build/install.)
@@ -30,6 +30,7 @@ Python/Bash sources and executables are then installed in `/usr/local/share/grid
   This is a bit flakey at the moment, and suspected of driving Prometheus nuts, so use with caution.
 - `cephhealth-exporter` &ndash; Run continuously, this scans disc health metrics retained by Ceph, and serves them to Prometheus.
 - `hammercloud-events` &ndash; Run from Procmail, this converts a HammerCloud notification email into a metric point, best used for annotating HammerCloud exclusions.
+- `kafka-exporter` &ndash; Run continuously, this consumes from one or more Kafka queues, counting key/value bytes, messages and connections, and reporting whether up.
 
 
 ## Configuration of Prometheus
@@ -679,3 +680,46 @@ last_over_time(hammercloud_state{queue=~"MYQUEUE_.*"}[10d]) > 0
 ```
 
 As future work, the script might run persistently, maybe listen for new notifications on a Unix-domain socket, and periodically repeat non-zero metrics, so that events don't simply expire.
+
+
+## Kafka metrics
+
+The script `kafka-exporter` connects to one or more Kafka queues as a consumer, and counts messages, key bytes, value bytes and connections.
+These can be scraped as Prometheus-compatible metrics.
+
+The following arguments are accepted:
+
+- `-f *file*` Load queue configuration from YAML file.
+  Can be used multiple times, merging details for identical queues.
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
+- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8567 is the default
+- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `--log=level` &ndash; Set the log level.
+- `--log-file=file` &ndash; Set the log file; default is probably to `stderr`.
+
+Queue configuration is a YAML file consisting of a map `queues`.
+Each entry key is an arbitrary queue name which appears in matrics as the label `queue`.
+Each entry value is a map with the following members:
+
+- `bootstrap` &ndash; an array of `host:port` bootstrap addresses
+- `topics` &ndash; an array of topic names to subscribe to
+- `group` &ndash; the consumer group name, defaulting to `monitor`
+
+Metrics can be scraped from the endpoint `http://host:port/metrics`, as specified by `-T` and `-t` above.
+
+The following metrics are defined with the `topic` label specifying the topic:
+
+- `kafka_key_volume_bytes_total` &ndash; the number of key bytes received
+- `kafka_value_volume_bytes_total` &ndash; the number of value bytes received
+- `kafka_messages_total` &ndash; the number of messages received
+
+The following metrics are also defined without the `topic` label:
+
+- `kafka_up` &ndash; `1` if a connection with the queue is established; `0` otherwise
+- `kafka_connections_total` &ndash; the number of connection attempts
+
+(Each `_total` metric has a corresponding `_created` metric giving the time of the metric's reset.)
+
+For each queue, connections are attempted continuously on failure.
+However, 30 seconds are guaranteed between any two connection attempts on the same queue.
