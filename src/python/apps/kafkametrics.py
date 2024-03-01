@@ -130,6 +130,7 @@ stats = {
     'queues': {
         name: {
             'up': False,
+            'conns': 0,
             'topics': dict({ t: {
                 'key_bytes': 0,
                 'value_bytes': 0,
@@ -147,6 +148,7 @@ def update_live_metrics(hist, stats, lock):
         for name, stat in stats['queues'].items():
             dat = data.setdefault('queues', { }).setdefault(name, { })
             dat['up'] = stat['up']
+            dat['conns'] = stat['conns']
             utils.merge(dat.setdefault('topics', { }), stat['topics'])
             continue
         pass
@@ -223,6 +225,21 @@ schema = [
             'queue': ('%s', lambda t, d: t[0]),
         },
     },
+
+    {
+        'base': 'kafka_connections',
+        'type': 'counter',
+        'select': lambda e: [ (q, e['queues'][q]['conns'], e['reset'])
+                              for q in e['queues']
+                              if 'conns' in e['queues'][q] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: t[1]),
+            '_created': ('%.3f', lambda t, d: t[2]),
+        },
+        'attrs': {
+            'queue': ('%s', lambda t, d: t[0]),
+        },
+    },
 ]
 
 methist = metrics.MetricHistory(schema, horizon=horizon)
@@ -250,6 +267,9 @@ def listen_to_kafka(conf, stats, stats_lock):
     while True:
         try:
             restart_time = time.time()
+            with stats_lock:
+                stats['conns'] += 1
+                pass
             cons = KafkaConsumer(*topics,
                                  bootstrap_servers=boot,
                                  group_id=conf['group'])
