@@ -41,8 +41,10 @@ from http.server import HTTPServer
 import threading
 import os
 import signal
+import time
 
 from kafka import KafkaConsumer
+import kafka.errors as ke
 
 import metrics
 import utils
@@ -72,8 +74,8 @@ for opt, val in opts:
     elif opt == '-f':
         with open(val, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
-            boot += doc.get('bootstrap', [])
-            topics += doc.get('topics', [])
+            boot.update(doc.get('bootstrap', []))
+            topics.update(doc.get('topics', []))
             group = doc.get('group', group)
             pass
     elif opt == '-T':
@@ -121,10 +123,11 @@ if 'filename' in log_params:
     pass
 
 
-stats_lock = threading.lock()
+stats_lock = threading.Lock()
 stats = {
+    'up': False,
     'reset': time.time(),
-    'topics': map({ t: {
+    'topics': dict({ t: {
         'key_bytes': 0,
         'value_bytes': 0,
         'count': 0,
@@ -135,8 +138,9 @@ def update_live_metrics(hist, stats, lock):
     data = { }
 
     with lock:
+        data['up'] = stats['up']
         data['reset'] = stats['reset']
-        utils.merge(data['topics'], stats['topics'])
+        utils.merge(data.setdefault('topics', { }), stats['topics'])
         pass
 
     ## Record this data as almost immediate metrics.
@@ -186,6 +190,15 @@ schema = [
             'topic': ('%s', lambda t, d: t[0]),
         },
     },
+
+    {
+        'base': 'kafka_up',
+        'type': 'gauge',
+        'select': lambda e: [ (e['up'],) ],
+        'samples': {
+            '': ('%d', lambda t, d: 1 if t[0] else 0),
+        },
+    },
 ]
 
 methist = metrics.MetricHistory(schema, horizon=horizon)
@@ -217,21 +230,35 @@ try:
                                 daemon=True)
     srv_thrd.start()
 
+    # key_deserializer=lambda x: x.decode('utf-8')
+    # value_deserializer=lambda x: x.decode('utf-8')
     try:
-        cons = KafkaConsumer(*topics,
-                             bootstrap_servers=boot,
-                             group_id=group,
-                             key_deserializer=lambda x: x.decode('utf-8'),
-                             value_deserializer=lambda x: x.decode('utf-8'))
-        for msg in cons:
-            topic = msg.topic
-            keybytes = len(msg.key)
-            valuebytes = len(msg.value)
-            with stats_lock:
-                logging.debug('%s: %d/%d' % (topic, keybytes, valuebytes))
-                stats['topics'][topic]['key_bytes'] += keybytes
-                stats['topics'][topic]['value_bytes'] += valuebytes
-                stats['topics'][topic]['count'] += 1
+        while True:
+            try:
+                restart_time = time.time()
+                cons = KafkaConsumer(*topics,
+                                     bootstrap_servers=boot,
+                                     group_id=group)
+                stats['up'] = True
+                for msg in cons:
+                    topic = msg.topic
+                    keybytes = len(msg.key)
+                    valuebytes = len(msg.value)
+                    with stats_lock:
+                        logging.debug('%s: %d/%d' %
+                                      (topic, keybytes, valuebytes))
+                        stats['topics'][topic]['key_bytes'] += keybytes
+                        stats['topics'][topic]['value_bytes'] += valuebytes
+                        stats['topics'][topic]['count'] += 1
+                        pass
+                    continue
+            except ke.NoBrokersAvailable:
+                fail_time = time.time()
+                restart_delay = restart_time + 30 - fail_time
+                if restart_delay > 0:
+                    time.sleep(restart_delay)
+                stats['up'] = False
+                ## Try again.
                 pass
             continue
     except InterruptedError:
