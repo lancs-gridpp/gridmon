@@ -253,7 +253,9 @@ def listen_to_kafka(conf, stats, stats_lock):
             cons = KafkaConsumer(*topics,
                                  bootstrap_servers=boot,
                                  group_id=conf['group'])
-            stats['up'] = True
+            with stats_lock:
+                stats['up'] = True
+                pass
             for msg in cons:
                 topic = msg.topic
                 keybytes = len(msg.key)
@@ -270,7 +272,9 @@ def listen_to_kafka(conf, stats, stats_lock):
             fail_time = time.time()
             restart_delay = restart_time + 30 - fail_time
             if restart_delay > 0:
-                stats['up'] = False
+                with stats_lock:
+                    stats['up'] = False
+                    pass
 
                 ## Try again, but not necessarily straight away.
                 time.sleep(restart_delay)
