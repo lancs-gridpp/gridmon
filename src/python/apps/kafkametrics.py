@@ -197,7 +197,7 @@ schema = [
     },
 
     {
-        'base': 'kafka_events',
+        'base': 'kafka_messages',
         'type': 'counter',
         'select': lambda e: [ (q, t, e['reset'])
                               for q in e['queues']
