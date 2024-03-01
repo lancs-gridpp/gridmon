@@ -60,9 +60,7 @@ log_params = {
 http_host = "localhost"
 http_port = 8567
 
-boot = set()
-topics = set()
-group = 'monitor'
+config = { }
 
 opts, args = gnu_getopt(sys.argv[1:], 'h:f:T:t:z',
                         [ 'log=', 'log-file=', 'pid-file='])
@@ -74,9 +72,16 @@ for opt, val in opts:
     elif opt == '-f':
         with open(val, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
-            boot.update(doc.get('bootstrap', []))
-            topics.update(doc.get('topics', []))
-            group = doc.get('group', group)
+            for q, newqconf in doc.get('queues', { }).items():
+                qconf = config.setdefault(q, {
+                    'bootstrap': set(),
+                    'topics': set(),
+                    'group': 'monitor',
+                })
+                qconf['bootstrap'].update(newqconf.get('bootstrap', []))
+                qconf['topics'].update(newqconf.get('topics', []))
+                qconf['group'] = doc.get('group', qconf['group'])
+                continue
             pass
     elif opt == '-T':
         http_host = val
@@ -100,10 +105,6 @@ for opt, val in opts:
         pass
     continue
 
-boot = ', '.join(boot)
-topics = list(topics)
-
-
 if silent:
     with open('/dev/null', 'w') as devnull:
         fd = devnull.fileno()
@@ -125,22 +126,29 @@ if 'filename' in log_params:
 
 stats_lock = threading.Lock()
 stats = {
-    'up': False,
     'reset': time.time(),
-    'topics': dict({ t: {
-        'key_bytes': 0,
-        'value_bytes': 0,
-        'count': 0,
-    } for t in topics }),
+    'queues': {
+        name: {
+            'up': False,
+            'topics': dict({ t: {
+                'key_bytes': 0,
+                'value_bytes': 0,
+                'count': 0,
+            } for t in conf['topics'] }),
+        } for name, conf in config.items()
+    },
 }
 
 def update_live_metrics(hist, stats, lock):
     data = { }
 
     with lock:
-        data['up'] = stats['up']
         data['reset'] = stats['reset']
-        utils.merge(data.setdefault('topics', { }), stats['topics'])
+        for name, stat in stats['queues'].items():
+            dat = data.setdefault('queues', { }).setdefault(name, { })
+            dat['up'] = stat['up']
+            utils.merge(dat.setdefault('topics', { }), stat['topics'])
+            continue
         pass
 
     ## Record this data as almost immediate metrics.
@@ -154,13 +162,17 @@ schema = [
         'base': 'kafka_key_volume',
         'type': 'counter',
         'unit': 'bytes',
-        'select': lambda e: [ (t, e['reset']) for t in e['topics'] ],
+        'select': lambda e: [ (q, t, e['reset'])
+                              for q in e['queues']
+                              for t in e['queues'][q]['topics'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d['topics'][t[0]]['key_bytes']),
-            '_created': ('%.3f', lambda t, d: t[1]),
+            '_total': ('%d', lambda t, d: d['queues'][t[0]] \
+                       ['topics'][t[1]]['key_bytes']),
+            '_created': ('%.3f', lambda t, d: t[2]),
         },
         'attrs': {
-            'topic': ('%s', lambda t, d: t[0]),
+            'topic': ('%s', lambda t, d: t[1]),
+            'queue': ('%s', lambda t, d: t[0]),
         },
     },
 
@@ -168,35 +180,47 @@ schema = [
         'base': 'kafka_value_volume',
         'type': 'counter',
         'unit': 'bytes',
-        'select': lambda e: [ (t, e['reset']) for t in e['topics'] ],
+        'select': lambda e: [ (q, t, e['reset'])
+                              for q in e['queues']
+                              for t in e['queues'][q]['topics'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d['topics'][t[0]]['value_bytes']),
-            '_created': ('%.3f', lambda t, d: t[1]),
+            '_total': ('%d', lambda t, d: d['queues'][t[0]] \
+                       ['topics'][t[1]]['value_bytes']),
+            '_created': ('%.3f', lambda t, d: t[2]),
         },
         'attrs': {
-            'topic': ('%s', lambda t, d: t[0]),
+            'topic': ('%s', lambda t, d: t[1]),
+            'queue': ('%s', lambda t, d: t[0]),
         },
     },
 
     {
         'base': 'kafka_events',
         'type': 'counter',
-        'select': lambda e: [ (t, e['reset']) for t in e['topics'] ],
+        'select': lambda e: [ (q, t, e['reset'])
+                              for q in e['queues']
+                              for t in e['queues'][q]['topics'] ],
         'samples': {
-            '_total': ('%d', lambda t, d: d['topics'][t[0]]['count']),
-            '_created': ('%.3f', lambda t, d: t[1]),
+            '_total': ('%d', lambda t, d: d['queues'][t[0]] \
+                       ['topics'][t[1]]['count']),
+            '_created': ('%.3f', lambda t, d: t[2]),
         },
         'attrs': {
-            'topic': ('%s', lambda t, d: t[0]),
+            'topic': ('%s', lambda t, d: t[1]),
+            'queue': ('%s', lambda t, d: t[0]),
         },
     },
 
     {
         'base': 'kafka_up',
         'type': 'gauge',
-        'select': lambda e: [ (e['up'],) ],
+        'select': lambda e: [ (q, e['queues'][q]['up'])
+                              for q in e['queues'] ],
         'samples': {
-            '': ('%d', lambda t, d: 1 if t[0] else 0),
+            '': ('%d', lambda t, d: 1 if t[1] else 0),
+        },
+        'attrs': {
+            'queue': ('%s', lambda t, d: t[0]),
         },
     },
 ]
@@ -218,6 +242,42 @@ except OSError as e:
     sys.exit(1)
     pass
 
+def listen_to_kafka(conf, stats, stats_lock):
+    topics = list(conf['topics'])
+    boot = ', '.join(conf['bootstrap'])
+    group_id = conf['group']
+
+    while True:
+        try:
+            restart_time = time.time()
+            cons = KafkaConsumer(*topics,
+                                 bootstrap_servers=boot,
+                                 group_id=conf['group'])
+            stats['up'] = True
+            for msg in cons:
+                topic = msg.topic
+                keybytes = len(msg.key)
+                valuebytes = len(msg.value)
+                with stats_lock:
+                    logging.debug('%s: %d/%d' %
+                                  (topic, keybytes, valuebytes))
+                    stats['topics'][topic]['key_bytes'] += keybytes
+                    stats['topics'][topic]['value_bytes'] += valuebytes
+                    stats['topics'][topic]['count'] += 1
+                    pass
+                continue
+        except ke.NoBrokersAvailable:
+            fail_time = time.time()
+            restart_delay = restart_time + 30 - fail_time
+            if restart_delay > 0:
+                stats['up'] = False
+
+                ## Try again, but not necessarily straight away.
+                time.sleep(restart_delay)
+                continue
+        break
+    pass
+
 try:
     if pidfile is not None:
         with open(pidfile, "w") as f:
@@ -225,55 +285,26 @@ try:
             pass
         pass
 
-    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                args=(webserver,),
+    ## Start a thread for each queue.
+    for queue, qconf in config.items():
+        thrd = threading.Thread(target=listen_to_kafka,
+                                args=(qconf, stats['queues'][queue], stats_lock),
                                 daemon=True)
-    srv_thrd.start()
+        thrd.start()
+        continue
 
-    # key_deserializer=lambda x: x.decode('utf-8')
-    # value_deserializer=lambda x: x.decode('utf-8')
-    try:
-        while True:
-            try:
-                restart_time = time.time()
-                cons = KafkaConsumer(*topics,
-                                     bootstrap_servers=boot,
-                                     group_id=group)
-                stats['up'] = True
-                for msg in cons:
-                    topic = msg.topic
-                    keybytes = len(msg.key)
-                    valuebytes = len(msg.value)
-                    with stats_lock:
-                        logging.debug('%s: %d/%d' %
-                                      (topic, keybytes, valuebytes))
-                        stats['topics'][topic]['key_bytes'] += keybytes
-                        stats['topics'][topic]['value_bytes'] += valuebytes
-                        stats['topics'][topic]['count'] += 1
-                        pass
-                    continue
-            except ke.NoBrokersAvailable:
-                fail_time = time.time()
-                restart_delay = restart_time + 30 - fail_time
-                if restart_delay > 0:
-                    time.sleep(restart_delay)
-                stats['up'] = False
-                ## Try again.
-                pass
-            continue
-    except InterruptedError:
-        pass
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        sys.exit(1)
-    finally:
-        logging.info('Polling halted')
-        methist.halt()
-        webserver.shutdown()
-        pass
+    webserver.serve_forever()
+except InterruptedError:
+    pass
+except KeyboardInterrupt:
+    pass
+except Exception as e:
+    logging.error(traceback.format_exc())
+    sys.exit(1)
 finally:
+    logging.info('Polling halted')
+    methist.halt()
+    webserver.shutdown()
     if pidfile is not None:
         os.remove(pidfile)
         pass
