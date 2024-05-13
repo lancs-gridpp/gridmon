@@ -307,6 +307,24 @@ The following are extracted from SCSI devices, each indexed by a `devid` label:
 - `cephhealth_scsi_grown_defect_list_total` &ndash; the `scsi_grown_defect_list` reading; a counter, also with a `_created` time, which is always 0
 - `cephhealth_scsi_uncorrected_total` &ndash; the `scsi_error_counter_log` reading; a counter, also with a `_created` time, which is always 0; a `mode` label distingishes between `read`, `write` and `verify`
 
+The following are extracted from NVME devices (from `nvme_smart_health_information_log`), also indexed by `devid`:
+
+- `cephhealth_nvme_unsafe_shutdowns_total` &ndash; the `unsafe_shutdowns` field
+- `cephhealth_nvme_errlog_entries_total` &ndash; the `num_err_log_entries` field
+- `cephhealth_nvme_temperature_celsius` &ndash; the `temperature` field
+- `cephhealth_nvme_media_errors_total` &ndash; the `media_errors` field
+- `cephhealth_nvme_controller_busy_minutes_total` &ndash; the `controller_busy_time` field
+- `cephhealth_nvme_power_cycles_total` &ndash; the `power_cycles` field
+- `cephhealth_nvme_power_on_hours_total` &ndash; the `power_on_hours` field
+- `cephhealth_nvme_percentage_used` &ndash; the `percentage_used` field
+- `cephhealth_nvme_host_reads_total` &ndash; the `host_reads` field
+- `cephhealth_nvme_host_writes_total` &ndash; the `host_writes` field
+- `cephhealth_nvme_data_read_megabytes_total` &ndash; the `data_units_read` field, multipled by 1000 and the block size, then divided by 1024×1024
+- `cephhealth_nvme_data_written_megabytes_total` &ndash; the `data_units_written` field, multipled by 1000 and the block size, then divided by 1024×1024
+
+The block size is obtained from `logical_block_size`.
+All metrics ending in `_total` are counters, and have a dual `_created` which is always 0.
+
 These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint.
 This process can take a second or so per disc, so remote-writing ensures that the metrics for each disc are delivered to Prometheus in a timely manner.
 
