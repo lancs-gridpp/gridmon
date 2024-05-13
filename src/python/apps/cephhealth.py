@@ -233,10 +233,11 @@ class CephHealthMetricPusher:
         if osds is None:
             return
         limit = self.disk_limit
+        done = set()
         for osd in osds:
             ## Get metrics for one OSD, and write them into the
             ## history.
-            mets = get_osd_disk_metrics(osd, args=self.cmdpfx)
+            mets = get_osd_disk_metrics(osd, args=self.cmdpfx, done=done)
             if mets is None:
                 continue
             self.hist.install(mets)
@@ -268,6 +269,21 @@ def get_osd_set(args=[]):
         pass
     return None
 
+_nvme_metrics = {
+    'unsafe_shutdowns': { },
+    'data_units_read': { 'fn': lambda x: int(x)*1000, 'blocks': True, },
+    'data_units_written': { 'fn': lambda x: int(x)*1000, 'blocks': True, },
+    'host_reads': { },
+    'host_writes': { },
+    'percentage_used': { },
+    'power_cycles': { },
+    'power_on_hours': { 'dst': 'power_on', },
+    'controller_busy_time': { 'dst': 'controller_busy', },
+    'temperature': { },
+    'num_err_log_entries': { 'dst': 'errlog_entries', },
+    'media_errors': { },
+}
+
 _scsi_metrics = [
     ('correction_algorithm_invocations', 'invoked', int),
     ('errors_corrected_by_eccdelayed', 'eccdelayed', int),
@@ -278,7 +294,7 @@ _scsi_metrics = [
     ('total_uncorrected_errors', 'uncorrected', int),
 ]
 
-def get_osd_disk_metrics(osd, args=[]):
+def get_osd_disk_metrics(osd, args=[], done=set()):
     cmd = args + [ 'ceph', 'device', 'query-daemon-health-metrics',
                    '--format=json', 'osd.%d' % osd ]
     try:
@@ -286,7 +302,14 @@ def get_osd_disk_metrics(osd, args=[]):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         doc = json.loads(proc.stdout.read().decode("utf-8"))
         result = { }
+        dfls = (None, None, int, 1, False)
         for devid, ent in doc.items():
+            ## Database units appear multiple times.  Make sure we
+            ## don't report them more than once.
+            if devid in done:
+                continue
+            done.add(devid)
+
             ## Get the timestamp.
             lct = ent.get('local_time')
             if lct is None:
@@ -295,8 +318,29 @@ def get_osd_disk_metrics(osd, args=[]):
             if ts is None:
                 continue
 
-            ## Get the SCSI fields.
             out = { }
+
+            ## Get the NVME fields.
+            blksz = ent.get('logical_block_size')
+            if blksz is not None:
+                out['blksz'] = blksz
+                pass
+            membs = ent.get('nvme_smart_health_information_log', { })
+            for src, met in _nvme_metrics.items():
+                val = membs.get(src)
+                if val is None:
+                    continue
+                if 'fn' in met:
+                    val = met['fn'](val)
+                    pass
+                if met.get('blocks', False):
+                    val *= blksz
+                    pass
+                dst = 'nvme_' + met.get('dst', src)
+                out[dst] = val
+                continue
+
+            ## Get the SCSI fields.
             dfl = ent.get('scsi_grown_defect_list')
             if dfl is not None:
                 out['defects'] = dfl
