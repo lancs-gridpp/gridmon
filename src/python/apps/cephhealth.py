@@ -425,49 +425,49 @@ def get_device_metrics(result, devid, args=[], start=None, end=None, adorn=None)
     
     
 
-class CephHealthCollector:
-    def __init__(self, cmdpfx, lag=20, horizon=0):
-        self.lag = lag
-        self.last = 0
-        # self.last = int(time.time()) - self.lag - horizon
-        self.cmdpfx = cmdpfx
-        pass
+# class CephHealthCollector:
+#     def __init__(self, cmdpfx, lag=20, horizon=0):
+#         self.lag = lag
+#         self.last = 0
+#         # self.last = int(time.time()) - self.lag - horizon
+#         self.cmdpfx = cmdpfx
+#         pass
 
-    def update(self, limit=None):
-        ## Our time range is from self.last to curr.
-        curr = int(time.time()) - self.lag
+#     def update(self, limit=None):
+#         ## Our time range is from self.last to curr.
+#         curr = int(time.time()) - self.lag
 
-        newdata = { }
-        devset = get_device_set(args=self.cmdpfx)
-        for devid in devset:
-            if limit is not None and limit <= 0:
-                break
+#         newdata = { }
+#         devset = get_device_set(args=self.cmdpfx)
+#         for devid in devset:
+#             if limit is not None and limit <= 0:
+#                 break
 
-            ## Get the history for this device within our time range.
-            ## (This actually gets the entire history, and then
-            ## filters it, as the Ceph command used does not offer
-            ## filtering, except to get a specific timestamp.)
-            logging.debug('Getting %s' % devid)
-            if get_device_metrics(newdata,
-                                  devid,
-                                  args=self.cmdpfx,
-                                  start=self.last,
-                                  end=curr,
-                                  adorn=devset[devid]):
-                if limit is not None:
-                    limit -= 1
-                    pass
-            else:
-                logging.info('no data for %s' % devid)
-                pass
+#             ## Get the history for this device within our time range.
+#             ## (This actually gets the entire history, and then
+#             ## filters it, as the Ceph command used does not offer
+#             ## filtering, except to get a specific timestamp.)
+#             logging.debug('Getting %s' % devid)
+#             if get_device_metrics(newdata,
+#                                   devid,
+#                                   args=self.cmdpfx,
+#                                   start=self.last,
+#                                   end=curr,
+#                                   adorn=devset[devid]):
+#                 if limit is not None:
+#                     limit -= 1
+#                     pass
+#             else:
+#                 logging.info('no data for %s' % devid)
+#                 pass
 
-            continue
+#             continue
 
-        ## The next time range is begins where we finished.
-        self.last = curr
-        return newdata
+#         ## The next time range is begins where we finished.
+#         self.last = curr
+#         return newdata
 
-    pass
+#     pass
 
 def update_live_metrics(hist, args=[]):
     data = { }
