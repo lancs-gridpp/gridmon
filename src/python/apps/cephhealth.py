@@ -598,6 +598,189 @@ schema = [
     },
 
     {
+        'base': 'cephhealth_nvme_unsafe_shutdowns',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_unsafe_shutdowns' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_unsafe_shutdowns']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_temperature',
+        'unit': 'celsius',
+        'type': 'guage',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_temperature' in e['disks'][t] ],
+        'samples': {
+            '': ('%.1f', lambda t, d: d['disks'][t[0]]['nvme_temperature']),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_errlog_entries',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_errlog_entries' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_errlog_entries']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_media_errors',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_media_errors' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_media_errors']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_controller_busy',
+        'unit': 'minutes',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_controller_busy' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_controller_busy']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_power_cycles',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_power_cycles' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_power_cycles']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_power_on',
+        'unit': 'hours',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_power_on' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_power_on']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_percentage_used',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_percentage_used' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_percentage_used']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_host_writes',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_host_writes' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_host_writes']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_host_reads',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_host_reads' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_host_reads']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_data_read',
+        'unit': 'megabytes',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_data_units_read' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_data_units_read'] / (1024 * 1024)),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_nvme_data_written',
+        'unit': 'megabytes',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'nvme_data_units_written' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['nvme_data_units_written'] / (1024 * 1024)),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
         'base': 'cephhealth_scsi_grown_defect_list',
         'type': 'counter',
         'help': 'number of defects',
