@@ -615,7 +615,7 @@ schema = [
     {
         'base': 'cephhealth_nvme_temperature',
         'unit': 'celsius',
-        'type': 'guage',
+        'type': 'gauge',
         'select': lambda e: [ (t,) for t in e['disks']
                               if 'nvme_temperature' in e['disks'][t] ],
         'samples': {
