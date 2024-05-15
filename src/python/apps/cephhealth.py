@@ -379,7 +379,7 @@ def get_osd_disk_metrics(osd, args=[], done=set()):
         pass
     return None
 
-_devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
+_devpathfmt = re.compile(r'/dev/disk/by-path/(.*)')
 
 _devsep = re.compile(r',')
 _devfmt = re.compile(r'([^=]+)=(.+)')
