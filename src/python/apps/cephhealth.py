@@ -381,30 +381,61 @@ def get_osd_disk_metrics(osd, args=[], done=set()):
 
 _devpathfmt = re.compile(r'/dev/disk/by-path/(.*scsi.*)')
 
+_devsep = re.compile(r',')
+_devfmt = re.compile(r'([^=]+)=(.+)')
+
+def split_dev_list(text, key, out):
+    if text is None:
+        return
+    for te in _devsep.split(text):
+        mt = _devfmt.match(te)
+        if mt is None:
+            continue
+        dev = mt.group(1)
+        val = mt.group(2)
+        out.setdefault(dev, dict())[key] = val
+        continue
+    return
+
 def get_device_set(args=[]):
-    cmd = args + [ 'ceph', 'device', 'ls', '--format=json' ]
+    cmd = args + [ 'ceph', 'osd', 'metadata', '--format=json' ]
     result = { }
     try:
         logging.debug('Command: %s' % cmd)
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         doc = json.loads(proc.stdout.read().decode("utf-8"))
         for elem in doc:
-            if 'devid' not in elem or 'location' not in elem:
+            host = elem.get('hostname')
+            attrs = dict()
+            split_dev_list(elem.get('device_ids'), 'id', attrs)
+            split_dev_list(elem.get('device_paths'), 'path', attrs)
+            for dev, dattrs in attrs.items():
+                devid = dattrs.get('id')
+                if devid is None:
+                    continue
+                path = dattrs.get('path')
+                if path is None:
+                    continue
+                r = result.setdefault(devid, dict())
+                r['host'] = host
+                r['path'] = path
                 continue
-            if len(elem['location']) == 0:
-                continue
-            devid = elem['devid']
-            pathtxt = elem['location'][0]['path']
-            mt = _devpathfmt.match(pathtxt)
-            if mt is not None:
-                (path,) = mt.groups()
-                if path is not None:
-                    result[devid] = {
-                        'host': elem['location'][0]['host'],
-                        'path': path,
-                    }
-                    pass
-                pass
+            # if 'devid' not in elem or 'location' not in elem:
+            #     continue
+            # if len(elem['location']) == 0:
+            #     continue
+            # devid = elem['devid']
+            # pathtxt = elem['location'][0]['path']
+            # mt = _devpathfmt.match(pathtxt)
+            # if mt is not None:
+            #     (path,) = mt.groups()
+            #     if path is not None:
+            #         result[devid] = {
+            #             'host': elem['location'][0]['host'],
+            #             'path': path,
+            #         }
+            #         pass
+            #     pass
             continue
     except FileNotFoundError:
         logging.error('Command not found: %s' % cmd)
