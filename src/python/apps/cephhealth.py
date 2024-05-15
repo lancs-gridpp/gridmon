@@ -416,6 +416,10 @@ def get_device_set(args=[]):
                 path = dattrs.get('path')
                 if path is None:
                     continue
+                mt = _devpathfmt.match(path)
+                if mt is None:
+                    continue
+                (path,) = mt.groups()
                 r = result.setdefault(devid, dict())
                 r['host'] = host
                 r['path'] = path
