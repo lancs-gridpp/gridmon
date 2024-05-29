@@ -105,8 +105,9 @@ The following keys are recognized:
   Each role generates an `ip_role` metric.
   Additionally, a role of `xroot` identifies the device that XRootD uses to determine its full name.
 - `enabled` &ndash; Assumed `true` if absent, this allows a node to be ignored from the configuration.
-- `clusters` &ndash; This holds a dictionary, whose keys are cluster names that the machine plays a part in.
-  The values are dictionaries with the following optional values:
+- `clusters` &ndash; This holds a dictionary whose keys are cluster names that the machine plays a part in.
+  Metrics generated from the `clusters` entry have a `cluster` label giving the cluster name, and this cross-references entries in the top-level `cluster` dictionary.
+  The values of the `clusters` dictionary are themselves dictionaries with the following optional values:
   - `osds` &ndash; This specifies the number of Ceph OSDs that the node should be running, and appears as the value of the `machine_osd_drives` metric.
   - `roles` &ndash; This specifies an array of role names.
     A metric `machine_role` is generated for each one on that node.
@@ -115,7 +116,6 @@ The following keys are recognized:
   - `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
     Exactly one interface must be assigned the role `xroot`, as described for `xroots`.
 	The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
-  Metrics generated from the `clusters` entry have a `cluster` label giving the cluster name, and this cross-references entries in the top-level `cluster` dictionary.
 
 All node names must be unique.
 All interface names must be unique.
