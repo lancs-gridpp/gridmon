@@ -75,16 +75,16 @@ It runs continously, but can be started safely with a cronjob, quitting if it's 
 
 The following options are accepted:
 
-- `-h *int*` &ndash; seconds of horizon, beyond which metrics are discarded; 120 is the default
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 9363 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-h INT` &ndash; seconds of horizon, beyond which metrics are discarded; 120 is the default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 9363 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `--log=*level*` &ndash; Set the log level.
+- `--log=LEVEL` &ndash; Set the log level.
   `info` is good.
-- `--log-file=*file*` &ndash; Append logging to a file.
-- `-f *file*` &ndash; Add the file to the list scanned each time metrics are generated.
-- `-M *endpoint*` &ndash; Push metrics to a remote-write endpoint.
+- `--log-file=FILE` &ndash; Append logging to a file.
+- `-f FILE` &ndash; Add the file to the list scanned each time metrics are generated.
+- `-M ENDPOINT` &ndash; Push metrics to a remote-write endpoint.
 
 ### Source format
 
@@ -167,7 +167,7 @@ All pushed metrics include the label `job="statics"`.
 
 <!-- The following options are accepted: -->
 
-<!-- - `-o *file*` &ndash; Atomically write output to the file. -->
+<!-- - `-o FILE` &ndash; Atomically write output to the file. -->
 <!--   An adjacent file is created, and then moved into place. -->
 <!-- - `+o` &ndash; Write to standard output. -->
 
@@ -358,18 +358,18 @@ For example, to get a list of discs with at least one defect, include which OSD 
 
 The following arguments are accepted:
 
-- `-l *int*` &ndash; the number of seconds of lag; default 20
-- `-s *HH:MM*` &ndash; Add the time of day to the daily schedule.
+- `-l INT` &ndash; the number of seconds of lag; default 20
+- `-s HH:MM` &ndash; Add the time of day to the daily schedule.
   Ceph is scanned at each scheduled time.
-- `-h *int*` &ndash; seconds of horizon, beyond which metrics are discarded; 30 is the default
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-h INT` &ndash; seconds of horizon, beyond which metrics are discarded; 30 is the default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `--log=*level*` &ndash; Set the log level.
+- `--log=LEVEL` &ndash; Set the log level.
   `info` is good.
-- `--log-file=*file*` &ndash; Append logging to a file.
-- `--disk-limit=*num*` &ndash; Stop after getting non-empty data from this many discs.
+- `--log-file=FILE` &ndash; Append logging to a file.
+- `--disk-limit=INT` &ndash; Stop after getting non-empty data from this many discs.
   This is intended mainly for debugging on a small scale, without having to wait six minutes to scrape 700 discs!
 - `--now` &ndash; Perform a single scrape of the discs immediately, then settle into the configured schedule.
 
@@ -388,17 +388,17 @@ The script distinguishes HTTP clients by `Authorization` header, and remembers t
 
 The following arguments are accepted:
 
-- `-h *int*` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
-- `-u *port*` &ndash; port number to bind to (UDP); 9485 is the default
-- `-U *host*` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8744 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-h INT` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
+- `-u PORT` &ndash; port number to bind to (UDP); 9485 is the default
+- `-U HOST` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8744 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `--log=*level*` &ndash; Set the log level.
+- `--log=LEVEL` &ndash; Set the log level.
   `info` is good.
-- `--log-file=*file*` &ndash; Append logging to a file.
-- `-E *endpoint*` &ndash; Push metrics to a remote-write endpoint.
+- `--log-file=FILE` &ndash; Append logging to a file.
+- `-E ENDPOINT` &ndash; Push metrics to a remote-write endpoint.
 
 If you use `-E`, metrics are pushed to the endpoint as soon as a UDP report arrives and its contents are converted.
 In this case, the HTTP server serves no metrics, but still yields metric documentation in the form of `# HELP`, `# TYPE` and `# UNIT`, which you might choose to scrape infrequently.
@@ -512,21 +512,21 @@ It also runs an HTTP server, and serves metric documentation over it in [OpenMet
 
 The following arguments are accepted:
 
-- `-u *port*` &ndash; port number to bind to (UDP); 9486 is the default
-- `-U *host*` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8746 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-u PORT` &ndash; port number to bind to (UDP); 9486 is the default
+- `-U HOST` &ndash; hostname/IP address to bind to (UDP); empty string is `INADDR_ANY`, and is default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8746 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `--log=*level*` &ndash; Set the log level.
+- `--log=LEVEL` &ndash; Set the log level.
   `info` is good.
-- `--log-file=*file*` &ndash; Append logging to a file.
-- `-M *endpoint*` &ndash; Push metrics to a remote-write endpoint.
-- `-o *file*` &ndash; Append stream-derived log entries to this file.
-- `--pidfile=*file*.pid` &ndash; Write the process id to this file.
+- `--log-file=FILE` &ndash; Append logging to a file.
+- `-M ENDPOINT` &ndash; Push metrics to a remote-write endpoint.
+- `-o FILE` &ndash; Append stream-derived log entries to this file.
+- `--pidfile=FILE.pid` &ndash; Write the process id to this file.
   It should be deleted on exit.
-- `-d *file*` &ndash; Load domain information from this file.
-- `-i *timeout*` &ndash; Timeout in minutes for dictids.
+- `-d FILE` &ndash; Load domain information from this file.
+- `-i NUM` &ndash; Timeout in minutes for dictids.
   The default is 120.
 
 Note that two log files are specified.
@@ -604,19 +604,19 @@ The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR
 
 The following arguments are accepted:
 
-- `-h *int*` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
-- `-l *int*` &ndash; the number of seconds of lag; default 20
-- `-f *int*` &ndash; seconds before the scraped period to look for metadata keys; default 0
-- `-a *int*` &ndash; seconds before the scraped period to look for metadata keys; default 60
+- `-h INT` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
+- `-l INT` &ndash; the number of seconds of lag; default 20
+- `-f INT` &ndash; seconds before the scraped period to look for metadata keys; default 0
+- `-a INT` &ndash; seconds before the scraped period to look for metadata keys; default 60
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8732 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
-- `-E *endpoint*` &ndash; the `esmond` endpoint to fetch metrics from
-- `-S *host*` &ndash; the host of the `esmond` endpoint, from which `https://*host*/esmond/perfsonar/archive/` is formed
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8732 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-E ENDPOINT` &ndash; the `esmond` endpoint to fetch metrics from
+- `-S HOST` &ndash; the host of the `esmond` endpoint, from which `https://HOST/esmond/perfsonar/archive/` is formed
 - `--log=level` &ndash; Set the log level.
 - `--log-file=file` &ndash; Set the log file; default is probably to `stderr`.
-- `-M *endpoint*` &ndash; Push metrics to a remote-write endpoint.
+- `-M ENDPOINT` &ndash; Push metrics to a remote-write endpoint.
 
 One of `-E` or `-S` is required.
 The specified endpoint is consulted periodically to obtain timestamped metric points, which can then be scraped by Prometheus.
@@ -722,12 +722,12 @@ These can be scraped as Prometheus-compatible metrics.
 
 The following arguments are accepted:
 
-- `-f *file*` Load queue configuration from YAML file.
+- `-f FILE` Load queue configuration from YAML file.
   Can be used multiple times, merging details for identical queues.
 - `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
   Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `-t *port*` &ndash; port number to bind to (HTTP/TCP); 8567 is the default
-- `-T *host*` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8567 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
 - `--log=level` &ndash; Set the log level.
 - `--log-file=file` &ndash; Set the log file; default is probably to `stderr`.
 
