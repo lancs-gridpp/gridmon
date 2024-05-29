@@ -323,12 +323,12 @@ The following are extracted from NVME devices (from `nvme_smart_health_informati
 - `cephhealth_nvme_data_written_megabytes_total` &ndash; the `data_units_written` field, multipled by 1000 and the block size, then divided by 1024×1024
 
 The block size is obtained from `logical_block_size`.
-All metrics ending in `_total` are counters, and have a dual `_created` which is always 0.
+All metrics ending in `_total` are counters, and have a dual ending in `_created` which is always 0.
 
-These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint.
+These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint, with the label `job="cephhealth"`.
 This process can take a second or so per disc, so remote-writing ensures that the metrics for each disc are delivered to Prometheus in a timely manner.
 
-The process establishes a scraping endpoint for metrics that can be obtained relatively quickly:
+The process also establishes a scraping endpoint for metrics that can be obtained relatively quickly:
 
 - `cephhealth_disk_fitting` (formerly `cephhealth_metadata`; still present, but deprecated) &ndash; always 1; includes `devid`; includes the label `path` giving the value of `location` with the `/dev/disk/by-path/` prefix lopped off
 - `cephhealth_status_check` &ndash; a gauge in the cluster health status as reported by `ceph status`; includes a label `type` indicating what is being counted, e.g., `PG_NOT_DEEP_SCRUBBED`
@@ -336,7 +336,7 @@ The process establishes a scraping endpoint for metrics that can be obtained rel
 
 They can then be scraped by Prometheus in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md).
 Obtaining these metrics dynamically is not exactly instantaneous, so a scrape interval of at least 5 minutes is recommended.
-For a large interval (say, an hour), you will probably need to use `last_over_time(cephhealth_status_check[70m])` to ensure they are detected.
+For a large interval (say, an hour), you will probably need to use `last_over_time(cephhealth_status_check[1h10m])` to ensure they are detected.
 
 The `devid` label can be correlated with the `device_ids` label of `ceph_disk_occupation` metrics supplied by Ceph itself.
 However, `device_ids` must be processed first to get a match.
@@ -346,7 +346,7 @@ You need to use `label_replace` on it in PromQL to create a suitable label.
 For example, to get a list of discs with at least one defect, include which OSD they serve, which host they are on, their `/dev/` names and device paths:
 
 ```
-(last_over_time(cephhealth_scsi_grown_defect_list_total[25h]) > 0) * on(devid) group_right() avg without (device_ids, devices) (label_replace(label_replace(avg without (exported_instance, instance, job) (ceph_disk_occupation), "devid", '$2', "device_ids", `([^=]+=[^,]+,)?[^=]+=(.*)`), "disk", '$2', "devices", `([^,]+,)?(.*)`)) * on(devid) group_left(path) last_over_time(cephhealth_metadata[25h])
+(last_over_time(cephhealth_scsi_grown_defect_list_total[1d1h]) > 0) * on(devid) group_right() avg without (device_ids, devices) (label_replace(label_replace(avg without (exported_instance, instance, job) (ceph_disk_occupation), "devid", '$2', "device_ids", `([^=]+=[^,]+,)?[^=]+=(.*)`), "disk", '$2', "devices", `([^,]+,)?(.*)`)) * on(devid) group_left(path) last_over_time(cephhealth_metadata[1d1h])
 ```
 
 The following arguments are accepted:
