@@ -185,7 +185,7 @@ schema = [
 
     {
         'base': 'ip_role',
-        'help': 'whether a host is reachable',
+        'help': 'the purpose of an interface within its host',
         'type': 'gauge',
         'select': lambda e: [ (n, i, r) for n in e.get('node', { })
                               if 'static' in e['node'][n]
