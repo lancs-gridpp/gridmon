@@ -23,19 +23,20 @@ sudo make install
 
 Python/Bash sources and executables are then installed in `/usr/local/share/gridmon/`:
 
-- `static-metrics` (deprecated; use `ip-statics-exporter` instead) &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion.
 - `ip-statics-exporter` &ndash; Run continuously, this reads a YAML file describing static intent, and writes it in to Prometheus, along with ping times.
 - `xrootd-stats` &ndash; Run continuously, this receives UDP summaries from XRootD's `xrd.monitor` setting, and serves or pushes them to Prometheus.
-- `perfsonar-stats` &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
-  This is a bit flakey at the moment, and suspected of driving Prometheus nuts, so use with caution.
 - `cephhealth-exporter` &ndash; Run continuously, this scans disc health metrics retained by Ceph, and serves them to Prometheus.
 - `hammercloud-events` &ndash; Run from Procmail, this converts a HammerCloud notification email into a metric point, best used for annotating HammerCloud exclusions.
 - `kafka-exporter` &ndash; Run continuously, this consumes from one or more Kafka queues, counting key/value bytes, messages and connections, and reporting whether up.
+- `perfsonar-stats` (deprecated) &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
+<!-- - `static-metrics` (deprecated; use `ip-statics-exporter` instead) &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion. -->
+
 
 
 ## Configuration of Prometheus
 
 For each script, either Prometheus scrapes the running process with an HTTP GET, or the process pushes metrics into Prometheus as soon as it has them.
+Even if pushing is preferred, the existence of an endpoint for scraping is often retain, as it allows metrics' documentation like `# HELP` to be loaded, and it's an easy way to detect when a collector has failed.
 
 ### Scraping
 
@@ -94,9 +95,6 @@ The node name appears as the label `node` on many metrics, including all the `ma
 The following keys are recognized:
 
 - `building`, `room`, `rack`, `level` &ndash; These strings appear as labels in `machine_metadata`, and can be used to describe the location of the machine.
-- `osds` &ndash; This specifies the number of Ceph OSDs that the node should be running, and appears as the value of the `machine_osd_drives` metric.
-- `roles` &ndash; This specifies an array of role names.
-  A metric `machine_role` is generated for each one on that node.
 - `interfaces` &ndash; This describes interfaces present on the node.
   IP addresses or DNS names are keys, and the values are maps with the following keys:
   - `device` &ndash; the internal device name, such as `eth0`
@@ -106,11 +104,18 @@ The following keys are recognized:
   The interface name appears as the label `iface` on almost all `ip_` metrics.
   Each role generates an `ip_role` metric.
   Additionally, a role of `xroot` identifies the device that XRootD uses to determine its full name.
-- `xroots` &ndash; This lists names of XRootD instances expected to be running on the node.
-  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `xrootd`.
-- `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
-  Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `*instance name*@*interface name*`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `cmsd`.
 - `enabled` &ndash; Assumed `true` if absent, this allows a node to be ignored from the configuration.
+- `clusters` &ndash; This holds a dictionary, whose keys are cluster names that the machine plays a part in.
+  The values are dictionaries with the following optional values:
+  - `osds` &ndash; This specifies the number of Ceph OSDs that the node should be running, and appears as the value of the `machine_osd_drives` metric.
+  - `roles` &ndash; This specifies an array of role names.
+    A metric `machine_role` is generated for each one on that node.
+  - `xroots` &ndash; This lists names of XRootD instances expected to be running on the node.
+    Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `INSTANCE-NAME@INTERFACE-NAME`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `xrootd`.
+  - `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
+    Exactly one interface must be assigned the role `xroot`, as described for `xroots`.
+	The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
+  Metrics generated from the `clusters` entry have a `cluster` label giving the cluster name, and this cross-references entries in the top-level `cluster` dictionary.
 
 All node names must be unique.
 All interface names must be unique.
@@ -150,140 +155,142 @@ Otherwise, `ip_up` is `0`, and no `ip_ping_milliseconds` metric is generated.
 
 If `-M` is specified, all metrics are written to this endpoint as they have all been generated.
 Meanwhile, the HTTP server serves no metrics, only metric documentation.
-Otherwise, no remote-write occurs, and all metrics are served through the HTTP server.
+Without `-M`, no remote-write occurs, and all metrics are served through the HTTP server.
 
-## Static metrics (deprecated)
+All pushed metrics include the label `job="statics"`.
 
-The script `static-metrics` is used to generate Prometheus-compatible metrics expressing essentially static intent.
-(It also includes `ping` RTTs, just to muddy the waters.)
-The script is to be run as a cronjob to generate a file served statically through a regular HTTP server.
+<!-- ## Static metrics (deprecated) -->
 
-The following options are accepted:
+<!-- The script `static-metrics` is used to generate Prometheus-compatible metrics expressing essentially static intent. -->
+<!-- (It also includes `ping` RTTs, just to muddy the waters.) -->
+<!-- The script is to be run as a cronjob to generate a file served statically through a regular HTTP server. -->
 
-- `-o *file*` &ndash; Atomically write output to the file.
-  An adjacent file is created, and then moved into place.
-- `+o` &ndash; Write to standard output.
+<!-- The following options are accepted: -->
 
-Other arguments are taken as source filenames.
-Each is read in turn, and then listed hosts are `ping`ed, and their RTTs are recorded.
-Finally, the metrics are written out.
+<!-- - `-o *file*` &ndash; Atomically write output to the file. -->
+<!--   An adjacent file is created, and then moved into place. -->
+<!-- - `+o` &ndash; Write to standard output. -->
 
-### Source format
+<!-- Other arguments are taken as source filenames. -->
+<!-- Each is read in turn, and then listed hosts are `ping`ed, and their RTTs are recorded. -->
+<!-- Finally, the metrics are written out. -->
 
-Each line identifies a host, and defines several attributes to be presented as metrics.
-Each attribute has the form `name=value`, and attributes are separated by spaces.
-The following are recognized:
+<!-- ### Source format -->
 
-- `addrs` specifies a comma-separated list of interfaces by their hostnames or IP addresses.
-  Each element may optionally identify the device by suffixing `#device`.
-  Each element may optionally identify the connected network by suffixing `/network`.
+<!-- Each line identifies a host, and defines several attributes to be presented as metrics. -->
+<!-- Each attribute has the form `name=value`, and attributes are separated by spaces. -->
+<!-- The following are recognized: -->
 
-- `building` specifies the building housing the physical device.
+<!-- - `addrs` specifies a comma-separated list of interfaces by their hostnames or IP addresses. -->
+<!--   Each element may optionally identify the device by suffixing `#device`. -->
+<!--   Each element may optionally identify the connected network by suffixing `/network`. -->
 
-- `room` specifies the machine room or laboratory housing the physical device.
+<!-- - `building` specifies the building housing the physical device. -->
 
-- `rack` specifies the rack identifier housing the physical device.
+<!-- - `room` specifies the machine room or laboratory housing the physical device. -->
 
-- `level` specifies the position within the rack housing the physical device.
+<!-- - `rack` specifies the rack identifier housing the physical device. -->
 
-- `osds` specifies the number of Ceph OSDs expected to be 'up' on the host.
+<!-- - `level` specifies the position within the rack housing the physical device. -->
 
-- `roles` specifies a comma-separated list of roles that the host fulfils (e.g., `storage`, `ceph_data`, `ceph_monitor`, `ceph_manager`, `ceph_metadata`, `storage_gateway`, etc.
+<!-- - `osds` specifies the number of Ceph OSDs expected to be 'up' on the host. -->
 
-- `func` is a deprecated field acting as a shorthand for `roles`:
+<!-- - `roles` specifies a comma-separated list of roles that the host fulfils (e.g., `storage`, `ceph_data`, `ceph_monitor`, `ceph_manager`, `ceph_metadata`, `storage_gateway`, etc. -->
 
-  - `storage-data` &rArr; `storage`, `ceph_data`
-  - `storage-monitor` &rArr; `storage`, `ceph_monitor`, `ceph_manager`
-  - `storage-metadata` &rArr; `storage`, `ceph_metadata`
-  - `storage-gateway` &rArr; `storage`, `storage_gateway`
+<!-- - `func` is a deprecated field acting as a shorthand for `roles`: -->
 
-  Anything else is mapped to itself as a role.
+<!--   - `storage-data` &rArr; `storage`, `ceph_data` -->
+<!--   - `storage-monitor` &rArr; `storage`, `ceph_monitor`, `ceph_manager` -->
+<!--   - `storage-metadata` &rArr; `storage`, `ceph_metadata` -->
+<!--   - `storage-gateway` &rArr; `storage`, `storage_gateway` -->
 
-### Generated metrics
+<!--   Anything else is mapped to itself as a role. -->
 
-Three groups of metrics are generated, with the following prefixes:
+<!-- ### Generated metrics -->
 
-- `machine_` metrics with the same `node` label describe a physical or virtual machine.
+<!-- Three groups of metrics are generated, with the following prefixes: -->
 
-- `ip_` metrics with the same `iface` label describe an IP interface of a machine (which may have several such interfaces).
+<!-- - `machine_` metrics with the same `node` label describe a physical or virtual machine. -->
 
-- `xrootd_` metrics with the same `xrdid` and `pgm` labels describe an XRootD program instance.
+<!-- - `ip_` metrics with the same `iface` label describe an IP interface of a machine (which may have several such interfaces). -->
 
-#### Machine metrics
+<!-- - `xrootd_` metrics with the same `xrdid` and `pgm` labels describe an XRootD program instance. -->
 
-These metrics include `node` as a key label, identifying the host:
+<!-- #### Machine metrics -->
 
-- `machine_osd_drives` specifies the number of block storage devices on the host that should be under Ceph management as OSDs.
-  An `exported_instance` label is included, but is deprecated in favour of `node`.
+<!-- These metrics include `node` as a key label, identifying the host: -->
 
-- `machine_location` is always 1, and includes the optional labels `building`, `room`, `rack`, `level`, as specified by the attributes provided as input.
-  An `exported_instance` label is included, but is deprecated in favour of `node`.
+<!-- - `machine_osd_drives` specifies the number of block storage devices on the host that should be under Ceph management as OSDs. -->
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node`. -->
 
-- `machine_role` is always 1, and includes the label `role`, with one metric point for each role specified by the `roles` attribute on input.
-  An `exported_instance` label is included, but is deprecated in favour of `node`.
+<!-- - `machine_location` is always 1, and includes the optional labels `building`, `room`, `rack`, `level`, as specified by the attributes provided as input. -->
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node`. -->
 
-- `machine_roles` is always 1, and includes the label `roles`, which includes each of the roles specified by the `roles` attribute on input, and separated/surrounded by `/`.
-  The intention is to be able to match a role with a regular expression such as `.*/storage/.*`.
+<!-- - `machine_role` is always 1, and includes the label `role`, with one metric point for each role specified by the `roles` attribute on input. -->
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node`. -->
 
-It's not yet clear whether to favour one of `machine_role` and `machine_roles`, and then deprecate the other.
-One of the problems with `machine_roles` is that the ordering of roles is undefined.
-If it should change arbitrarily at some point, the same data could appear as two distinct time series, even though they are meant to be the same one.
-For that reason, it's more probable that `machine_roles` will be deprecated.
+<!-- - `machine_roles` is always 1, and includes the label `roles`, which includes each of the roles specified by the `roles` attribute on input, and separated/surrounded by `/`. -->
+<!--   The intention is to be able to match a role with a regular expression such as `.*/storage/.*`. -->
 
-#### IP interface metrics
+<!-- It's not yet clear whether to favour one of `machine_role` and `machine_roles`, and then deprecate the other. -->
+<!-- One of the problems with `machine_roles` is that the ordering of roles is undefined. -->
+<!-- If it should change arbitrarily at some point, the same data could appear as two distinct time series, even though they are meant to be the same one. -->
+<!-- For that reason, it's more probable that `machine_roles` will be deprecated. -->
 
-Most of these metrics include `iface` as a key label, which is an IP address or a resolvable host name:
+<!-- #### IP interface metrics -->
 
-- `ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise.
-  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
+<!-- Most of these metrics include `iface` as a key label, which is an IP address or a resolvable host name: -->
 
-- `ip_ping` is the last RTT to the interface in milliseconds.
-  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
+<!-- - `ip_up` is 1 if the host was reachable with `ping`, or 0 otherwise. -->
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`. -->
 
-- `ip_metadata` is always 1, and includes the following additional labels:
+<!-- - `ip_ping` is the last RTT to the interface in milliseconds. -->
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`. -->
 
-  - `node` &ndash; the machine to which the interface belongs
+<!-- - `ip_metadata` is always 1, and includes the following additional labels: -->
+
+<!--   - `node` &ndash; the machine to which the interface belongs -->
   
-  - `device` (optional) &ndash; the name of the interface within the host, e.g., `eth0`
+<!--   - `device` (optional) &ndash; the name of the interface within the host, e.g., `eth0` -->
   
-  - `network` (optional) &ndash; the name of the network that the interface connects to
+<!--   - `network` (optional) &ndash; the name of the network that the interface connects to -->
   
-  An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`.
-  The `hostname` label is deprecated in favour of `iface`.
-  The labels `building`, `room`, `rack` and `level` are deprecated in favour of the metric `machine_location`.
-  `func`, `role_*` and `roles` are deprecated in favour of metrics `machine_role(s)`.
+<!--   An `exported_instance` label is included, but is deprecated in favour of `node` on `ip_metadata`. -->
+<!--   The `hostname` label is deprecated in favour of `iface`. -->
+<!--   The labels `building`, `room`, `rack` and `level` are deprecated in favour of the metric `machine_location`. -->
+<!--   `func`, `role_*` and `roles` are deprecated in favour of metrics `machine_role(s)`. -->
   
-- `ip_osd_drives` is deprecated in favour of `machine_osd_drives`.
+<!-- - `ip_osd_drives` is deprecated in favour of `machine_osd_drives`. -->
 
-- `ip_heartbeat` is a counter in seconds giving the time when the script was invoked.
-  It can be used to detect whether the script is properly running and updating its output metrics.
-  Exceptionally, it has no `iface` label.
+<!-- - `ip_heartbeat` is a counter in seconds giving the time when the script was invoked. -->
+<!--   It can be used to detect whether the script is properly running and updating its output metrics. -->
+<!--   Exceptionally, it has no `iface` label. -->
 
-#### XRootD metrics
+<!-- #### XRootD metrics -->
 
-These metrics include `xrdid` as a key label of the form `instance@hostname`, as an XRootD instance identifies itself.
-Only one metric is actually defined:
+<!-- These metrics include `xrdid` as a key label of the form `instance@hostname`, as an XRootD instance identifies itself. -->
+<!-- Only one metric is actually defined: -->
 
-- `xrootd_expect` always has the value 1, and the following additional labels:
+<!-- - `xrootd_expect` always has the value 1, and the following additional labels: -->
 
-  - `node` &ndash; the name of the machine on which the XRootD instance runs
+<!--   - `node` &ndash; the name of the machine on which the XRootD instance runs -->
   
-  - `pgm` &ndash; the value `xrootd`
+<!--   - `pgm` &ndash; the value `xrootd` -->
 
-In future versions, it will be possible to have multiple `pgm` values on the same node, e.g., `xrootd` and `cmsd`.
+<!-- In future versions, it will be possible to have multiple `pgm` values on the same node, e.g., `xrootd` and `cmsd`. -->
 
 
-#### Site metrics
+<!-- #### Site metrics -->
 
-The following metrics are generated from the `sites` and `site_groups` configuration:
+<!-- The following metrics are generated from the `sites` and `site_groups` configuration: -->
 
-- `site_domain` has the value `1`, and attributes `site` and `domain`, indicating that the domain belongs to the site.
+<!-- - `site_domain` has the value `1`, and attributes `site` and `domain`, indicating that the domain belongs to the site. -->
 
-- `site_group_depth` has a positive integer value, and attributes `site` and `group`, indicating that the site is part of the group.
-  The value is the depth within the group, `1` indicating that the site is a direct member.
+<!-- - `site_group_depth` has a positive integer value, and attributes `site` and `group`, indicating that the site is part of the group. -->
+<!--   The value is the depth within the group, `1` indicating that the site is a direct member. -->
   
-- `site_subgroup_depth` has a positive integer value, and attributes `group` and `subgroup`, indicating that the latter is a group and a member of the former.
-  The value is the depth of the latter within the group, `1` indicating that the subgroup is a direct member.
+<!-- - `site_subgroup_depth` has a positive integer value, and attributes `group` and `subgroup`, indicating that the latter is a group and a member of the former. -->
+<!--   The value is the depth of the latter within the group, `1` indicating that the subgroup is a direct member. -->
 
 ## Ceph disc health metrics exporter
 
@@ -325,7 +332,7 @@ The following are extracted from NVME devices (from `nvme_smart_health_informati
 The block size is obtained from `logical_block_size`.
 All metrics ending in `_total` are counters, and have a dual ending in `_created` which is always 0.
 
-These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint, with the label `job="cephhealth"`.
+These metrics are timestamped according to a field in the mapped value, and pushed to a remote-write endpoint, including the label `job="cephhealth"`.
 This process can take a second or so per disc, so remote-writing ensures that the metrics for each disc are delivered to Prometheus in a timely manner.
 
 The process also establishes a scraping endpoint for metrics that can be obtained relatively quickly:
@@ -492,7 +499,11 @@ In addition to `xrdid`, the following labels are defined to have `lp` and `rp` p
 (It's not clear which of `lp` and `rp` should be considered 'key fields', so both are included for now.
 A future version might drop one, and provide it as metadata.)
 
-## Details XRootD statistics
+All pushed metrics include the label `job="xrootd"`.
+
+
+
+## Detailed XRootD statistics
 
 The script `xrootd-detail` receives UDP packets in the format defined
 by [Detailed Monitoring Data Format](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119279), generated using the [`xrootd.monitor`](https://xrootd.slac.stanford.edu/doc/dev50/xrd_config.htm#_monitor) configuration.
@@ -559,6 +570,8 @@ The following metrics are defined:
   Labels are `pgm`, `xrdid`, `protocol` and `client_domain`.
 - `xrootd_data_disconnects_total` and `xrootd_data_disconnects_created` &ndash; When a [Disc event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119287) is received in an `f`-stream, this counter is incremented.
   Labels are `pgm`, `xrdid`, `protocol`, `client_domain`, `ip_version` and `auth`.
+
+All pushed metrics include the label `job="xrootd_detail"`.
 
 
 ### Domain information
@@ -648,6 +661,8 @@ The metadata itself provides source and destination addresses (`src_addr` and `d
 In either case, the other pair of fields are copied to `peer_addr` and `peer_name`.
 The `tool` label is a copy of the `tool-name` field, `subj_type` is a copy of `subject-type`, and `psched_type` is a copy of `pscheduler-test-type`.
 The IP metadata additionally provides `ip_transport_protocol`.
+
+All pushed metrics include the label `job="perfsonar"`.
 
 
 ## HammerCloud notifications
