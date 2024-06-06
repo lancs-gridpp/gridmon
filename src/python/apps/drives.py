@@ -55,7 +55,7 @@ def get_field(fld_spec):
 
     return None
 
-def get_drive_array(spec):
+def get_array(spec):
     mapping = { }
     path_fmt = spec.get('path')
     if path_fmt is None:
@@ -125,17 +125,17 @@ def get_drive_array(spec):
 
     return mapping
 
-def get_drive_layout_patterns(doc):
+def get_layout_patterns(doc):
     res = { }
-    for lyt, spec in doc.get('drive_paths', { }).get('patterns', { }).items():
+    for lyt, spec in doc.get('patterns', { }).items():
         print('layout: %s' % lyt)
-        res[lyt] = get_drive_array(spec)
+        res[lyt] = get_array(spec)
         continue
     return res
 
-def get_drive_layouts(doc, pats):
+def get_layouts(doc, pats):
     res = { }
-    for lytn, spec in doc.get('drive_paths', { }).get('layouts', { }).items():
+    for lytn, spec in doc.get('layouts', { }).items():
         lyt = { }
         for i in spec:
             lyt.update(pats.get(i, { }))
@@ -149,9 +149,10 @@ if __name__ == '__main__':
     import sys
     from pprint import pprint, pformat
     doc = yaml.load(sys.stdin, Loader=yaml.SafeLoader)
-    pats = get_drive_layout_patterns(doc)
+    drive_spec = doc.get('drive_paths', { })
+    pats = get_layout_patterns(drive_spec)
     pprint(pats)
-    lyts = get_drive_layouts(doc, pats)
+    lyts = get_layouts(drive_spec, pats)
     pprint(lyts)
     pass
 
