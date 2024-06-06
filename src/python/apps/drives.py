@@ -87,6 +87,13 @@ def get_array(spec):
             pass
         continue
 
+    ## Load label formats.
+    fmt_spec = spec.get('formats', { })
+    fmts = { }
+    for k in set(lbls.keys()).union(set(clbls.keys())):
+        fmts[k] = fmt_spec.get(k, '%s')
+        continue
+
     ## Iterate over all fields.  Set all digits to 0, and all fields
     ## to their first values.  Also include the allowed names.
     digs = [ 0 ] * len(flds)
@@ -97,10 +104,10 @@ def get_array(spec):
         path = path_fmt.format(**vals)
 
         ## Build the label set for this path.
-        lblset = dict(lbls)
+        lblset = { k: { 'value': v, 'fmt': fmts[k] } for k, v in lbls.items() }
         for lnam, code in clbls.items():
             lval = eval(code, { "__builtins__": {} }, vals)
-            lblset[lnam] = lval
+            lblset[lnam] = { 'value': lval, 'fmt': fmts[lnam] }
             continue
         mapping[path] = lblset
 
