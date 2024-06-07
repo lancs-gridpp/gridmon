@@ -207,7 +207,12 @@ drive_paths:
 Together, they generate metrics such as:
 
 ```
-dlo_meta{dloid="gen1", path="pci-0000:18:00.0-scsi-0:0:14:0", drive_bank="hotplug", drive_slot="14", drive_row="2", drive_column="2"} 1
+dlo_meta{dloid="gen1",
+         path="pci-0000:18:00.0-scsi-0:0:14:0",
+		 drive_bank="hotplug",
+		 drive_slot="14",
+		 drive_row="2",
+		 drive_column="2"} 1
 ```
 
 The `dloid` label matches that of `machine_drive_layout`, and `path` matches that of `cephhealth_disk_fitting`, so a metric with `node` and `path` can first be augmented with `dloid` using `machine_drive_layout` on `node`, and then with these additional metrics using `dlo_meta` on `dloid` and `path`:
