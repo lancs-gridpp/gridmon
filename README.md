@@ -214,7 +214,7 @@ The `dloid` label matches that of `machine_drive_layout`, and `path` matches tha
 
 ```
 my_expr * on(node) group_left(dloid) machine_drive_layout
-        * on(dloid, path) group_right() dlo_meta
+        * on(dloid, path) group_left(drive_bank, drive_slot) dlo_meta
 ```
 
 
