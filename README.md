@@ -95,6 +95,7 @@ The node name appears as the label `node` on many metrics, including all the `ma
 The following keys are recognized:
 
 - `building`, `room`, `rack`, `level` &ndash; These strings appear as labels in `machine_metadata`, and can be used to describe the location of the machine.
+- `drive_layout` &ndash; This string appears as label `dloid` in a metric `machine_drive_layout`, and should be used to map drive device paths to physical ports/slots/sockets on the host.
 - `interfaces` &ndash; This describes interfaces present on the node.
   IP addresses or DNS names are keys, and the values are maps with the following keys:
   - `device` &ndash; the internal device name, such as `eth0`
@@ -129,6 +130,9 @@ A `site_groups` top-level map entry may exist, with site groups' names as keys.
 Each value is an array of site names or group names belonging to the site.
 
 
+A `drive_paths` top-level map entry may exist to define drive path patterns and layouts.
+
+
 A `clusters` top-level map entry may exist, whose keys are cluster identifiers, and whose values are maps with the following entries:
 
 - `name` &ndash; This specifies the display name for the cluster.
@@ -158,6 +162,62 @@ Meanwhile, the HTTP server serves no metrics, only metric documentation.
 Without `-M`, no remote-write occurs, and all metrics are served through the HTTP server.
 
 All pushed metrics include the label `job="statics"`.
+
+### Drive layouts
+
+The `drive_paths` top-level map entry contains `patterns` and `layouts` map elements.
+`patterns` defines device paths for drives, so they can be mapped to more meaningful label sets.
+For example, the following defines a pattern called `gen1_hotplugs`, and matches strings such as `pci-0000:18:00.0-scsi-0:0:14:0` slot 14, row 2, column 4:
+
+```
+drive_paths:
+  patterns:
+    gen1_hotplugs:
+      path: "pci-0000:18:00.0-scsi-0:0:{x}:0"
+      fields:
+        - name: x
+          min: 0
+          max: 23
+      labels:
+        drive_bank: hotplug
+      computed_labels:
+        drive_slot: 'x'
+        drive_row: 'x // 6'
+        drive_column: 'x % 6'
+      formats:
+        drive_slot: '%d'
+        drive_row: '%d'
+        drive_column: '%d'
+```
+
+`computed_labels` values are limited Python expressions, referring to the variables named in `fields`.
+`labels` defines only static values.
+Elements of `formats` override the default `%s` used to format the label value.
+
+The `layouts` map defines layouts are unions of patterns.
+For example, the following defines that layout `gen1` is the single set of mappings from `gen1_hotplugs` (defined above):
+
+```
+drive_paths:
+  layouts:
+    gen1:
+      - gen1_hotplugs
+```
+
+Together, they generate metrics such as:
+
+```
+dlo_meta{dloid="gen1", path="pci-0000:18:00.0-scsi-0:0:14:0", drive_bank="hotplug", drive_slot="14", drive_row="2", drive_column="2"} 1
+```
+
+The `dloid` label matches that of `machine_drive_layout`, and `path` matches that of `cephhealth_disk_fitting`, so a metric with `node` and `path` can first be augmented with `dloid` using `machine_drive_layout` on `node`, and then with these additional metrics using `dlo_meta` on `dloid` and `path`:
+
+```
+my_expr * on(node) group_left(dloid) machine_drive_layout
+        * on(dloid, path) group_right() dlo_meta
+```
+
+
 
 <!-- ## Static metrics (deprecated) -->
 
