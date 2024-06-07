@@ -135,7 +135,6 @@ def get_array(spec):
 def get_layout_patterns(doc):
     res = { }
     for lyt, spec in doc.get('patterns', { }).items():
-        print('layout: %s' % lyt)
         res[lyt] = get_array(spec)
         continue
     return res
