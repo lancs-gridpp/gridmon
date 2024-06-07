@@ -185,9 +185,7 @@ drive_paths:
         drive_row: 'x // 6'
         drive_column: 'x % 6'
       formats:
-        drive_slot: '%d'
-        drive_row: '%d'
-        drive_column: '%d'
+        drive_slot: '%02d'
 ```
 
 `computed_labels` values are limited Python expressions, referring to the variables named in `fields`.
