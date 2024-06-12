@@ -38,6 +38,13 @@ def _walk(root, path):
         return root
     return _walk(root[path[0]], path[1:])
 
+def _extract_user_labels(keys, data):
+    res = { }
+    for k, v in data['drives'][keys[0]][keys[1]].items():
+        res[k] = v['fmt'] % v['value']
+        continue
+    return res
+
 schema = [
     {
         'base': 'xrootd_expect',
@@ -266,6 +273,20 @@ schema = [
     },
 
     {
+        'base': 'machine_drive_layout',
+        'help': 'which mapping from device path to physical position to use',
+        'select': lambda e: [ (n,) for n in e.get('node', { })
+                              if 'dloid' in e['node'][n] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'node': ('%s', lambda t, d: t[0]),
+            'dloid': ('%s', lambda t, d: d['node'][t[0]].get('dloid')),
+        },
+    },
+
+    {
         'base': 'machine_osd_drives',
         'help': 'how many drives are allocated as OSDs',
         'type': 'gauge',
@@ -356,6 +377,22 @@ schema = [
     },
 
     {
+        'base': 'dlo_meta',
+        'help': 'metadata mapping device paths to physical slots',
+        'type': 'info',
+        'select': lambda e: [ (lyt, path) for lyt in e.get('drives', { })
+                              for path in e['drives'][lyt] ],
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'dloid': ('%s', lambda t, d: t[0]),
+            'path': ('%s', lambda t, d: t[1]),
+            '': lambda t, d: _extract_user_labels(t, d),
+        },
+    },
+
+    {
         'base': 'vo_meta',
         'help': 'VO metadata',
         'type': 'info',
@@ -423,16 +460,24 @@ schema = [
 ]
 
 def update_live_metrics(hist, confs):
+    import drives
+
     ## Read site and site-group specs from -f arguments.
     sites = { }
     group_specs = { }
     clus_specs = { }
+    drive_specs = { }
     for arg in confs:
         with open(arg, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
             merge(sites, doc.get('sites', { }), mismatch=+1)
             merge(group_specs, doc.get('site_groups', { }), mismatch=+1)
             merge(clus_specs, doc.get('clusters', { }), mismatch=+1)
+            dpts = doc.get('drive_paths', { })
+            lyt_pats = drives.get_layout_patterns(dpts)
+            merge(drive_specs,
+                  drives.get_layouts(dpts, lyt_pats),
+                  mismatch=+1)
             pass
         continue
 
@@ -484,6 +529,9 @@ def update_live_metrics(hist, confs):
     ## Create an entry for right now.
     data = { }
     nd = data[int(time.time() * 1000) / 1000.0] = { }
+
+    ## Populate drive data.
+    nd.setdefault('drives', drive_specs)
 
     ## Populate site data.
     sd = nd.setdefault('sites', { })
@@ -781,6 +829,10 @@ if __name__ == '__main__':
                             nent[k] = nspec[k]
                             pass
                         continue
+                    dloid = nspec.get('drive_layout')
+                    if dloid is not None:
+                        nent['dloid'] = dloid
+                        pass
 
                     for clus, cspec in nspec.get('clusters', { }).items():
                         if 'osds' in cspec:

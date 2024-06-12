@@ -202,6 +202,16 @@ class MetricHistory:
             attrs = { }
             pass
         for an, vspec in attrs.items():
+            if callable(vspec):
+                ## vspec is to be called with the entry details, and
+                ## yields multiple key-value pairs.
+                for ansfx, lval in vspec(tup, entry).items():
+                    if lval is not None:
+                        labels.append(('%s="%s"') % (an + ansfx, lval))
+                        pass
+                    continue
+                continue
+
             vspec = _get_sample_func(vspec)
             ## The first element of vspec is a format string,
             ## containing len(vspec)-1 format specifiers.  The
@@ -521,6 +531,14 @@ class RemoteMetricsWriter:
                         famkey['job'] = self.job
                         pass
                     for labname, labspec in lab.items():
+                        if labspec is callable:
+                            for labsfx, labval in labspec(idx, snapshot).items():
+                                if labval is not None:
+                                    famkey[labname + labsfx] = labval
+                                    pass
+                                continue
+                            continue
+
                         labspec = _get_sample_func(labspec)
                         labval = _safe_mod(labspec, idx, snapshot)
                         if labval is not None:
