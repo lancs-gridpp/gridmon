@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
-        'datefmt': '%Y-%d-%mT%H:%M:%S',
+        'datefmt': '%Y-%m-%dT%H:%M:%S',
         # 'level': logging.DEBUG,
     }
     logging.basicConfig(**log_params)

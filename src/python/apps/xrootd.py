@@ -1852,7 +1852,7 @@ if __name__ == '__main__':
     pidfile = None
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
-        'datefmt': '%Y-%d-%mT%H:%M:%S',
+        'datefmt': '%Y-%m-%dT%H:%M:%S',
     }
     opts, args = getopt(sys.argv[1:], "zh:u:U:t:T:E:X",
                         [ 'log=', 'log-file=', 'pid-file=' ])

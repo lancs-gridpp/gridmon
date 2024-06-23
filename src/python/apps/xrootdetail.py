@@ -1330,7 +1330,7 @@ if __name__ == '__main__':
     id_timeout_min = 120
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
-        'datefmt': '%Y-%d-%mT%H:%M:%S',
+        'datefmt': '%Y-%m-%dT%H:%M:%S',
     }
     opts, args = gnu_getopt(sys.argv[1:], "zl:U:u:d:o:M:t:T:i:",
                             [ 'log=', 'log-file=', 'pid-file=' ])

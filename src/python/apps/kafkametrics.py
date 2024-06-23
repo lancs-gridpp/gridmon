@@ -54,7 +54,7 @@ silent = False
 pidfile = None
 log_params = {
     'format': '%(asctime)s %(levelname)s %(message)s',
-    'datefmt': '%Y-%d-%mT%H:%M:%S',
+    'datefmt': '%Y-%m-%dT%H:%M:%S',
 }
 
 http_host = "localhost"
