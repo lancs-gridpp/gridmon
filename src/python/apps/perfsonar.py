@@ -386,6 +386,7 @@ class PerfsonarCollector:
 
         ## Get the summary of measurements within the interval.
         url = self.endpoint + "?" + scan
+        logging.debug('root scan %s' % url)
         rsp = urllib.request.urlopen(url, context=self.ctx)
         doc = json.loads(rsp.read().decode("utf-8"))
 
@@ -425,6 +426,8 @@ class PerfsonarCollector:
                 if evtype not in PerfsonarCollector.known_events:
                     if evtype not in PerfsonarCollector.unknown_events:
                         logging.info('%s %s: skipped' % (mdkey, evtype))
+                    else:
+                        logging.debug('%s %s: skipped' % (mdkey, evtype))
                         pass
                     continue
 
@@ -437,6 +440,7 @@ class PerfsonarCollector:
                 ## that doesn't overlap with the previous or
                 ## subsequent interval.
                 evturl = urljoin(baseurl, evt['base-uri']) + '?' + interval
+                logging.debug('%s get event %s' % (mdkey, evturl))
                 evtrsp = urllib.request.urlopen(evturl, context=self.ctx)
                 evtdoc = json.loads(evtrsp.read().decode("utf-8"))
 
