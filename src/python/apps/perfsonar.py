@@ -350,7 +350,7 @@ class PerfsonarCollector:
                            'pscheduler-run-href', 'throughput-subintervals',
                            'time-error-estimates', 'packet-loss-rate' ])
 
-    def __init__(self, endpoint, lag=20, fore=0, aft=60):
+    def __init__(self, endpoint, lag=20, fore=0, aft=60, forced_host=None):
         self.endpoint = endpoint
         self.lag = lag
         self.fore = fore
@@ -361,6 +361,10 @@ class PerfsonarCollector:
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
         self.counters = { }
+        self.headers = dict()
+        if forced_host is not None:
+            self.headers['Host'] = forced_host
+            pass
         pass
 
     def update(self):
@@ -387,7 +391,8 @@ class PerfsonarCollector:
         ## Get the summary of measurements within the interval.
         url = self.endpoint + "?" + scan
         logging.debug('root scan %s' % url)
-        rsp = urllib.request.urlopen(url, context=self.ctx)
+        rtreq = urllib.request.Request(url, headers=self.headers)
+        rsp = urllib.request.urlopen(rtreq, context=self.ctx)
         doc = json.loads(rsp.read().decode("utf-8"))
 
         ## Get data for mentioned events.
@@ -441,7 +446,8 @@ class PerfsonarCollector:
                 ## subsequent interval.
                 evturl = urljoin(baseurl, evt['base-uri']) + '?' + interval
                 logging.debug('%s get event %s' % (mdkey, evturl))
-                evtrsp = urllib.request.urlopen(evturl, context=self.ctx)
+                evtreq = urllib.request.Request(evturl, headers=self.headers)
+                evtrsp = urllib.request.urlopen(evtreq, context=self.ctx)
                 evtdoc = json.loads(evtrsp.read().decode("utf-8"))
 
                 ## Convert the event data to a dict indexed by
@@ -505,11 +511,12 @@ if __name__ == "__main__":
     fore = 0
     aft = 60
     pidfile = None
+    forced_host = None
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
         'datefmt': '%Y-%m-%dT%H:%M:%S',
     }
-    opts, args = getopt(sys.argv[1:], "zh:t:T:E:M:S:l:f:a:",
+    opts, args = getopt(sys.argv[1:], "zh:t:T:E:M:S:l:f:a:H:",
                         [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-h':
@@ -518,6 +525,8 @@ if __name__ == "__main__":
             silent = True
         elif opt == '-l':
             lag = int(val)
+        elif opt == '-H':
+            forced_host = val
         elif opt == '-f':
             fore = int(val)
         elif opt == '-a':
@@ -569,7 +578,8 @@ if __name__ == "__main__":
         pass
 
     methist = metrics.MetricHistory(schema, horizon=horizon)
-    perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft)
+    perfcoll = PerfsonarCollector(endpoint, lag=lag, fore=fore, aft=aft,
+                                  forced_host=forced_host)
     if metrics_endpoint is None:
         hist = methist
     else:
