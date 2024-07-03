@@ -330,6 +330,15 @@ def _merge(a, b, pfx=()):
         continue
     pass
 
+def _match_host(got, sought):
+    import socket, ipaddress
+    gotaddr = ipaddress.ip_address(got)
+    for ent in socket.getaddrinfo(sought, 0):
+        if ipaddress.ip_address(ent[4][0]) == gotaddr:
+            return True
+        continue
+    return False
+
 class PerfsonarCollector:
     known_events = set([ 'throughput', 'packet-count-lost',
                          'packet-count-sent', 'histogram-owdelay',
@@ -394,15 +403,20 @@ class PerfsonarCollector:
                                'tool-name', 'subject-type',
                                'pscheduler-test-type',
                                'ip-transport-protocol') }
-            if meta['source'] == meta['measurement-agent']:
+            if _match_host(meta['measurement-agent'], meta['input-source']):
                 meta['measurement-peer'] = meta['destination']
                 meta['input-measurement-peer'] = meta['input-destination']
                 meta['input-measurement-agent'] = meta['input-source']
-            else:
+                logging.debug('%s peer is destination' % mdkey)
+            elif _match_host(meta['measurement-agent'],
+                             meta['input-destination']):
                 meta['measurement-peer'] = meta['source']
                 meta['input-measurement-peer'] = meta['input-source']
                 meta['input-measurement-agent'] = meta['input-destination']
-                pass
+                logging.debug('%s peer is source' % mdkey)
+            else:
+                logging.warning('%s has no peer' % mdkey)
+                continue
 
             baseurl = mdent['url']
             for evt in mdent['event-types']:
