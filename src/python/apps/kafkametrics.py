@@ -270,6 +270,7 @@ def listen_to_kafka(conf, stats, stats_lock):
             with stats_lock:
                 stats['conns'] += 1
                 pass
+            logging.info('conn(%s) as %s\n' % (boot, group_id))
             cons = KafkaConsumer(*topics,
                                  bootstrap_servers=boot,
                                  group_id=group_id)
