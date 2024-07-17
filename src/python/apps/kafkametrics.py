@@ -76,7 +76,7 @@ for opt, val in opts:
                 qconf = config.setdefault(q, {
                     'bootstrap': set(),
                     'topics': set(),
-                    'group': 'monitor',
+                    'group': None,
                 })
                 qconf['bootstrap'].update(newqconf.get('bootstrap', []))
                 qconf['topics'].update(newqconf.get('topics', []))
