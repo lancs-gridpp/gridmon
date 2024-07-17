@@ -272,7 +272,7 @@ def listen_to_kafka(conf, stats, stats_lock):
                 pass
             cons = KafkaConsumer(*topics,
                                  bootstrap_servers=boot,
-                                 group_id=conf['group'])
+                                 group_id=group_id)
             with stats_lock:
                 stats['up'] = True
                 pass
