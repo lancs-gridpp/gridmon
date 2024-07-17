@@ -80,7 +80,7 @@ for opt, val in opts:
                 })
                 qconf['bootstrap'].update(newqconf.get('bootstrap', []))
                 qconf['topics'].update(newqconf.get('topics', []))
-                qconf['group'] = doc.get('group', qconf['group'])
+                qconf['group'] = newqconf.get('group')
                 continue
             pass
     elif opt == '-T':
