@@ -573,6 +573,7 @@ if __name__ == '__main__':
     from http.server import HTTPServer
     import threading
     import errno
+    import socket
 
     ## Local libraries
     import metrics
@@ -755,10 +756,22 @@ if __name__ == '__main__':
                                     .setdefault(node, { })
                         ient = nent.setdefault('iface', { }) \
                                    .setdefault(iface, { })
-                        for ipv in [ 4, 6 ]:
+                        for adent in socket.getaddrinfo(iface, 0):
+                            if adent[1] != socket.SocketKind.SOCK_RAW:
+                                continue
+                            ipv = None
+                            if adent[0] == socket.AddressFamily.AF_INET:
+                                ipv = 4
+                            elif adent[0] == socket.AddressFamily.AF_INET6:
+                                ipv = 6
+                            else:
+                                continue
+                            adstr = adent[4][0]
+
                             cmd = [ 'ping', '-%d' % ipv, '-c', '1',
-                                    '-w', '1', iface ]
-                            logging.info('Ping %s of %s' % (iface, node))
+                                    '-w', '1', adstr ]
+                            logging.info('Ping v%d %s(%s) of %s' % \
+                                         (ipv, iface, adstr, node))
                             logging.debug('Command: %s' % cmd)
                             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                                     universal_newlines=True)
