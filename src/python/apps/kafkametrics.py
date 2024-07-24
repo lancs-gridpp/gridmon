@@ -279,8 +279,8 @@ def listen_to_kafka(queue, conf, stats, stats_lock):
                 pass
             for msg in cons:
                 topic = msg.topic
-                keybytes = len(msg.key)
-                valuebytes = len(msg.value)
+                keybytes = 0 if msg.key is None else len(msg.key)
+                valuebytes = 0 if msg.value is None else len(msg.value)
                 with stats_lock:
                     logging.debug('%s: %d/%d' %
                                   (topic, keybytes, valuebytes))
