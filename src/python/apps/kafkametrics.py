@@ -261,7 +261,7 @@ except OSError as e:
 
 def listen_to_kafka(queue, conf, stats, stats_lock):
     topics = list(conf['topics'])
-    boot = ', '.join(conf['bootstrap'])
+    boot = list(conf['bootstrap'])
     group_id = conf['group']
 
     while True:
