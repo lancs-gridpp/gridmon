@@ -259,7 +259,7 @@ except OSError as e:
     sys.exit(1)
     pass
 
-def listen_to_kafka(conf, stats, stats_lock):
+def listen_to_kafka(queue, conf, stats, stats_lock):
     topics = list(conf['topics'])
     boot = ', '.join(conf['bootstrap'])
     group_id = conf['group']
@@ -313,7 +313,8 @@ try:
     ## Start a thread for each queue.
     for queue, qconf in config.items():
         thrd = threading.Thread(target=listen_to_kafka,
-                                args=(qconf, stats['queues'][queue], stats_lock),
+                                args=(queue, qconf,
+                                      stats['queues'][queue], stats_lock),
                                 daemon=True)
         thrd.start()
         continue
