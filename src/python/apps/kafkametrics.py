@@ -277,13 +277,14 @@ def listen_to_kafka(queue, conf, stats, stats_lock):
             with stats_lock:
                 stats['up'] = True
                 pass
+            logging.debug('consuming %s on %s as %s' % (topics, queue, group_id))
             for msg in cons:
                 topic = msg.topic
                 keybytes = 0 if msg.key is None else len(msg.key)
                 valuebytes = 0 if msg.value is None else len(msg.value)
+                logging.debug('got %d:%d of %s on %s as %s' % \
+                              (keybytes, valuebytes, topic, queue, group_id))
                 with stats_lock:
-                    logging.debug('%s: %d/%d' %
-                                  (topic, keybytes, valuebytes))
                     stats['topics'][topic]['key_bytes'] += keybytes
                     stats['topics'][topic]['value_bytes'] += valuebytes
                     stats['topics'][topic]['count'] += 1
