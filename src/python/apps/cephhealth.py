@@ -110,17 +110,20 @@ def get_status_metrics(args=[]):
     hth = status.get('health')
     if hth is None:
         return result
-    cks = hth.get('checks')
-    if cks is None:
-        return result
-    for k, v in cks.items():
+    for k, v in hth.get('checks', dict()).items():
         smy = v.get('summary')
         if smy is None:
             continue
         cnt = smy.get('count')
         if cnt is None:
             continue
-        result[k] = { 'count': cnt }
+        result[k] = { 'count': cnt, 'mute': False }
+        continue
+    for mt in hth.get('mutes', list()):
+        k = mt.get('code')
+        if k is None:
+            continue
+        result.setdefault(k, dict())['mute'] = True
         continue
     return result
 
@@ -578,6 +581,19 @@ schema = [
         'select': lambda e: [ (t,) for t in e['checks'] ],
         'samples': {
             '': ('%d', lambda t, d: d['checks'][t[0]]['count']),
+        },
+        'attrs': {
+            'type': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'cephhealth_status_mute',
+        'type': 'gauge',
+        'help': 'whether check is muted',
+        'select': lambda e: [ (t,) for t in e['checks'] ],
+        'samples': {
+            '': ('%d', lambda t, d: 1 if d['checks'][t[0]]['mute'] else 0),
         },
         'attrs': {
             'type': ('%s', lambda t, d: t[0]),
