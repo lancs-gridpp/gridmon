@@ -117,13 +117,7 @@ def get_status_metrics(args=[]):
         cnt = smy.get('count')
         if cnt is None:
             continue
-        result[k] = { 'count': cnt, 'mute': False }
-        continue
-    for mt in hth.get('mutes', list()):
-        k = mt.get('code')
-        if k is None:
-            continue
-        result.setdefault(k, dict())['mute'] = True
+        result[k] = { 'count': cnt, 'mute': v.get('muted', False) }
         continue
     return result
 
