@@ -273,6 +273,21 @@ schema = [
     },
 
     {
+        'base': 'machine_alarm_load_max',
+        'help': 'maximum expected load',
+        'type': 'gauge',
+        'select': lambda e: [ (n,) for n in e.get('node', dict())
+                              if 'alarms' in e['node'][n]
+                              and 'load_max' in e['node'][n]['alarms'] ],
+        'samples': {
+            '': ('%.3f', lambda t, d: d['node'][t[0]]['alarms']['load_max']),
+        },
+        'attrs': {
+            'node': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
         'base': 'machine_drive_layout',
         'help': 'which mapping from device path to physical position to use',
         'select': lambda e: [ (n,) for n in e.get('node', { })
@@ -846,6 +861,8 @@ if __name__ == '__main__':
                     if dloid is not None:
                         nent['dloid'] = dloid
                         pass
+
+                    nent['alarms'] = nspec.get('alarms', dict())
 
                     for clus, cspec in nspec.get('clusters', { }).items():
                         if 'osds' in cspec:
