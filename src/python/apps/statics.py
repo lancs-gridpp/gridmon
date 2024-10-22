@@ -288,6 +288,42 @@ schema = [
     },
 
     {
+        'base': 'machine_alarm_cpu_max',
+        'help': 'maximum expected cpu mode fraction',
+        'type': 'gauge',
+        'select': lambda e: [ (n, m) for n in e.get('node', dict())
+                              if 'alarms' in e['node'][n]
+                              and 'cpu_max' in e['node'][n]['alarms']
+                              for m in e['node'][n]['alarms']['cpu_max'] ],
+        'samples': {
+            '': ('%.3f', lambda t, d: d['node'][t[0]]['alarms'] \
+                 ['cpu_max'][t[1]]),
+        },
+        'attrs': {
+            'node': ('%s', lambda t, d: t[0]),
+            'mode': ('%s', lambda t, d: t[1]),
+        },
+    },
+
+    {
+        'base': 'machine_alarm_cpu_min',
+        'help': 'minimum expected cpu mode fraction',
+        'type': 'gauge',
+        'select': lambda e: [ (n, m) for n in e.get('node', dict())
+                              if 'alarms' in e['node'][n]
+                              and 'cpu_min' in e['node'][n]['alarms']
+                              for m in e['node'][n]['alarms']['cpu_min'] ],
+        'samples': {
+            '': ('%.3f', lambda t, d: d['node'][t[0]]['alarms'] \
+                 ['cpu_min'][t[1]]),
+        },
+        'attrs': {
+            'node': ('%s', lambda t, d: t[0]),
+            'mode': ('%s', lambda t, d: t[1]),
+        },
+    },
+
+    {
         'base': 'machine_drive_layout',
         'help': 'which mapping from device path to physical position to use',
         'select': lambda e: [ (n,) for n in e.get('node', { })
