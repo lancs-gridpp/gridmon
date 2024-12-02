@@ -150,22 +150,22 @@ class Summary:
 
 
 schema = [
-    {
-        'base': 'cephpg_read_latency_count',
-        'type': 'gauge',
-        'help': 'count PG read latency',
-        'select': lambda e: [ (mode, pgid)
-                              for mode in e['read_latency']
-                              for pgid in e['read_latency'][mode] ],
-        'samples': {
-            '': ('%d', lambda t, d: d['read_latency'][t[0]][t[1]].count()),
-        },
-        'attrs': {
-            'status': ('%s', lambda t, d: t[0]),
-            'pgid': ('%s', lambda t, d: t[1]),
-            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
-        },
-    },
+    # {
+    #     'base': 'cephpg_read_latency_count',
+    #     'type': 'gauge',
+    #     'help': 'count PG read latency',
+    #     'select': lambda e: [ (mode, pgid)
+    #                           for mode in e['read_latency']
+    #                           for pgid in e['read_latency'][mode] ],
+    #     'samples': {
+    #         '': ('%d', lambda t, d: d['read_latency'][t[0]][t[1]].count()),
+    #     },
+    #     'attrs': {
+    #         'status': ('%s', lambda t, d: t[0]),
+    #         'pgid': ('%s', lambda t, d: t[1]),
+    #         'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+    #     },
+    # },
 
     {
         'base': 'cephpg_read_latency_mean',
@@ -240,22 +240,22 @@ schema = [
     },
 
 
-    {
-        'base': 'cephpg_write_latency_count',
-        'type': 'gauge',
-        'help': 'mean PG write latency',
-        'select': lambda e: [ (mode, pgid)
-                              for mode in e['write_latency']
-                              for pgid in e['write_latency'][mode] ],
-        'samples': {
-            '': ('%df', lambda t, d: d['write_latency'][t[0]][t[1]].count()),
-        },
-        'attrs': {
-            'status': ('%s', lambda t, d: t[0]),
-            'pgid': ('%s', lambda t, d: t[1]),
-            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
-        },
-    },
+    # {
+    #     'base': 'cephpg_write_latency_count',
+    #     'type': 'gauge',
+    #     'help': 'mean PG write latency',
+    #     'select': lambda e: [ (mode, pgid)
+    #                           for mode in e['write_latency']
+    #                           for pgid in e['write_latency'][mode] ],
+    #     'samples': {
+    #         '': ('%df', lambda t, d: d['write_latency'][t[0]][t[1]].count()),
+    #     },
+    #     'attrs': {
+    #         'status': ('%s', lambda t, d: t[0]),
+    #         'pgid': ('%s', lambda t, d: t[1]),
+    #         'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+    #     },
+    # },
 
     {
         'base': 'cephpg_write_latency_mean',
@@ -330,22 +330,22 @@ schema = [
     },
 
 
-    {
-        'base': 'cephpg_slow_ops_count',
-        'type': 'gauge',
-        'help': 'mean PG slow ops',
-        'select': lambda e: [ (mode, pgid)
-                              for mode in e['slow_ops']
-                              for pgid in e['slow_ops'][mode] ],
-        'samples': {
-            '': ('%d', lambda t, d: d['slow_ops'][t[0]][t[1]].count()),
-        },
-        'attrs': {
-            'status': ('%s', lambda t, d: t[0]),
-            'pgid': ('%s', lambda t, d: t[1]),
-            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
-        },
-    },
+    # {
+    #     'base': 'cephpg_slow_ops_count',
+    #     'type': 'gauge',
+    #     'help': 'mean PG slow ops',
+    #     'select': lambda e: [ (mode, pgid)
+    #                           for mode in e['slow_ops']
+    #                           for pgid in e['slow_ops'][mode] ],
+    #     'samples': {
+    #         '': ('%d', lambda t, d: d['slow_ops'][t[0]][t[1]].count()),
+    #     },
+    #     'attrs': {
+    #         'status': ('%s', lambda t, d: t[0]),
+    #         'pgid': ('%s', lambda t, d: t[1]),
+    #         'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+    #     },
+    # },
 
     {
         'base': 'cephpg_slow_ops_mean',
