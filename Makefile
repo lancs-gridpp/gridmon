@@ -20,6 +20,7 @@ hidden_scripts += xrootd-stats
 hidden_scripts += xrootd-detail
 hidden_scripts += qstats-exporter
 hidden_scripts += cephhealth-exporter
+hidden_scripts += pgcomp
 hidden_scripts += ip-statics-exporter
 hidden_scripts += get-cert-expiry
 hidden_scripts += hammercloud-events
