@@ -301,6 +301,6 @@ if __name__ == '__main__':
                                       job='cephpg',
                                       labels={ 'cluster': cluster },
                                       expiry=30)
-    rmw.install({ int(now * 1000): results })
+    rmw.install({ now: results })
     # pprint(results)
     pass
