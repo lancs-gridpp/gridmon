@@ -448,6 +448,7 @@ if __name__ == '__main__':
     query_endpoint = None
     query_port = 9090
     query_host = None
+    step = '1m'
     sbin = '5m'
     log_params = {
         'format': '%(asctime)s %(levelname)s %(message)s',
@@ -456,13 +457,15 @@ if __name__ == '__main__':
 
     ## Parse arguments.  Ceph command prefix is in remaining
     ## arguments.
-    opts, args = gnu_getopt(sys.argv[1:], "b:M:H:P:Q:c:",
+    opts, args = gnu_getopt(sys.argv[1:], "b:M:H:P:Q:c:s:",
                             [ 'log=', 'log-file=' ])
     for opt, val in opts:
         if opt == '-b':
             sbin = val
         elif opt == '-c':
             cluster = val
+        elif opt == '-s':
+            step = val
         elif opt == '-M':
             metrics_endpoint = val
         elif opt == '-Q':
@@ -511,6 +514,8 @@ if __name__ == '__main__':
         query = qexpr.format(cluster=cluster, sbin=sbin)
         logging.info('Calculating %s: %s' % (qkey, query.replace('\n', ' ')))
         url = query_endpoint + '?query=' + quote_plus(query)
+        url += "&step="
+        url += quote_plus(step)
         url += "&time="
         url += quote_plus(datetime.datetime.utcfromtimestamp(now)\
                           .strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
