@@ -452,10 +452,11 @@ class MetricsHTTPHandler(BaseHTTPRequestHandler):
 ## Snappy: <http://google.github.io/snappy/>
 
 class RemoteMetricsWriter:
-    def __init__(self, endpoint, schema, expiry=5*60, **kwargs):
+    def __init__(self, endpoint, schema, expiry=5*60, labels=dict(), **kwargs):
         self.expiry = expiry
         self.endpoint = endpoint
         self.schema = schema
+        self.labels = labels
         ## Each schema entry describes a metric family, and is a dict
         ## with the following members:
         ##
@@ -530,6 +531,7 @@ class RemoteMetricsWriter:
                     if hasattr(self, 'job'):
                         famkey['job'] = self.job
                         pass
+                    famkey.update(self.labels)
                     for labname, labspec in lab.items():
                         if labspec is callable:
                             for labsfx, labval in labspec(idx, snapshot).items():
