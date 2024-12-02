@@ -120,7 +120,7 @@ class Summary:
     def __str__(self):
         return '<%.6f %.6f\u00b1%.6f %.6f>' % (self.min(),
                                                self.mean(),
-                                               self.standard_deviation(),
+                                               self.stddev(),
                                                self.max())
 
     def max(self):
@@ -139,7 +139,7 @@ class Summary:
         mn = self.mean()
         return self.mean_of_squares() - mn * mn
 
-    def standard_deviation(self):
+    def stddev(self):
         import math
         return math.sqrt(self.variance())
 
