@@ -437,7 +437,7 @@ ceph:disk_installation{{cluster="production"}}
     'slow_ops': '''
 ceph:disk_installation{{cluster="{cluster}"}}
 * on(ceph_daemon) group_right()
-ceph_daemon_health_metrics{{cluster="{cluster}", type="SLOW_OPS"}}
+avg_over_time(ceph_daemon_health_metrics{{cluster="{cluster}", type="SLOW_OPS"}}[{sbin}])
 ''',
 }
 
