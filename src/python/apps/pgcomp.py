@@ -100,12 +100,12 @@ class Summary:
     def __init__(self):
         self.total = 0.0
         self.sqtotal = 0.0
-        self.count = 0
+        self._count = 0
         pass
 
     def __iadd__(self, other):
         v = float(other)
-        if self.count == 0:
+        if self._count == 0:
             self.vmin = self.vmax = v
         elif v < self.vmin:
             self.vmin = v
@@ -114,7 +114,7 @@ class Summary:
             pass
         self.total += v
         self.sqtotal += v * v
-        self.count += 1
+        self._count += 1
         pass
 
     def __str__(self):
@@ -123,6 +123,9 @@ class Summary:
                                                self.stddev(),
                                                self.max())
 
+    def count(self):
+        return self._count
+
     def max(self):
         return self.vmax
 
@@ -130,10 +133,10 @@ class Summary:
         return self.vmin
 
     def mean(self):
-        return self.total / self.count
+        return self.total / self._count
 
     def mean_of_squares(self):
-        return self.sqtotal / self.count
+        return self.sqtotal / self._count
 
     def variance(self):
         mn = self.mean()
