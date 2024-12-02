@@ -151,6 +151,23 @@ class Summary:
 
 schema = [
     {
+        'base': 'cephpg_read_latency_count',
+        'type': 'gauge',
+        'help': 'count PG read latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['read_latency']
+                              for pgid in e['read_latency'][mode] ],
+        'samples': {
+            '': ('%d', lambda t, d: d['read_latency'][t[0]][t[1]].count()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
         'base': 'cephpg_read_latency_mean',
         'unit': 'seconds',
         'type': 'gauge',
@@ -160,6 +177,236 @@ schema = [
                               for pgid in e['read_latency'][mode] ],
         'samples': {
             '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].mean()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_read_latency_stddev',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'standard deviation PG read latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['read_latency']
+                              for pgid in e['read_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].stddev()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_read_latency_min',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'minimum PG read latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['read_latency']
+                              for pgid in e['read_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].min()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_read_latency_max',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'maximum PG read latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['read_latency']
+                              for pgid in e['read_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].max()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+
+    {
+        'base': 'cephpg_write_latency_count',
+        'type': 'gauge',
+        'help': 'mean PG write latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['write_latency']
+                              for pgid in e['write_latency'][mode] ],
+        'samples': {
+            '': ('%df', lambda t, d: d['write_latency'][t[0]][t[1]].count()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_write_latency_mean',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'mean PG write latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['write_latency']
+                              for pgid in e['write_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].mean()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_write_latency_stddev',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'standard deviation PG write latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['write_latency']
+                              for pgid in e['write_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].stddev()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_write_latency_min',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'minimum PG write latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['write_latency']
+                              for pgid in e['write_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].min()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_write_latency_max',
+        'unit': 'seconds',
+        'type': 'gauge',
+        'help': 'maximum PG write latency',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['write_latency']
+                              for pgid in e['write_latency'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].max()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+
+    {
+        'base': 'cephpg_slow_ops_count',
+        'type': 'gauge',
+        'help': 'mean PG slow ops',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['slow_ops']
+                              for pgid in e['slow_ops'][mode] ],
+        'samples': {
+            '': ('%d', lambda t, d: d['slow_ops'][t[0]][t[1]].count()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_slow_ops_mean',
+        'type': 'gauge',
+        'help': 'mean PG slow ops',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['slow_ops']
+                              for pgid in e['slow_ops'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['slow_ops'][t[0]][t[1]].mean()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_slow_ops_stddev',
+        'type': 'gauge',
+        'help': 'standard deviation PG slow ops',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['slow_ops']
+                              for pgid in e['slow_ops'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['slow_ops'][t[0]][t[1]].stddev()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_slow_ops_min',
+        'type': 'gauge',
+        'help': 'minimum PG slow ops',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['slow_ops']
+                              for pgid in e['slow_ops'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['slow_ops'][t[0]][t[1]].min()),
+        },
+        'attrs': {
+            'status': ('%s', lambda t, d: t[0]),
+            'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
+        },
+    },
+
+    {
+        'base': 'cephpg_slow_ops_max',
+        'type': 'gauge',
+        'help': 'maximum PG slow ops',
+        'select': lambda e: [ (mode, pgid)
+                              for mode in e['slow_ops']
+                              for pgid in e['slow_ops'][mode] ],
+        'samples': {
+            '': ('%.6f', lambda t, d: d['slow_ops'][t[0]][t[1]].max()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
