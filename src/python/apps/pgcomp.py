@@ -159,7 +159,7 @@ schema = [
             '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].mean()),
         },
         'attrs': {
-            'mode': ('%s', lambda t, d: t[0]),
+            'status': ('%s', lambda t, d: t[0]),
             'pgid': ('%s', lambda t, d: t[1]),
             'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
         },
