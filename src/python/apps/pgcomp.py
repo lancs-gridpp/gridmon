@@ -50,6 +50,10 @@ import metrics
 _pgidfmt = re.compile(r'([0-9]+)\.(.+)')
 _osdfmt = re.compile(r'osd\.([0-9]+)')
 
+def get_pool_id(pgid):
+    pool, subid = _pgidfmt.match(pgid).groups()
+    return pool
+
 def get_pg_comp(args=[]):
     cmd = args + [ 'ceph', 'pg', 'dump', 'pgs_brief', '-f', 'json' ]
     try:
@@ -157,6 +161,7 @@ schema = [
         'attrs': {
             'mode': ('%s', lambda t, d: t[0]),
             'pgid': ('%s', lambda t, d: t[1]),
+            'pool_id': ('%s', lambda t, d: get_pool_id(t[1])),
         },
     },
 ]
