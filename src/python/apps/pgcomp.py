@@ -151,14 +151,14 @@ class Summary:
 
 schema = [
     # {
-    #     'base': 'cephpg_read_latency_count',
+    #     'base': 'cephpg_disk_read_latency_count',
     #     'type': 'gauge',
     #     'help': 'count PG read latency',
     #     'select': lambda e: [ (mode, pgid)
-    #                           for mode in e['read_latency']
-    #                           for pgid in e['read_latency'][mode] ],
+    #                           for mode in e['disk_read_latency']
+    #                           for pgid in e['disk_read_latency'][mode] ],
     #     'samples': {
-    #         '': ('%d', lambda t, d: d['read_latency'][t[0]][t[1]].count()),
+    #         '': ('%d', lambda t, d: d['disk_read_latency'][t[0]][t[1]].count()),
     #     },
     #     'attrs': {
     #         'status': ('%s', lambda t, d: t[0]),
@@ -168,15 +168,15 @@ schema = [
     # },
 
     {
-        'base': 'cephpg_read_latency_mean',
+        'base': 'cephpg_disk_read_latency_mean',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'mean PG read latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['read_latency']
-                              for pgid in e['read_latency'][mode] ],
+                              for mode in e['disk_read_latency']
+                              for pgid in e['disk_read_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].mean()),
+            '': ('%.6f', lambda t, d: d['disk_read_latency'][t[0]][t[1]].mean()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -186,15 +186,16 @@ schema = [
     },
 
     {
-        'base': 'cephpg_read_latency_stddev',
+        'base': 'cephpg_disk_read_latency_stddev',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'standard deviation PG read latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['read_latency']
-                              for pgid in e['read_latency'][mode] ],
+                              for mode in e['disk_read_latency']
+                              for pgid in e['disk_read_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].stddev()),
+            '': ('%.6f',
+                 lambda t, d: d['disk_read_latency'][t[0]][t[1]].stddev()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -204,15 +205,15 @@ schema = [
     },
 
     {
-        'base': 'cephpg_read_latency_min',
+        'base': 'cephpg_disk_read_latency_min',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'minimum PG read latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['read_latency']
-                              for pgid in e['read_latency'][mode] ],
+                              for mode in e['disk_read_latency']
+                              for pgid in e['disk_read_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].min()),
+            '': ('%.6f', lambda t, d: d['disk_read_latency'][t[0]][t[1]].min()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -222,15 +223,15 @@ schema = [
     },
 
     {
-        'base': 'cephpg_read_latency_max',
+        'base': 'cephpg_disk_read_latency_max',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'maximum PG read latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['read_latency']
-                              for pgid in e['read_latency'][mode] ],
+                              for mode in e['disk_read_latency']
+                              for pgid in e['disk_read_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['read_latency'][t[0]][t[1]].max()),
+            '': ('%.6f', lambda t, d: d['disk_read_latency'][t[0]][t[1]].max()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -241,14 +242,14 @@ schema = [
 
 
     # {
-    #     'base': 'cephpg_write_latency_count',
+    #     'base': 'cephpg_disk_write_latency_count',
     #     'type': 'gauge',
     #     'help': 'mean PG write latency',
     #     'select': lambda e: [ (mode, pgid)
-    #                           for mode in e['write_latency']
-    #                           for pgid in e['write_latency'][mode] ],
+    #                           for mode in e['disk_write_latency']
+    #                           for pgid in e['disk_write_latency'][mode] ],
     #     'samples': {
-    #         '': ('%df', lambda t, d: d['write_latency'][t[0]][t[1]].count()),
+    #         '': ('%df', lambda t, d: d['disk_write_latency'][t[0]][t[1]].count()),
     #     },
     #     'attrs': {
     #         'status': ('%s', lambda t, d: t[0]),
@@ -258,15 +259,16 @@ schema = [
     # },
 
     {
-        'base': 'cephpg_write_latency_mean',
+        'base': 'cephpg_disk_write_latency_mean',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'mean PG write latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['write_latency']
-                              for pgid in e['write_latency'][mode] ],
+                              for mode in e['disk_write_latency']
+                              for pgid in e['disk_write_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].mean()),
+            '': ('%.6f',
+                 lambda t, d: d['disk_write_latency'][t[0]][t[1]].mean()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -276,15 +278,16 @@ schema = [
     },
 
     {
-        'base': 'cephpg_write_latency_stddev',
+        'base': 'cephpg_disk_write_latency_stddev',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'standard deviation PG write latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['write_latency']
-                              for pgid in e['write_latency'][mode] ],
+                              for mode in e['disk_write_latency']
+                              for pgid in e['disk_write_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].stddev()),
+            '': ('%.6f',
+                 lambda t, d: d['disk_write_latency'][t[0]][t[1]].stddev()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -294,15 +297,15 @@ schema = [
     },
 
     {
-        'base': 'cephpg_write_latency_min',
+        'base': 'cephpg_disk_write_latency_min',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'minimum PG write latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['write_latency']
-                              for pgid in e['write_latency'][mode] ],
+                              for mode in e['disk_write_latency']
+                              for pgid in e['disk_write_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].min()),
+            '': ('%.6f', lambda t, d: d['disk_write_latency'][t[0]][t[1]].min()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -312,15 +315,15 @@ schema = [
     },
 
     {
-        'base': 'cephpg_write_latency_max',
+        'base': 'cephpg_disk_write_latency_max',
         'unit': 'seconds',
         'type': 'gauge',
         'help': 'maximum PG write latency',
         'select': lambda e: [ (mode, pgid)
-                              for mode in e['write_latency']
-                              for pgid in e['write_latency'][mode] ],
+                              for mode in e['disk_write_latency']
+                              for pgid in e['disk_write_latency'][mode] ],
         'samples': {
-            '': ('%.6f', lambda t, d: d['write_latency'][t[0]][t[1]].max()),
+            '': ('%.6f', lambda t, d: d['disk_write_latency'][t[0]][t[1]].max()),
         },
         'attrs': {
             'status': ('%s', lambda t, d: t[0]),
@@ -418,7 +421,7 @@ schema = [
 
 
 queries = {
-    'read_latency': '''
+    'disk_read_latency': '''
 ceph:disk_installation{{cluster="{cluster}"}}
 * on(node, device) group_right(ceph_daemon)
 (rate(node_disk_read_time_seconds_total[{sbin}])
@@ -426,7 +429,7 @@ ceph:disk_installation{{cluster="{cluster}"}}
  rate(node_disk_reads_completed_total[{sbin}]))
 ''',
 
-    'write_latency': '''
+    'disk_write_latency': '''
 ceph:disk_installation{{cluster="production"}}
 * on(node, device) group_right(ceph_daemon)
 (rate(node_disk_write_time_seconds_total[{sbin}])
@@ -437,7 +440,8 @@ ceph:disk_installation{{cluster="production"}}
     'slow_ops': '''
 ceph:disk_installation{{cluster="{cluster}"}}
 * on(ceph_daemon) group_right()
-avg_over_time(ceph_daemon_health_metrics{{cluster="{cluster}", type="SLOW_OPS"}}[{sbin}])
+avg_over_time(ceph_daemon_health_metrics
+{{cluster="{cluster}", type="SLOW_OPS"}}[{sbin}])
 ''',
 }
 
