@@ -30,6 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import sys
 import logging
 import traceback
@@ -62,19 +63,16 @@ log_params = {
 
 http_host = "localhost"
 http_port = 8567
-record_dir = None
 
 config = { }
 
-opts, args = gnu_getopt(sys.argv[1:], 'h:f:T:t:r:z',
+opts, args = gnu_getopt(sys.argv[1:], 'h:f:T:t:z',
                         [ 'log=', 'log-file=', 'pid-file='])
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val)
     elif opt == '-z':
         silent = True
-    elif opt == '-r':
-        record_dir = pathlib.Path(val)
     elif opt == '-f':
         with open(val, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
@@ -87,6 +85,18 @@ for opt, val in opts:
                 qconf['bootstrap'].update(newqconf.get('bootstrap', []))
                 qconf['topics'].update(newqconf.get('topics', []))
                 qconf['group'] = newqconf.get('group')
+                rec_spec = newqconf.get('record')
+                if rec_spec is not None:
+                    rec_dir = rec_spec.get('path')
+                    if rec_dir is not None:
+                        rec_dir = os.path.expanduser(rec_dir)
+                        qconf['record'] = { 'path': pathlib.Path(rec_dir) }
+                        rec_excl = rec_spec.get('exclude')
+                        rec_excl = None if rec_excl is None \
+                            else re.compile(rec_excl)
+                        qconf['record']['exclude'] = rec_excl
+                        pass
+                    pass
                 continue
             pass
     elif opt == '-T':
@@ -265,10 +275,26 @@ except OSError as e:
     sys.exit(1)
     pass
 
-def listen_to_kafka(queue, conf, stats, stats_lock, rec_dir):
+def listen_to_kafka(queue, conf, stats, stats_lock):
     topics = list(conf['topics'])
     boot = list(conf['bootstrap'])
     group_id = conf['group']
+    rec_spec = conf['record']
+    if rec_spec is not None:
+        rec_dir = rec_spec['path']
+        rec_excl = rec_spec['exclude']
+        m = '%s recorded in %s'
+        t = (queue, str(rec_dir))
+        if rec_excl is not None:
+            m += ' excluding %s'
+            t += (rec_excl.pattern,)
+            pass
+        logging.info(m % t)
+        rec_dir.mkdir(exist_ok=True, parents=False)
+    else:
+        rec_dir = None
+        rec_excl = None
+        pass
 
     while True:
         try:
@@ -287,7 +313,8 @@ def listen_to_kafka(queue, conf, stats, stats_lock, rec_dir):
             for msg in cons:
                 topic = msg.topic
                 if rec_dir is not None and \
-                   (msg.key is not None or msg.value is not None):
+                   (msg.key is not None or msg.value is not None) \
+                   and (rec_excl is None or not rec_excl.match(topic)):
                     ## Create a way to distinctly identify this
                     ## message.  Use the timestamp and a digest of key
                     ## and value.
@@ -303,13 +330,15 @@ def listen_to_kafka(queue, conf, stats, stats_lock, rec_dir):
                         pass
                     dig = hashlib.md5(digin).hexdigest()[0:4]
                     if msg.key is not None:
-                        op = rec_dir.joinpath(f'{tst}.{dig}.key')
+                        op = rec_dir.joinpath(topic, f'{tst}.{dig}.key')
+                        op.parent.mkdir(parents=True, exist_ok=True)
                         with op.open('wb') as f:
                             f.write(msg.key)
                             pass
                         pass
                     if msg.value is not None:
-                        op = rec_dir.joinpath(f'{tst}.{dig}.value')
+                        op = rec_dir.joinpath(topic, f'{tst}.{dig}.value')
+                        op.parent.mkdir(parents=True, exist_ok=True)
                         with op.open('wb') as f:
                             f.write(msg.value)
                             pass
@@ -345,16 +374,17 @@ try:
             f.write('%d\n' % os.getpid())
             pass
         pass
-    if record_dir is not None:
-        record_dir.mkdir(exist_ok=True)
-        pass
 
     ## Start a thread for each queue.
     for queue, qconf in config.items():
+        rec_dir = qconf.get('record', {}).get('path')
+        rec_excl = qconf.get('record', {}).get('exclude')
+        if rec_dir is not None:
+            rec_dir.mkdir(exist_ok=True)
+            pass
         thrd = threading.Thread(target=listen_to_kafka,
                                 args=(queue, qconf,
-                                      stats['queues'][queue], stats_lock,
-                                      record_dir),
+                                      stats['queues'][queue], stats_lock),
                                 daemon=True)
         thrd.start()
         continue
