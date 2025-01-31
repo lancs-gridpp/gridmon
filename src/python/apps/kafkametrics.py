@@ -42,6 +42,7 @@ import threading
 import os
 import signal
 import time
+import errno
 
 from kafka import KafkaConsumer
 import kafka.errors as ke
