@@ -291,7 +291,7 @@ def listen_to_kafka(queue, conf, stats, stats_lock, rec_dir):
                     ## Create a way to distinctly identify this
                     ## message.  Use the timestamp and a digest of key
                     ## and value.
-                    tst = datetime.utcfromtimestamp(msg.timestamp) \
+                    tst = datetime.utcfromtimestamp(msg.timestamp / 1000.0) \
                                   .isoformat('T', 'milliseconds') \
                                   .replace(':', '-')
                     digin = bytes()
