@@ -345,6 +345,9 @@ try:
             f.write('%d\n' % os.getpid())
             pass
         pass
+    if record_dir is not None:
+        record_dir.mkdir(exist_ok=True)
+        pass
 
     ## Start a thread for each queue.
     for queue, qconf in config.items():
