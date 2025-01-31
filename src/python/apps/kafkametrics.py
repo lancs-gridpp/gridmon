@@ -37,6 +37,9 @@ from getopt import gnu_getopt
 import yaml
 import logging
 import functools
+import hashlib
+import pathlib
+from datetime import datetime
 from http.server import HTTPServer
 import threading
 import os
@@ -59,16 +62,19 @@ log_params = {
 
 http_host = "localhost"
 http_port = 8567
+record_dir = None
 
 config = { }
 
-opts, args = gnu_getopt(sys.argv[1:], 'h:f:T:t:z',
+opts, args = gnu_getopt(sys.argv[1:], 'h:f:T:t:r:z',
                         [ 'log=', 'log-file=', 'pid-file='])
 for opt, val in opts:
     if opt == '-h':
         horizon = int(val)
     elif opt == '-z':
         silent = True
+    elif opt == '-r':
+        record_dir = pathlib.Path(val)
     elif opt == '-f':
         with open(val, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
@@ -259,7 +265,7 @@ except OSError as e:
     sys.exit(1)
     pass
 
-def listen_to_kafka(queue, conf, stats, stats_lock):
+def listen_to_kafka(queue, conf, stats, stats_lock, rec_dir):
     topics = list(conf['topics'])
     boot = list(conf['bootstrap'])
     group_id = conf['group']
@@ -280,6 +286,35 @@ def listen_to_kafka(queue, conf, stats, stats_lock):
             logging.debug('consuming %s on %s as %s' % (topics, queue, group_id))
             for msg in cons:
                 topic = msg.topic
+                if rec_dir is not None and \
+                   (msg.key is not None or msg.value is not None):
+                    ## Create a way to distinctly identify this
+                    ## message.  Use the timestamp and a digest of key
+                    ## and value.
+                    tst = datetime.utcfromtimestamp(msg.timestamp) \
+                                  .isoformat('T', 'milliseconds') \
+                                  .replace(':', '-')
+                    digin = bytes()
+                    if msg.key is not None:
+                        digin += msg.key
+                        pass
+                    if msg.value is not None:
+                        digin += msg.value
+                        pass
+                    dig = hashlib.md5(digin).hexdigest()[0:4]
+                    if msg.key is not None:
+                        op = rec_dir.joinpath(f'{tst}.{dig}.key')
+                        with op.open('wb') as f:
+                            f.write(msg.key)
+                            pass
+                        pass
+                    if msg.value is not None:
+                        op = rec_dir.joinpath(f'{tst}.{dig}.value')
+                        with op.open('wb') as f:
+                            f.write(msg.value)
+                            pass
+                        pass
+                    pass
                 keybytes = 0 if msg.key is None else len(msg.key)
                 valuebytes = 0 if msg.value is None else len(msg.value)
                 logging.debug('got %d:%d of %s on %s as %s' % \
@@ -315,7 +350,8 @@ try:
     for queue, qconf in config.items():
         thrd = threading.Thread(target=listen_to_kafka,
                                 args=(queue, qconf,
-                                      stats['queues'][queue], stats_lock),
+                                      stats['queues'][queue], stats_lock,
+                                      record_dir),
                                 daemon=True)
         thrd.start()
         continue
