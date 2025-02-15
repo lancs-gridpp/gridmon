@@ -807,7 +807,11 @@ if __name__ == '__main__':
                                     .setdefault(node, { })
                         ient = nent.setdefault('iface', { }) \
                                    .setdefault(iface, { })
-                        for adent in socket.getaddrinfo(iface, 0):
+                        try:
+                            adents = socket.getaddrinfo(iface, 0)
+                        except socket.gaierror:
+                            continue
+                        for adent in adents:
                             if adent[1] != socket.SocketKind.SOCK_RAW:
                                 continue
                             ipv = None
