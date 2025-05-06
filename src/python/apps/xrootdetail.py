@@ -117,6 +117,19 @@ def _decode_mapping(code, buf):
     assert status is not None
     return (status, { 'info': info, 'dictid': dictid })
 
+def _decode_gstream(buf):
+    tbeg = struct.unpack('>I', buf[0:4])[0] & 0xffffffff
+    tend = struct.unpack('>I', buf[4:8])[0] & 0xffffffff
+    sidw = struct.unpack('>Q', buf[8:16])[0] & 0xffffffffffffffff
+    prov = sidw >> 56
+    sid = sidw & 0xffffffffffff
+    text = buf[16:].decode('us-ascii')
+    return ('general', {
+        'provider': prov, 'sid': sid,
+        'begin': tbeg, 'end': tend,
+        'text': text,
+    })
+
 def _decode_trace(buf):
     assert len(buf) == 16
 
@@ -373,6 +386,9 @@ def _decode_packet(buf):
 
     if code == 'f':
         return (stod, pseq) + _decode_file(buf[8:])
+
+    if code == 'g':
+        return (stod, pseq) + _decode_gstream(buf[8:])
 
     return (stod, pseq, 'unrecognized', {
         'unparsed': buf[8:],
