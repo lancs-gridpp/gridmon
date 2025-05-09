@@ -266,10 +266,10 @@ def _decode_file_ops(buf):
     }
 
 def _decode_file_ssq(buf):
-    rd_sq = struct.unpack('>Q', buf[0:8])[0]
-    rdv_sq = struct.unpack('>Q', buf[8:16])[0]
-    seg_sq = struct.unpack('>Q', buf[16:24])[0]
-    wr_sq = struct.unpack('>Q', buf[24:32])[0]
+    rd_sq = struct.unpack('>d', buf[0:8])[0]
+    rdv_sq = struct.unpack('>d', buf[8:16])[0]
+    seg_sq = struct.unpack('>d', buf[16:24])[0]
+    wr_sq = struct.unpack('>d', buf[24:32])[0]
     return {
         'read': { 'sqsum': rd_sq },
         'readv': { 'sqsum': rdv_sq },
