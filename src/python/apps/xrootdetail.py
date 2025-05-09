@@ -166,7 +166,7 @@ def _decode_trace(buf):
 
     ## READ/WRITE REQUEST
     if buf[0] <= 0x7f:
-        offset = struct.unpack('>Q', buf[0:8])[0]
+        offset = struct.unpack('>Q', buf[0:8])[0] & 0xffffffffffffff
         blen = struct.unpack('>i', buf[8:12])[0]
         if blen < 0:
             blen = -blen
