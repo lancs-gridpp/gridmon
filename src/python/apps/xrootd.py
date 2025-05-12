@@ -269,7 +269,7 @@ if __name__ == '__main__':
     from getopt import getopt
 
     ## Local libraries
-    import metrics
+    import lancs_gridmon.metrics as metrics
 
     ## This is a sample to populate the history with for test
     ## purposes.

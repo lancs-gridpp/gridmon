@@ -44,7 +44,7 @@ from getopt import gnu_getopt
 from pprint import pprint
 
 ## Local libraries
-import metrics
+import lancs_gridmon.metrics as metrics
 
 
 _pgidfmt = re.compile(r'([0-9]+)\.(.+)')

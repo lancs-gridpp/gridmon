@@ -499,7 +499,7 @@ if __name__ == "__main__":
     import signal
 
     ## Local libraries
-    import metrics
+    import lancs_gridmon.metrics as metrics
 
     http_host = "localhost"
     http_port = 8732

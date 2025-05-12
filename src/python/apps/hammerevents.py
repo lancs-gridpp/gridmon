@@ -39,7 +39,7 @@ from pprint import pformat
 from getopt import gnu_getopt
 import yaml
 
-import metrics
+import lancs_gridmon.metrics as metrics
 
 ## Parse command-line arguments.
 endpoint = None

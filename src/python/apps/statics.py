@@ -627,7 +627,7 @@ if __name__ == '__main__':
     import socket
 
     ## Local libraries
-    import metrics
+    import lancs_gridmon.metrics as metrics
     from utils import merge
 
     http_host = "localhost"

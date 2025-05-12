@@ -51,7 +51,7 @@ import errno
 from kafka import KafkaConsumer
 import kafka.errors as ke
 
-import metrics
+import lancs_gridmon.metrics as metrics
 import utils
 
 horizon = 30 * 60

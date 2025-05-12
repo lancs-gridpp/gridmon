@@ -1037,7 +1037,7 @@ class Detailer:
 
     pass
 
-import metrics
+import lancs_gridmon.metrics as metrics
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 
