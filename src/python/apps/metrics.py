@@ -607,7 +607,7 @@ class RemoteMetricsWriter:
         expiry = self.expiry + lasttime
 
         ## Convert the timeseries into write request.
-        import remote_write_pb2 as pb
+        import lancs_gridmon.metrics.remote_write_pb2 as pb
 
         rw = pb.WriteRequest()
         for labs, vals in series.items():

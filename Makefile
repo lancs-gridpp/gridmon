@@ -34,7 +34,7 @@ SHAREDIR ?= $(PREFIX)/share/gridmon
 LIBEXECDIR ?= $(PREFIX)/libexec/gridmon
 
 python3_zips += apps
-apps_pyproto += remote_write
+apps_pyproto += lancs_gridmon/metrics/remote_write
 
 
 
