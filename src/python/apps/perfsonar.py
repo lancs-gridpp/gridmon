@@ -41,6 +41,7 @@ import sys
 import re
 import logging
 import traceback
+from lancs_gridmon.trees import merge_trees
 
 _tozero = re.compile(r"[0-9]")
 
@@ -308,28 +309,6 @@ schema = [
 ]
 
 
-def _merge(a, b, pfx=()):
-    for key, nv in b.items():
-        ## Add a value if not already present.
-        if key not in a:
-            a[key] = nv
-            continue
-
-        ## Compare the old value with the new.  Apply recursively if
-        ## they are both dictionaries.
-        ov = a[key]
-        if isinstance(ov, dict) and isinstance(nv, dict):
-            _merge(ov, nv, pfx + (key,))
-            continue
-
-        ## The new value and the existing value must match.
-        if ov != nv:
-            raise Exception('bad merge (%s over %s at %s)' %
-                            (nv, ov, '.'.join(pfx + (key,))))
-
-        continue
-    pass
-
 def _match_host(got, sought):
     import socket, ipaddress
     gotaddr = ipaddress.ip_address(got)
@@ -469,7 +448,7 @@ class PerfsonarCollector:
                     ## Install metadata and the value for this event.
                     tsdata = data.setdefault(ts, { })
                     evdata = tsdata.setdefault(mdkey, { })
-                    _merge(evdata, meta)
+                    merge_trees(evdata, meta)
                     evdata.setdefault('measurements', { })[evtype] = val
 
                     ## Increase the relevant event counter, and store

@@ -30,7 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-def merge(a, b, pfx=(), mismatch=0):
+def merge_trees(a, b, pfx=(), mismatch=0):
     for key, nv in b.items():
         ## Add a value if not already present.
         if key not in a:
@@ -41,7 +41,7 @@ def merge(a, b, pfx=(), mismatch=0):
         ## they are both dictionaries.
         ov = a[key]
         if isinstance(ov, dict) and isinstance(nv, dict):
-            merge(ov, nv, pfx + (key,), mismatch=mismatch)
+            merge_trees(ov, nv, pfx + (key,), mismatch=mismatch)
             continue
 
         if mismatch < 0:

@@ -32,6 +32,25 @@
 
 import logging
 import traceback
+from getopt import getopt
+import yaml
+import sys
+import os
+import signal
+import time
+import subprocess
+import re
+from pprint import pprint
+import functools
+from http.server import HTTPServer
+import threading
+import errno
+import socket
+
+## Local libraries
+from lancs_gridmon.statics.schema import schema as statics_schema
+import lancs_gridmon.metrics as metrics
+from lancs_gridmon.trees import merge_trees
 
 def _walk(root, path):
     if len(path) == 0:
@@ -56,12 +75,12 @@ def _update_live_metrics(hist, confs):
     for arg in confs:
         with open(arg, 'r') as fh:
             doc = yaml.load(fh, Loader=yaml.SafeLoader)
-            merge(sites, doc.get('sites', { }), mismatch=+1)
-            merge(group_specs, doc.get('site_groups', { }), mismatch=+1)
-            merge(clus_specs, doc.get('clusters', { }), mismatch=+1)
+            merge_trees(sites, doc.get('sites', { }), mismatch=+1)
+            merge_trees(group_specs, doc.get('site_groups', { }), mismatch=+1)
+            merge_trees(clus_specs, doc.get('clusters', { }), mismatch=+1)
             dpts = doc.get('drive_paths', { })
             lyt_pats = drives.get_layout_patterns(dpts)
-            merge(drive_specs,
+            merge_trees(drive_specs,
                   drives.get_layouts(dpts, lyt_pats),
                   mismatch=+1)
             pass
@@ -144,26 +163,6 @@ def _update_live_metrics(hist, confs):
 
     hist.install(data)
     pass
-
-from getopt import getopt
-import yaml
-import sys
-import os
-import signal
-import time
-import subprocess
-import re
-from pprint import pprint
-import functools
-from http.server import HTTPServer
-import threading
-import errno
-import socket
-from lancs_gridmon.statics.schema import schema as statics_schema
-
-## Local libraries
-import lancs_gridmon.metrics as metrics
-from utils import merge
 
 http_host = "localhost"
 http_port = 9363
@@ -288,7 +287,7 @@ try:
             for arg in confs:
                 with open(arg, 'r') as fh:
                     doc = yaml.load(fh, Loader=yaml.SafeLoader)
-                    merge(mach_specs, doc.get('machines', { }), mismatch=+1)
+                    merge_trees(mach_specs, doc.get('machines', { }), mismatch=+1)
 
                     ## Invert the machine role implications.
                     for role_so, role_ifs in doc.get('machine_roles', { }) \

@@ -46,7 +46,7 @@ from datetime import datetime
 from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
-from utils import merge
+from lancs_gridmon.trees import merge_trees
 from reseq import FixedSizeResequencer as Resequencer
 from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 
@@ -292,7 +292,7 @@ def _decode_file_ssq(buf):
     }
 
 def _decode_file_close(flags, dictid, buf):
-    from utils import merge
+    from utils import merge_trees
 
     brd = struct.unpack('>Q', buf[0:8])[0]
     brdv = struct.unpack('>Q', buf[8:16])[0]
@@ -308,13 +308,13 @@ def _decode_file_close(flags, dictid, buf):
 
     if flags & 0x02:
         ops = _decode_file_ops(buf)
-        merge(result, ops)
+        merge_trees(result, ops)
         buf = buf[48:]
         pass
 
     if flags & 0x04:
         ssq = _decode_file_ssq(buf)
-        merge(result, ssq)
+        merge_trees(result, ssq)
         pass
 
     return ('close', result)
@@ -532,7 +532,7 @@ class Peer:
                         }, ctxt=None)
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': usr['prot'],
                             'user': usr['user'],
                             'client_name': usr['host'],
@@ -583,7 +583,7 @@ class Peer:
                             pass
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': ufn['prot'],
                             'user': ufn['user'],
                             'client_name': ufn['host'],
@@ -619,7 +619,7 @@ class Peer:
                         }, ctxt=None)
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': fil['prot'],
                             'user': fil['user'],
                             'client_name': fil['host'],

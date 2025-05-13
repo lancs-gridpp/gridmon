@@ -52,7 +52,7 @@ from kafka import KafkaConsumer
 import kafka.errors as ke
 
 import lancs_gridmon.metrics as metrics
-import utils
+import lancs_gridmon.trees import merge_trees
 
 horizon = 30 * 60
 silent = False
@@ -166,7 +166,7 @@ def update_live_metrics(hist, stats, lock):
             dat = data.setdefault('queues', { }).setdefault(name, { })
             dat['up'] = stat['up']
             dat['conns'] = stat['conns']
-            utils.merge(dat.setdefault('topics', { }), stat['topics'])
+            merge_trees(dat.setdefault('topics', { }), stat['topics'])
             continue
         pass
 

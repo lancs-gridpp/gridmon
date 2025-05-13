@@ -38,35 +38,7 @@ from frozendict import frozendict
 
 from http.server import BaseHTTPRequestHandler
 
-def _merge(a, b, pfx=(), mismatch=0):
-    for key, nv in b.items():
-        ## Add a value if not already present.
-        if key not in a:
-            a[key] = nv
-            continue
-
-        ## Compare the old value with the new.  Apply recursively if
-        ## they are both dictionaries.
-        ov = a[key]
-        if isinstance(ov, dict) and isinstance(nv, dict):
-            _merge(ov, nv, pfx + (key,), mismatch=mismatch)
-            continue
-
-        if mismatch < 0:
-            ## Use the old value.
-            continue
-        if mismatch > 0:
-            ## Replace the old value.
-            a[key] = nv
-            continue
-
-        ## The new value and the existing value must match.
-        if ov != nv:
-            raise Exception('bad merge (%s over %s at %s)' %
-                            (nv, ov, '.'.join(pfx + (key,))))
-
-        continue
-    pass
+from lancs_gridmon.trees import merge_trees
 
 def _safe_mod(spec, idx, snapshot):
     vals = list()
@@ -181,7 +153,7 @@ class MetricHistory:
             threshold = int(time.time()) - self.horizon
 
             ## Merge the new data with the old.
-            _merge(self.entries, samples, mismatch=mismatch)
+            merge_trees(self.entries, samples, mismatch=mismatch)
 
             ## Discard old entries.
             for k in [ k for k in self.entries if k < threshold ]:
