@@ -33,4 +33,4 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
 export PYTHONPATH="${0%/*}/python3/apps.zip"
-exec python3 -m xrootd "$@"
+exec python3 -m lancs_gridmon.xrootd.summary.collector "$@"
