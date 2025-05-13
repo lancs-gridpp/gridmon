@@ -771,7 +771,7 @@ def _inc_counter(t0, t1, data, inc):
     data['last'] = t1
     pass
 
-import domains
+import lancs_gridmon.domains as domains
 import lancs_gridmon.logfmt as logfmt
 
 class Detailer:
