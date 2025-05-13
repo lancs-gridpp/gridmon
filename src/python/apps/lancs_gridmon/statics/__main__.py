@@ -145,378 +145,376 @@ def _update_live_metrics(hist, confs):
     hist.install(data)
     pass
 
-if __name__ == '__main__':
-    from getopt import getopt
-    import yaml
-    import sys
-    import os
-    import signal
-    import time
-    import subprocess
-    import re
-    from pprint import pprint
-    import functools
-    from http.server import HTTPServer
-    import threading
-    import errno
-    import socket
-    from lancs_gridmon.statics.schema import schema as statics_schema
+from getopt import getopt
+import yaml
+import sys
+import os
+import signal
+import time
+import subprocess
+import re
+from pprint import pprint
+import functools
+from http.server import HTTPServer
+import threading
+import errno
+import socket
+from lancs_gridmon.statics.schema import schema as statics_schema
 
-    ## Local libraries
-    import lancs_gridmon.metrics as metrics
-    from utils import merge
+## Local libraries
+import lancs_gridmon.metrics as metrics
+from utils import merge
 
-    http_host = "localhost"
-    http_port = 9363
-    ssl_interval = 6 * 60 * 60
-    silent = False
-    horizon = 120
-    metrics_endpoint = None
-    pidfile = None
-    log_params = {
-        'format': '%(asctime)s %(levelname)s %(message)s',
-        'datefmt': '%Y-%m-%dT%H:%M:%S',
-    }
-    confs = list()
-    opts, args = getopt(sys.argv[1:], "zh:t:T:M:f:",
-                        [ 'log=', 'log-file=', 'pid-file=' ])
-    for opt, val in opts:
-        if opt == '-z':
-            silent = True
-        elif opt == '-h':
-            horizon = int(val)
-        elif opt == '-f':
-            confs.append(val)
-        elif opt == '-T':
-            http_host = val
-        elif opt == '-t':
-            http_port = int(val)
-        elif opt == '-M':
-            metrics_endpoint = val
-        elif opt == '--log':
-            log_params['level'] = getattr(logging, val.upper(), None)
-            if not isinstance(log_params['level'], int):
-                sys.stderr.write('bad log level [%s]\n' % val)
-                sys.exit(1)
-                pass
-            pass
-        elif opt == '--pid-file':
-            if not val.endswith('.pid'):
-                sys.stderr.write('pid filename %s must end with .pid\n' % val)
-                sys.exit(1)
-                pass
-            pidfile = val
-        elif opt == '--log-file':
-            log_params['filename'] = val
-            pass
-        continue
-
-    if silent:
-        with open('/dev/null', 'w') as devnull:
-            fd = devnull.fileno()
-            os.dup2(fd, sys.stdout.fileno())
-            os.dup2(fd, sys.stderr.fileno())
+http_host = "localhost"
+http_port = 9363
+ssl_interval = 6 * 60 * 60
+silent = False
+horizon = 120
+metrics_endpoint = None
+pidfile = None
+log_params = {
+    'format': '%(asctime)s %(levelname)s %(message)s',
+    'datefmt': '%Y-%m-%dT%H:%M:%S',
+}
+confs = list()
+opts, args = getopt(sys.argv[1:], "zh:t:T:M:f:",
+                    [ 'log=', 'log-file=', 'pid-file=' ])
+for opt, val in opts:
+    if opt == '-z':
+        silent = True
+    elif opt == '-h':
+        horizon = int(val)
+    elif opt == '-f':
+        confs.append(val)
+    elif opt == '-T':
+        http_host = val
+    elif opt == '-t':
+        http_port = int(val)
+    elif opt == '-M':
+        metrics_endpoint = val
+    elif opt == '--log':
+        log_params['level'] = getattr(logging, val.upper(), None)
+        if not isinstance(log_params['level'], int):
+            sys.stderr.write('bad log level [%s]\n' % val)
+            sys.exit(1)
             pass
         pass
-
-    logging.basicConfig(**log_params)
-    if 'filename' in log_params:
-        def handler(signum, frame):
-            logging.root.handlers = []
-            logging.basicConfig(**log_params)
-            logging.info('rotation')
+    elif opt == '--pid-file':
+        if not val.endswith('.pid'):
+            sys.stderr.write('pid filename %s must end with .pid\n' % val)
+            sys.exit(1)
             pass
-        signal.signal(signal.SIGHUP, handler)
+        pidfile = val
+    elif opt == '--log-file':
+        log_params['filename'] = val
         pass
+    continue
 
-    ## Serve HTTP metric documentation.
-    methist = metrics.MetricHistory(statics_schema, horizon=horizon)
-    if metrics_endpoint is None:
-        hist = methist
+if silent:
+    with open('/dev/null', 'w') as devnull:
+        fd = devnull.fileno()
+        os.dup2(fd, sys.stdout.fileno())
+        os.dup2(fd, sys.stderr.fileno())
+        pass
+    pass
+
+logging.basicConfig(**log_params)
+if 'filename' in log_params:
+    def handler(signum, frame):
+        logging.root.handlers = []
+        logging.basicConfig(**log_params)
+        logging.info('rotation')
+        pass
+    signal.signal(signal.SIGHUP, handler)
+    pass
+
+## Serve HTTP metric documentation.
+methist = metrics.MetricHistory(statics_schema, horizon=horizon)
+if metrics_endpoint is None:
+    hist = methist
+else:
+    hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                       schema=statics_schema,
+                                       job='statics', expiry=horizon)
+    pass
+
+## Serve the history on demand.  Even if we don't store anything
+## in the history, the HELP, TYPE and UNIT strings are exposed,
+## which doesn't seem to be possible with remote-write.
+updater = functools.partial(_update_live_metrics, methist, confs)
+partial_handler = functools.partial(metrics.MetricsHTTPHandler,
+                                    hist=methist,
+                                    prescrape=updater)
+try:
+    webserver = HTTPServer((http_host, http_port), partial_handler)
+except OSError as e:
+    if e.errno == errno.EADDRINUSE:
+        sys.stderr.write('Stopping: address in use: %s:%d\n' % \
+                         (http_host, http_port))
     else:
-        hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                           schema=statics_schema,
-                                           job='statics', expiry=horizon)
+        logging.error(traceback.format_exc())
+        pass
+    sys.exit(1)
+    pass
+
+share_dir = os.environ['GRIDMON_SHAREDIR']
+cert_exp_cmd = os.path.join(share_dir, 'get-cert-expiry')
+
+try:
+    if pidfile is not None:
+        with open(pidfile, "w") as f:
+            f.write('%d\n' % os.getpid())
+            pass
         pass
 
-    ## Serve the history on demand.  Even if we don't store anything
-    ## in the history, the HELP, TYPE and UNIT strings are exposed,
-    ## which doesn't seem to be possible with remote-write.
-    updater = functools.partial(_update_live_metrics, methist, confs)
-    partial_handler = functools.partial(metrics.MetricsHTTPHandler,
-                                        hist=methist,
-                                        prescrape=updater)
+    ## Use a separate thread to run the server, which we can stop by
+    ## calling shutdown().
+    srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
+                                args=(webserver,),
+                                daemon=True)
+    srv_thrd.start()
+
+    pingfmt = re.compile(r'rtt min/avg/max/mdev = ' +
+                         r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+)/' +
+                         r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+) ms')
+    tbase = int(time.time() * 1000) / 1000.0
+    sslbase = tbase - ssl_interval
     try:
-        webserver = HTTPServer((http_host, http_port), partial_handler)
-    except OSError as e:
-        if e.errno == errno.EADDRINUSE:
-            sys.stderr.write('Stopping: address in use: %s:%d\n' % \
-                             (http_host, http_port))
-        else:
-            logging.error(traceback.format_exc())
-            pass
-        sys.exit(1)
-        pass
+        while True:
+            ## Read cluster/machine specs and implied roles from
+            ## -f arguments.
+            role_impls = { }
+            mach_specs = { }
+            for arg in confs:
+                with open(arg, 'r') as fh:
+                    doc = yaml.load(fh, Loader=yaml.SafeLoader)
+                    merge(mach_specs, doc.get('machines', { }), mismatch=+1)
 
-    share_dir = os.environ['GRIDMON_SHAREDIR']
-    cert_exp_cmd = os.path.join(share_dir, 'get-cert-expiry')
-
-    try:
-        if pidfile is not None:
-            with open(pidfile, "w") as f:
-                f.write('%d\n' % os.getpid())
-                pass
-            pass
-
-        ## Use a separate thread to run the server, which we can stop by
-        ## calling shutdown().
-        srv_thrd = threading.Thread(target=HTTPServer.serve_forever,
-                                    args=(webserver,),
-                                    daemon=True)
-        srv_thrd.start()
-
-        pingfmt = re.compile(r'rtt min/avg/max/mdev = ' +
-                             r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+)/' +
-                             r'([0-9]+\.[0-9]+)/([0-9]+\.[0-9]+) ms')
-        tbase = int(time.time() * 1000) / 1000.0
-        sslbase = tbase - ssl_interval
-        try:
-            while True:
-                ## Read cluster/machine specs and implied roles from
-                ## -f arguments.
-                role_impls = { }
-                mach_specs = { }
-                for arg in confs:
-                    with open(arg, 'r') as fh:
-                        doc = yaml.load(fh, Loader=yaml.SafeLoader)
-                        merge(mach_specs, doc.get('machines', { }), mismatch=+1)
-
-                        ## Invert the machine role implications.
-                        for role_so, role_ifs in doc.get('machine_roles', { }) \
-                                                    .get('implied', { }).items():
-                            for role_if in role_ifs:
-                                role_impls.setdefault(role_if, set()) \
-                                          .add(role_so)
-                                continue
-                            continue
-                        pass
-                    continue
-
-                ## Recursively apply role implications.
-                while True:
-                    changed = False
-                    for k, ms in role_impls.items():
-                        for ak in ms.copy():
-                            for v in role_impls.get(ak, set()):
-                                if v not in ms:
-                                    changed = True
-                                    ms.add(v)
-                                    pass
-                                continue
+                    ## Invert the machine role implications.
+                    for role_so, role_ifs in doc.get('machine_roles', { }) \
+                                                .get('implied', { }).items():
+                        for role_if in role_ifs:
+                            role_impls.setdefault(role_if, set()) \
+                                      .add(role_so)
                             continue
                         continue
-                    if changed:
-                        continue
-                    break
-
-                ## Prepare to gather metrics.
-                beat = int(time.time() * 1000) / 1000.0
-                logging.info('Starting sweep')
-                data = { }
-                data.setdefault(beat, { })['heartbeat'] = beat
-
-                if beat - sslbase >= ssl_interval:
-                    sslbase += ssl_interval
-                    do_ssl = True
-                else:
-                    do_ssl = False
                     pass
+                continue
 
-                ## Ping all interfaces.
-                for node, nspec in mach_specs.items():
-                    if not nspec.get('enabled', True):
-                        continue
-                    for iface, sub in nspec.get('interfaces', { }).items():
-                        pt = int(time.time() * 1000) / 1000.0
-                        entry = data.setdefault(pt, { })
-                        nent = entry.setdefault('node', { }) \
-                                    .setdefault(node, { })
-                        ient = nent.setdefault('iface', { }) \
-                                   .setdefault(iface, { })
-                        try:
-                            adents = socket.getaddrinfo(iface, 0)
-                        except socket.gaierror:
+            ## Recursively apply role implications.
+            while True:
+                changed = False
+                for k, ms in role_impls.items():
+                    for ak in ms.copy():
+                        for v in role_impls.get(ak, set()):
+                            if v not in ms:
+                                changed = True
+                                ms.add(v)
+                                pass
                             continue
-                        for adent in adents:
-                            if adent[1] != socket.SocketKind.SOCK_RAW:
-                                continue
-                            ipv = None
-                            if adent[0] == socket.AddressFamily.AF_INET:
-                                ipv = 4
-                            elif adent[0] == socket.AddressFamily.AF_INET6:
-                                ipv = 6
-                            else:
-                                continue
-                            adstr = adent[4][0]
+                        continue
+                    continue
+                if changed:
+                    continue
+                break
 
-                            cmd = [ 'ping', '-%d' % ipv, '-c', '1',
-                                    '-w', '1', adstr ]
-                            logging.info('Ping v%d %s(%s) of %s' % \
-                                         (ipv, iface, adstr, node))
-                            logging.debug('Command: %s' % cmd)
-                            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            ## Prepare to gather metrics.
+            beat = int(time.time() * 1000) / 1000.0
+            logging.info('Starting sweep')
+            data = { }
+            data.setdefault(beat, { })['heartbeat'] = beat
+
+            if beat - sslbase >= ssl_interval:
+                sslbase += ssl_interval
+                do_ssl = True
+            else:
+                do_ssl = False
+                pass
+
+            ## Ping all interfaces.
+            for node, nspec in mach_specs.items():
+                if not nspec.get('enabled', True):
+                    continue
+                for iface, sub in nspec.get('interfaces', { }).items():
+                    pt = int(time.time() * 1000) / 1000.0
+                    entry = data.setdefault(pt, { })
+                    nent = entry.setdefault('node', { }) \
+                                .setdefault(node, { })
+                    ient = nent.setdefault('iface', { }) \
+                               .setdefault(iface, { })
+                    try:
+                        adents = socket.getaddrinfo(iface, 0)
+                    except socket.gaierror:
+                        continue
+                    for adent in adents:
+                        if adent[1] != socket.SocketKind.SOCK_RAW:
+                            continue
+                        ipv = None
+                        if adent[0] == socket.AddressFamily.AF_INET:
+                            ipv = 4
+                        elif adent[0] == socket.AddressFamily.AF_INET6:
+                            ipv = 6
+                        else:
+                            continue
+                        adstr = adent[4][0]
+
+                        cmd = [ 'ping', '-%d' % ipv, '-c', '1',
+                                '-w', '1', adstr ]
+                        logging.info('Ping v%d %s(%s) of %s' % \
+                                     (ipv, iface, adstr, node))
+                        logging.debug('Command: %s' % cmd)
+                        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                                universal_newlines=True)
+                        lines = proc.stdout.readlines()
+                        rc = proc.wait()
+                        assert rc is not None
+                        ipent = ient.setdefault('proto', { }) \
+                                    .setdefault('ipv%d' % ipv, { })
+                        if rc == 0:
+                            mt = pingfmt.match(lines[-1])
+                            if mt is not None:
+                                ipent['rtt'] = float(mt.group(1))
+                                ipent['up'] = 1
+                                pass
+                            pass
+                        elif rc == 2:
+                            ## The hostname did not resolve for
+                            ## the IP version.  Just ignore.
+                            pass
+                        else:
+                            logging.debug('No pong for %s (IPv%d) of %s' %
+                                          (iface, ipv, node))
+                            ipent['up'] = 0
+                            pass
+                        continue
+                    from pprint import pprint
+                    if do_ssl:
+                        sslent = ient.setdefault('ssl', { })
+                        for sslch in sub.get('ssl_checks',
+                                             sub.get('ssl-checks', [])):
+                            port = sslch.get('port')
+                            port = 443 if port is None else int(port)
+                            name = sslch.get('name', iface)
+                            addr = iface + ':' + str(port)
+                            cmd = [ cert_exp_cmd, '--connect=' + addr,
+                                    '--name=' + name ]
+                            logging.debug('ssl cmd: %s' % cmd)
+                            proc = subprocess.Popen(cmd,
+                                                    stdout=subprocess.PIPE,
                                                     universal_newlines=True)
                             lines = proc.stdout.readlines()
                             rc = proc.wait()
                             assert rc is not None
-                            ipent = ient.setdefault('proto', { }) \
-                                        .setdefault('ipv%d' % ipv, { })
-                            if rc == 0:
-                                mt = pingfmt.match(lines[-1])
-                                if mt is not None:
-                                    ipent['rtt'] = float(mt.group(1))
-                                    ipent['up'] = 1
-                                    pass
+                            certent = sslent.setdefault(port, { }) \
+                                .setdefault(name, { })
+                            certent['error'] = rc
+                            if rc == 0 and len(lines) > 0:
+                                exptime = int(lines[0])
+                                certent['expiry'] = exptime
+                                logging.info('%s:%d (%s) = %d' %
+                                             (iface, port, name, exptime))
                                 pass
-                            elif rc == 2:
-                                ## The hostname did not resolve for
-                                ## the IP version.  Just ignore.
-                                pass
-                            else:
-                                logging.debug('No pong for %s (IPv%d) of %s' %
-                                              (iface, ipv, node))
-                                ipent['up'] = 0
-                                pass
-                            continue
-                        from pprint import pprint
-                        if do_ssl:
-                            sslent = ient.setdefault('ssl', { })
-                            for sslch in sub.get('ssl_checks',
-                                                 sub.get('ssl-checks', [])):
-                                port = sslch.get('port')
-                                port = 443 if port is None else int(port)
-                                name = sslch.get('name', iface)
-                                addr = iface + ':' + str(port)
-                                cmd = [ cert_exp_cmd, '--connect=' + addr,
-                                        '--name=' + name ]
-                                logging.debug('ssl cmd: %s' % cmd)
-                                proc = subprocess.Popen(cmd,
-                                                        stdout=subprocess.PIPE,
-                                                        universal_newlines=True)
-                                lines = proc.stdout.readlines()
-                                rc = proc.wait()
-                                assert rc is not None
-                                certent = sslent.setdefault(port, { }) \
-                                    .setdefault(name, { })
-                                certent['error'] = rc
-                                if rc == 0 and len(lines) > 0:
-                                    exptime = int(lines[0])
-                                    certent['expiry'] = exptime
-                                    logging.info('%s:%d (%s) = %d' %
-                                                 (iface, port, name, exptime))
-                                    pass
-                                continue
-                            pass
-                        continue
-                    continue
-
-                ## Add in the static metrics.
-                entry = data.setdefault(int(time.time() * 1000) / 1000.0, { })
-                for node, nspec in mach_specs.items():
-                    if not nspec.get('enabled', True):
-                        continue
-
-                    nent = entry.setdefault('node', { }).setdefault(node, { })
-
-                    for k in [ 'building', 'room', 'rack', 'level' ]:
-                        if k in nspec:
-                            nent[k] = nspec[k]
-                            pass
-                        continue
-                    dloid = nspec.get('drive_layout')
-                    if dloid is not None:
-                        nent['dloid'] = dloid
-                        pass
-
-                    nent['alarms'] = nspec.get('alarms', dict())
-
-                    for clus, cspec in nspec.get('clusters', { }).items():
-                        if 'osds' in cspec:
-                            nent.setdefault('cluster', { }) \
-                                .setdefault(clus, { })['osds'] = cspec['osds']
-                            pass
-                        for role in cspec.get('roles', [ ]):
-                            rent = nent.setdefault('cluster', { }) \
-                                       .setdefault(clus, { }) \
-                                       .setdefault('roles', set())
-                            rent.add(role)
-                            for oth in role_impls.get(role, [ ]):
-                                rent.add(oth)
-                                continue
-                            continue
-                        continue
-
-                    nent['static'] = True
-
-                    ## Get sets of interfaces with specific roles.  Also, copy
-                    ## other attributes.
-                    iroles = { }
-                    for iface, sub in nspec.get('interfaces', { }).items():
-                        for role in sub.get('roles', [ ]):
-                            iroles.setdefault(role, set()).add(iface)
-                            continue
-                        ient = nent.setdefault('iface', { }) \
-                                   .setdefault(iface, { })
-                        for k in [ 'network', 'device' ]:
-                            if k in sub:
-                                ient[k] = sub[k]
-                                pass
-                            continue
-                        ient['roles'] = set(sub.get('roles', [ ]))
-                        continue
-
-                    ## Process XRootD expectations.
-                    if 'xroot' in iroles:
-                        nent['xroot-host'] = list(iroles['xroot'])[0]
-                        for clus, cspec in nspec.get('clusters', { }).items():
-                            xrds = nent.setdefault('cluster', { }) \
-                                       .setdefault(clus, { }) \
-                                       .setdefault('xroots', { })
-                            for xname in cspec.get('xroots', { }):
-                                xrds.setdefault(xname, { }) \
-                                    .setdefault('pgms', set()).add('xrootd')
-                                continue
-                            for xname in cspec.get('cmses', { }):
-                                xrds.setdefault(xname, { }) \
-                                    .setdefault('pgms', set()).add('cmsd')
-                                continue
                             continue
                         pass
                     continue
+                continue
 
-                logging.info('Sweep complete')
-                hist.install(data)
+            ## Add in the static metrics.
+            entry = data.setdefault(int(time.time() * 1000) / 1000.0, { })
+            for node, nspec in mach_specs.items():
+                if not nspec.get('enabled', True):
+                    continue
 
-                ## Wait up to a minute before the next run.
-                tbase += 60
-                rem = tbase - time.time()
-                if rem > 0:
-                    time.sleep(rem)
+                nent = entry.setdefault('node', { }).setdefault(node, { })
+
+                for k in [ 'building', 'room', 'rack', 'level' ]:
+                    if k in nspec:
+                        nent[k] = nspec[k]
+                        pass
+                    continue
+                dloid = nspec.get('drive_layout')
+                if dloid is not None:
+                    nent['dloid'] = dloid
                     pass
 
-                continue
-        except KeyboardInterrupt:
-            pass
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            sys.exit(1)
-            pass
+                nent['alarms'] = nspec.get('alarms', dict())
 
-        methist.halt()
-        webserver.server_close()
-    finally:
-        if pidfile is not None:
-            os.remove(pidfile)
-            pass
+                for clus, cspec in nspec.get('clusters', { }).items():
+                    if 'osds' in cspec:
+                        nent.setdefault('cluster', { }) \
+                            .setdefault(clus, { })['osds'] = cspec['osds']
+                        pass
+                    for role in cspec.get('roles', [ ]):
+                        rent = nent.setdefault('cluster', { }) \
+                                   .setdefault(clus, { }) \
+                                   .setdefault('roles', set())
+                        rent.add(role)
+                        for oth in role_impls.get(role, [ ]):
+                            rent.add(oth)
+                            continue
+                        continue
+                    continue
+
+                nent['static'] = True
+
+                ## Get sets of interfaces with specific roles.  Also, copy
+                ## other attributes.
+                iroles = { }
+                for iface, sub in nspec.get('interfaces', { }).items():
+                    for role in sub.get('roles', [ ]):
+                        iroles.setdefault(role, set()).add(iface)
+                        continue
+                    ient = nent.setdefault('iface', { }) \
+                               .setdefault(iface, { })
+                    for k in [ 'network', 'device' ]:
+                        if k in sub:
+                            ient[k] = sub[k]
+                            pass
+                        continue
+                    ient['roles'] = set(sub.get('roles', [ ]))
+                    continue
+
+                ## Process XRootD expectations.
+                if 'xroot' in iroles:
+                    nent['xroot-host'] = list(iroles['xroot'])[0]
+                    for clus, cspec in nspec.get('clusters', { }).items():
+                        xrds = nent.setdefault('cluster', { }) \
+                                   .setdefault(clus, { }) \
+                                   .setdefault('xroots', { })
+                        for xname in cspec.get('xroots', { }):
+                            xrds.setdefault(xname, { }) \
+                                .setdefault('pgms', set()).add('xrootd')
+                            continue
+                        for xname in cspec.get('cmses', { }):
+                            xrds.setdefault(xname, { }) \
+                                .setdefault('pgms', set()).add('cmsd')
+                            continue
+                        continue
+                    pass
+                continue
+
+            logging.info('Sweep complete')
+            hist.install(data)
+
+            ## Wait up to a minute before the next run.
+            tbase += 60
+            rem = tbase - time.time()
+            if rem > 0:
+                time.sleep(rem)
+                pass
+
+            continue
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        sys.exit(1)
+        pass
+
+    methist.halt()
+    webserver.server_close()
+finally:
+    if pidfile is not None:
+        os.remove(pidfile)
         pass
     pass
