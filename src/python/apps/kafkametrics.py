@@ -52,7 +52,7 @@ from kafka import KafkaConsumer
 import kafka.errors as ke
 
 import lancs_gridmon.metrics as metrics
-import lancs_gridmon.trees import merge_trees
+from lancs_gridmon.trees import merge_trees
 
 horizon = 30 * 60
 silent = False
