@@ -772,7 +772,7 @@ def _inc_counter(t0, t1, data, inc):
     pass
 
 import domains
-import logfmt
+import lancs_gridmon.logfmt as logfmt
 
 class Detailer:
     def __init__(self, logname, rmw, domfile=None, id_timeout_min=120):
