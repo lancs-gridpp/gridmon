@@ -47,7 +47,7 @@ from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
 from lancs_gridmon.trees import merge_trees
-from reseq import FixedSizeResequencer as Resequencer
+from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
