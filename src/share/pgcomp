@@ -33,4 +33,4 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
 export PYTHONPATH="${0%/*}/python3/apps.zip"
-exec python3 -m pgcomp "$@"
+exec python3 -m lancs_gridmon.ceph.pgcomp "$@"
