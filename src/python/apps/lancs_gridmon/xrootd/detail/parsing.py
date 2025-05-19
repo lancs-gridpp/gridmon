@@ -300,8 +300,8 @@ def decode_message(ts, addr, buf):
         _humanize_timestamp(msg, 'stod', '%Y-%m-%dT%H:%M:%S%z')
         buf = buf[8:]
 
-        if code in 'f':
-            fstr = msg['fstream'] = list()
+        if code == 'f':
+            fstr = msg['file'] = list()
             while len(buf) > 4:
                 rent = dict()
                 fstr.append(rent)
@@ -389,7 +389,7 @@ def decode_message(ts, addr, buf):
                     pass
 
                 continue
-        elif code in 'g':
+        elif code == 'g':
             gstr = msg['gstream'] = dict()
             tbeg = gstr['time_begin'] = _u32(buf, 0)
             tend = gstr['time_end'] = _u32(buf, 4)
