@@ -552,21 +552,22 @@ def decode_message(ts, addr, buf):
             mpg['kind'] = _mapping_kind.get(code, None)
             buf = buf[4:]
             lines = buf.decode('ascii').splitlines()
-            mpg['userid'] = lines[0] ; lines = lines[1:]
-            _decompose_userid(mpg, 'userid')
-            mpgdat = dict()
+            mpg['info'] = lines[0] ; lines = lines[1:]
+            _decompose_userid(mpg, 'info')
+            info = mpg['info']
+            mpgdat = info['args'] = dict()
             if code == 'p':
-                mpgdat['xfn'] = lines[0]
+                info['xfn'] = lines[0]
                 lines = lines[1:]
             elif code == 'x':
-                mpgdat['logical_filename'] = lines[0]
+                info['lfn'] = lines[0]
                 lines = lines[1:]
             elif code == 'i':
-                mpgdat['app_info'] = [ _software_version(i)
-                                       for i in lines[0].split() ]
+                info['app_info'] = [ _software_version(i) \
+                                     for i in lines[0].split() ]
                 lines = list()
             elif code == 'd':
-                mpgdat['path'] = lines[0]
+                info['path'] = lines[0]
                 lines = list()
                 pass
             if len(lines) > 0:
@@ -583,9 +584,8 @@ def decode_message(ts, addr, buf):
                     msgdat['op'] = _xfr_ops.get(msgdat['op'],
                                                 'unk_' + msgdat['op'])
                 elif code == 'p':
-                    msgdat[('phsyical' if msgdat.get('f') == 'p'
-                            else 'logical') \
-                           + '_filename'] = msgdat['xfn']
+                    msgdat[('pfn' if msgdat.get('f') == 'p'
+                            else 'lfn')] = msgdat['xfn']
                     del msgdat['xfn']
                     pass
                 _expand_keys(mpgdat, _map_keys[code])
