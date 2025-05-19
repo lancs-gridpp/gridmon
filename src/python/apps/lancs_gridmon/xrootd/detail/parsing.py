@@ -337,7 +337,7 @@ def decode_message(ts, addr, buf):
                     dat = rent['open'] = dict()
                     dat['file_dictid'] = _u32(rbuf, 0)
                     dat['file_size'] = _u64(rbuf, 4)
-                    dat['mode'] = 'read-write' if rflags & 0x02 else 'read-only'
+                    dat['rw'] = (rflags & 0x02) != 0
                     if rflags & 0x01:
                         dat['user_dictid'] = _u32(rbuf, 12)
                         dat['lfn'] = _decode_null_term(rbuf[16:])
