@@ -38,6 +38,17 @@ import re
 
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
 
+_mapping_kind = {
+    '=': 'server-id',
+    'd': 'user-path-id',
+    'i': 'user-info-id',
+    'u': 'log-auth-id',
+    'p': 'file-purge-id',
+    'U': 'experiment-id',
+    'T': 'token-id',
+    'x': 'xfer-id',
+}
+
 _auth_fields = { 'g': 'group', 'o': 'organization', 'r': 'role' }
 
 _xfr_ops = {
@@ -535,17 +546,10 @@ def decode_message(ts, addr, buf):
                     pass
                 continue
             pass
-        elif code in '=dipTuUx':
+        elif code in _mapping_kind:
             mpg = msg['mapping'] = dict()
             mpg['dictid'] = struct.unpack('>I', buf[0:4])[0]
-            status = 'server-id' if code == '=' else \
-                'user-path-id' if code == 'd' else \
-                'user-info-id' if code == 'i' else \
-                'log-auth-id' if code == 'u' else \
-                'file-purge-id' if code == 'p' else \
-                'experiment-id' if code == 'U' else \
-                'token-id' if code == 'T' else \
-                'xfer-id' if code == 'x' else None
+            mpg['kind'] = _mapping_kind.get(code, None)
             buf = buf[4:]
             lines = buf.decode('ascii').splitlines()
             mpg['userid'] = lines[0] ; lines = lines[1:]
@@ -586,7 +590,6 @@ def decode_message(ts, addr, buf):
                     pass
                 _expand_keys(mpgdat, _map_keys[code])
                 pass
-            mpg[status] = mpgdat
             if len(lines) > 0:
                 mpg['lines'] = lines
                 pass
