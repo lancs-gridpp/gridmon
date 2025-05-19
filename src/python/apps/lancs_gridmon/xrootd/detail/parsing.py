@@ -170,12 +170,18 @@ def _software_version(txt):
     name, vers = _swvers_fmt.match(txt).groups()
     return { 'name': name, 'version': vers }
 
-def _integrate_field(d, k):
+def _parse_field(d, k, f):
     v = d.get(k)
     if v is None:
         return False
-    d[k] = int(v)
+    d[k] = f(v)
     return True
+
+def _integrate_field(d, k):
+    return _parse_field(d, k, int)
+
+def _reify_field(d, k):
+    return _parse_field(d, k, float)
 
 def _expand_keys(d, spec):
     if spec is None:
@@ -583,6 +589,10 @@ def decode_message(ts, addr, buf):
                 if code == 'x':
                     msgdat['op'] = _xfr_ops.get(msgdat['op'],
                                                 'unk_' + msgdat['op'])
+                    _integrate_field(msgdat, 'sz')
+                    _integrate_field(msgdat, 'rc')
+                    _reify_field(msgdat, 'tm')
+                    _reify_field(msgdat, 'tod')
                 elif code == 'p':
                     msgdat[('pfn' if msgdat.get('f') == 'p'
                             else 'lfn')] = msgdat['xfn']
