@@ -138,6 +138,23 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
+    def __replace_dictid(self, now, obj, k, rec):
+        did = obj.get(k + '_dictid', None)
+        if did is None:
+            return
+        r = self.__id_get(now, did)
+        if r is None:
+            self.__warning('dictid=%d field=%s' +
+                           ' ev=unknown-dictid' +
+                           ' rec=%s', did, k, rec)
+            self.__schedule_record(ts, 'unk-dict', {
+                'rec': rec,
+                'field': k,
+            }, ctxt=None)
+            return
+        obj[k] = r
+        return r
+
     def __call_user(self, fn, ts, *args, **kwargs):
         """Call a user function if present, passing the supplied
         timestamp, the program*, host* and instance*, and any
@@ -343,19 +360,10 @@ class Peer:
             ts = t0 + td * ((pos - 1) / nent)
 
             if 'disc' in ent:
-                usr = self.__id_get(ts, ent['disc']['user_dictid'])
-                # print('%d disconnect: %s' % (pos, usr))
                 msg = dict()
-                if usr is None:
-                    self.__warning('dictid=%d field=user' +
-                                   ' ev=unknown-dictid' +
-                                   ' rec=file-disconnect', ent['user'])
-                    self.__schedule_record(ts, 'unk-dict', {
-                        'rec': 'file-disconnect',
-                        'field': 'user',
-                    }, ctxt=None)
-                    pass
-                else:
+                usr = self.__replace_dictid(ts, ent['disc'],
+                                            'user', 'file-disconnect')
+                if usr is not None:
                     merge_trees(msg, {
                         'prot': usr['prot'],
                         'user': usr['user'],
@@ -373,42 +381,25 @@ class Peer:
                     pass
                 pass
             elif 'open' in ent:
-                fil = self.__id_get(ts, ent['open']['file_dictid'])
+                fil = self.__replace_dictid(ts, ent['open'], 'file', 'file-open')
                 ufn_p = ent['open'].get('lfn')
+                ufn = self.__replace_dictid(ts, ent['open'], 'user', 'file-open')
                 ufn_id = ent['open'].get('user_dictid')
-                if fil is None:
-                    self.__warning('dictid=%d field=file' +
-                                   ' ev=unknown-dictid' +
-                                   ' rec=file-open', ufn_p)
-                    self.__schedule_record(ts, 'unk-dict', {
-                        'rec': 'file-open',
-                        'field': 'file',
-                    }, ctxt=None)
-                    pass
                 rw = ent['open']['mode']
                 msg = { 'rw': rw }
-                if ufn_id is not None:
-                    ufn = self.__id_get(ts, ufn_id)
+                if ufn_p is not None:
                     msg['path'] = ufn_p
-                    if ufn is None:
-                        self.__warning('dictid=%d field=ufn' +
-                                       ' ev=unknown-dictid' +
-                                       ' rec=file-open', ufn_id)
-                        self.__schedule_record(ts, 'unk-dict', {
-                            'rec': 'file-open',
-                            'field': 'ufn',
-                        }, ctxt=None)
-                        pass
-                    else:
-                        merge_trees(msg, {
-                            'prot': ufn['prot'],
-                            'user': ufn['user'],
-                            'client_name': ufn['host'],
-                            'client_addr': ufn['args']['host_addr'],
-                            'ipv': ufn['args']['ip_version'],
-                            'dn': ufn['args']['dn'],
-                            'auth': ufn['args']['proto'],
-                        })
+                    pass
+                if ufn is not None:
+                    merge_trees(msg, {
+                        'prot': ufn['prot'],
+                        'user': ufn['user'],
+                        'client_name': ufn['host'],
+                        'client_addr': ufn['args']['host_addr'],
+                        'ipv': ufn['args']['ip_version'],
+                        'dn': ufn['args']['dn'],
+                        'auth': ufn['args']['proto'],
+                    })
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -417,24 +408,14 @@ class Peer:
                     pass
                 pass
             elif 'close' in ent:
-                filid = ent['close']['file_dictid']
-                fil = self.__id_get(ts, filid)
+                fil = self.__replace_dictid(ts, ent['close'], 'file', 'file-close')
                 msg = {
                     'read_bytes': ent['close']['read_bytes'],
                     'readv_bytes': ent['close']['readv_bytes'],
                     'write_bytes': ent['close']['write_bytes'],
                     'forced': ent['close']['forced'],
                 }
-                if fil is None:
-                    self.__warning('dictid=%d field=file' +
-                                   ' ev=unknown-dictid' +
-                                   ' rec=file-close', filid)
-                    self.__schedule_record(ts, 'unk-dict', {
-                        'rec': 'file-close',
-                        'field': 'file',
-                    }, ctxt=None)
-                    pass
-                else:
+                if fil is not None:
                     merge_trees(msg, {
                         'prot': fil['prot'],
                         'user': fil['user'],
