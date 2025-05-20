@@ -308,7 +308,8 @@ def decode_message(ts, addr, buf):
         buf = buf[8:]
 
         if code == 'f':
-            fstr = msg['file'] = list()
+            msg['type'] = 'file'
+            fstr = msg['data'] = list()
             while len(buf) > 4:
                 rent = dict()
                 fstr.append(rent)
@@ -397,7 +398,8 @@ def decode_message(ts, addr, buf):
 
                 continue
         elif code == 'g':
-            gstr = msg['gstream'] = dict()
+            msg['type'] = 'gstream'
+            gstr = msg['data'] = dict()
             tbeg = gstr['time_begin'] = _u32(buf, 0)
             tend = gstr['time_end'] = _u32(buf, 4)
             sid = _u64(buf, 8)
@@ -446,7 +448,8 @@ def decode_message(ts, addr, buf):
                 pass
             buf = b''
         elif code == 't':
-            trc = msg['traces'] = list()
+            msg['type'] = 'traces'
+            trc = msg['data'] = list()
             while len(buf) >= 16:
                 rbuf = buf[0:16]
                 buf = buf[16:]
@@ -518,7 +521,8 @@ def decode_message(ts, addr, buf):
                 continue
             pass
         elif code == 'r':
-            red = msg['redirect'] = dict()
+            msg['type'] = 'redirect'
+            red = msg['data'] = dict()
             red['sid'] = _u64(buf, 0) & 0xffffffffffff
             rlst = red['items'] = list()
             buf = buf[8:]
@@ -554,7 +558,8 @@ def decode_message(ts, addr, buf):
                 continue
             pass
         elif code in _mapping_kind:
-            mpg = msg['mapping'] = dict()
+            msg['type'] = 'mapping'
+            mpg = msg['data'] = dict()
             mpg['dictid'] = struct.unpack('>I', buf[0:4])[0]
             mpg['kind'] = _mapping_kind.get(code, None)
             buf = buf[4:]

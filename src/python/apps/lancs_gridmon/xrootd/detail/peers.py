@@ -202,51 +202,46 @@ class Peer:
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
     ## resequencing.
-    def process(self, now, pseq, msg):
-        if 'mapping' in msg or 'traces' in msg:
+    def process(self, now, pseq, typ, data):
+        if typ in [ 'mapping', 'traces' ] in data:
             ## All mapping and trace messages belong to the same
             ## sequence.  Submitting to the resequencer results in a
             ## potentially deferred call to
-            ## self.__mapping_sequenced(sid, now, pseq, msg).  We need
+            ## self.__mapping_sequenced(sid, now, pseq, data).  We need
             ## to pass the whole message to that that function can
             ## handle the two broad classes of event distincty.
-            self.__debug('sn=%d type=map-trace msg=%s', pseq, msg)
-            sid = msg['traces'][0]['sid'] if 'traces' in msg \
-                else msg['mapping']['info']['sid']
-            self.__get_map_resequencer(sid).submit(now, pseq, msg)
+            self.__debug('sn=%d type=%s data=%s', pseq, typ, data)
+            sid = data[0]['sid'] if typ == 'traces' else data['info']['sid']
+            self.__get_map_resequencer(sid).submit(now, pseq, data)
             return
 
-        if 'file' in msg:
+        if typ == 'file':
             ## The first entry must be a timing mark, and includes the
             ## sid.  Redundantly, other timing marks in the same
             ## sequence will repeat the sid.  TODO: Log warnings,
             ## don't fail assertions.
-            assert len(msg['file']) > 0, "no entries"
-            assert 'time' in msg['file'][0], "first entry is not timing mark"
-            sid = msg['file'][0]['time']['sid']
+            assert len(data) > 0, "no entries"
+            assert 'time' in data[0], "first entry is not timing mark"
+            sid = data[0]['time']['sid']
 
             ## 'file' messages (from the f-stream) need their own
             ## resequencing.  Submitting to the resequencer results in
             ## a potentially deferred call to
             ## self.__file_event_sequenced(sid, now, pseq,
-            ## msg['file']).
-            self._get_file_resequencer(sid).submit(now, pseq, msg['file'])
+            ## data['file']).
+            self._get_file_resequencer(sid).submit(now, pseq, data)
             return
 
-        if 'gstream' in msg:
+        if typ == 'gstream':
             ## 'gstream' messages need their own resequencing.
             ## Submitting to the resequencer results in a potentially
             ## deferred call to self.__gstream_event_sequenced(sid,
-            ## now, pseq, msg['stream']).
-            sid = msg['gstream']['sid']
-            self._get_gstream_resequencer(sid).submit(now, pseq, msg['stream'])
+            ## now, pseq, data['stream']).
+            sid = data['sid']
+            self._get_gstream_resequencer(sid).submit(now, pseq, data)
             return
 
-        if 'code' in msg:
-            self.__warning('ev=unh nseq=%d msg=%s', pseq, msg)
-            return
-
-        self.__warning('ev=ign nseq=%d msg=%s', pseq, msg)
+        self.__warning('ev=unh type=%s nseq=%d data=%s', typ, pseq, data)
         return
 
     def __schedule_record(self, ts, ev, data, ctxt={}):

@@ -75,14 +75,15 @@ class PeerManager:
             pass
         pass
 
-    def process(self, now, addr, dgram):
+    def process(self, addr, dgram):
         try:
-            ## TODO: Check if addr[0] is in permitted set.
-
+            now = dgram['ts']
             msg = dgram['message']
             stod = msg['stod']
             addr = (msg['peer']['host'], msg['peer']['port'])
             pseq = msg['pseq']
+            data = msg['data']
+            typ = msg['type']
 
             ## Locate the peer record.  Replace with a new one if the
             ## start time has increased.
@@ -100,7 +101,7 @@ class PeerManager:
 
             ## Submit the message to be incorporated into the peer
             ## record.
-            peer.process(now, pseq, msg)
+            peer.process(now, pseq, typ, data)
         except Exception as e:
             logging.error('error processing %s' % dgram)
             raise e
