@@ -44,21 +44,21 @@ _mapping_kind = {
     'i': 'user-info',
     'u': 'log-auth',
     'p': 'file-purge',
-    'U': 'experiment',
+    'U': 'expm',
     'T': 'token',
     'x': 'xfer',
 }
 
-_auth_fields = { 'g': 'group', 'o': 'organization', 'r': 'role' }
+_auth_fields = { 'g': 'grp', 'o': 'org', 'r': 'role' }
 
 _xfr_ops = {
-    0: 'unknown_operation',
-    1: 'client_copied_in',
-    2: 'migration_copied_out',
-    3: 'migration_copied_out_removed',
-    4: 'client_copied_out',
-    5: 'client_copied_out_removed',
-    6: 'staging_copied_in',
+    0: 'unk_op',
+    1: 'cli_cp_in',
+    2: 'migr_cp_out',
+    3: 'migr_cp_out_rm',
+    4: 'cli_cp_out',
+    5: 'cli_cp_out_rm',
+    6: 'stg_cp_in',
 }
 
 _map_keys = {
@@ -66,36 +66,37 @@ _map_keys = {
     'd': dict(),
     'i': dict(),
     'p': {
-        'at': 'time_access',
-        'mt': 'time_modify',
-        'ct': 'time_create',
+        'tod': 'ts',
+        'sz': 'size',
+        'at': 'tm_acc',
+        'mt': 'tm_mod',
+        'ct': 'tm_cre',
     },
     'T': {
         'Uc': 'user_dictid',
-        's': 'subject',
+        's': 'subj',
         'n': 'mapped_user',
     },
     'u': {
         'p': 'proto',
         'h': 'host_addr',
-        'x': 'executable',
-        'y': 'client_env',
-        'I': 'ip_version',
+        'x': 'exec',
+        'y': 'cli_env',
+        'I': 'ip_vers',
         'm': 'dn',
         'n': 'username',
     },
     'U': {
         'Uc': 'user_dictid',
-        'Ec': 'experiment_code',
-        'Ac': 'activity_code',
+        'Ec': 'expm_code',
+        'Ac': 'actvt_code',
     },
     'x': {
-        'tod': 'timestamp',
-        'tm': 'migrate_stage_duration',
-        'op': 'operation',
+        'tod': 'ts',
+        'tm': 'migr_stg_dur',
         'rc': 'exit',
         'sz': 'size',
-        'pd': 'mon_extra',
+        'pd': 'mon_ext',
     },
 }
 
@@ -227,7 +228,7 @@ def _interleave_arrays(d, name, spec):
 
 _userid_fmt = re.compile(r'^(?:([^/]+)/)?([^.]+)\.([^:]+):([^@]+)@(.*)')
 
-def _decompose_userid(d, k, sid_name='sid', pid_name='session'):
+def _decompose_userid(d, k, sid_name='sid', pid_name='sess'):
     v = d.get(k)
     if v is None:
         return False
@@ -285,18 +286,18 @@ def _humanize_buffer(d, k):
 
 def decode_message(ts, addr, buf):
     result = {
-        'timestamp': ts,
+        'ts': ts,
         'peer': {
             'host': addr[0],
             'port': addr[1],
         },
     }
-    _humanize_timestamp(result, 'timestamp')
+    _humanize_timestamp(result, 'ts')
 
     if len(buf) < 8:
         result['error'] = 'too-short'
-        result['remnant'] = buf
-        _humanize_buffer(result, 'remnant')
+        result['remn'] = buf
+        _humanize_buffer(result, 'remn')
     else:
         msg = result['message'] = dict()
         code = msg['code'] = buf[0:1].decode('ascii')
@@ -390,8 +391,8 @@ def decode_message(ts, addr, buf):
                     pass
 
                 if len(rbuf) > 0:
-                    rent['remnant'] = rbuf
-                    _humanize_buffer(rent, 'remnant')
+                    rent['remn'] = rbuf
+                    _humanize_buffer(rent, 'remn')
                     pass
 
                 continue
@@ -454,13 +455,13 @@ def decode_message(ts, addr, buf):
                 trc.append(rent)
                 typ = _u8(rbuf, 0)
                 if typ == 0x80:
-                    rent['type'] = 'OPEN'
+                    rent['type'] = 'open'
                     rent['len'] = _u64(rbuf, 0) & 0xffffffffffffff
                     rent['resv_8_12'] = rbuf[8:12]
                     _humanize_buffer(rent, 'resv_8_12')
                     rent['file_dictid'] = _u32(rbuf, 12)
                 elif typ == 0x90 or typ == 0x91:
-                    rent['type'] = 'READV' if typ == 0x90 else 'READU'
+                    rent['type'] = 'readv' if typ == 0x90 else 'readu'
                     rent['reqid'] = _u8(rbuf, 1)
                     rent['nsegs'] = _u16(rbuf, 2)
                     rent['resv_4_8'] = rbuf[4:8]
@@ -468,12 +469,12 @@ def decode_message(ts, addr, buf):
                     rent['len'] = _s32(rbuf, 8)
                     rent['file_dictid'] = _s32(rbuf, 12)
                 elif typ == 0xa0:
-                    rent['type'] = 'APPID'
+                    rent['type'] = 'appid'
                     rent['name'] = _decode_null_term(rbuf[4:16])
                     rent['resv_1_4'] = rbuf[1:4]
                     _humanize_buffer(rent, 'resv_1_4')
                 elif typ == 0xc0:
-                    rent['type'] = 'CLOSE'
+                    rent['type'] = 'close'
                     rtotsh = _u8(rbuf, 1)
                     wtotsh = _u8(rbuf, 2)
                     rent['resv_3_4'] = rbuf[3:4]
@@ -482,7 +483,7 @@ def decode_message(ts, addr, buf):
                     rent['wtot'] = _u32(rbuf, 8) << wtotsh
                     rent['file_dictid'] = _s32(rbuf, 12)
                 elif typ == 0xd0:
-                    rent['type'] = 'DISC'
+                    rent['type'] = 'disc'
                     rent['forced'] = (_u8(rbuf, 1) & 0x01) != 0
                     rent['boundp'] = (_u8(rbuf, 1) & 0x02) != 0
                     rent['resv_2_8'] = rbuf[2:8]
@@ -490,7 +491,7 @@ def decode_message(ts, addr, buf):
                     rent['dur'] = _s32(rbuf, 8)
                     rent['file_dictid'] = _u32(rbuf, 12)
                 elif typ == 0xe0:
-                    rent['type'] = 'WINDOW'
+                    rent['type'] = 'window'
                     rent['sid'] =_u64(rbuf, 0) & 0xffffffffffff
                     rent['resv_1_2'] = rbuf[1:2]
                     _humanize_buffer(rent, 'resv_1_2')
@@ -500,10 +501,10 @@ def decode_message(ts, addr, buf):
                     rent['off'] = _u64(rbuf, 0) & 0xffffffffffffff
                     blen = rent['len'] = _s32(rbuf, 8)
                     if blen < 0:
-                        rent['type'] = 'WRITE_RQ'
+                        rent['type'] = 'write_rq'
                         rent['len'] = -blen
                     else:
-                        rent['type'] = 'READ_RQ'
+                        rent['type'] = 'read_rq'
                         rent['len'] = blen
                         pass
                     rent['file_dictid'] = _u32(rbuf, 12)
@@ -532,14 +533,14 @@ def decode_message(ts, addr, buf):
                 rent = dict()
                 rlist.append(rent)
                 if typ == 0x00:
-                    rent['type'] = 'REDTIME'
+                    rent['type'] = 'redtime'
                     rent['size'] = _u32(rbuf, 0) & 0xffffff
                     rent['time'] = _u32(rbuf, 1)
                 elif typ == 0xf0:
-                    rent['type'] = 'REDSID'
+                    rent['type'] = 'redsid'
                     rent['sid'] = _u64(rbuf, 0) & 0xffffffffffff
                 elif typ == 0x80 or typ == 0x90:
-                    rent['type'] = 'REDIRECT' if typ == 0x80 else 'REDLOCAL'
+                    rent['type'] = 'redirect' if typ == 0x80 else 'redlocal'
                     rent['port'] = _u16(rbuf, 2)
                     rent['user_dictid'] = _u32(rbuf, 4)
                     rent['referent'] = _decode_null_term(rbuf[8:])
@@ -584,7 +585,7 @@ def decode_message(ts, addr, buf):
                 _decompose_array(mpgdat, 'g')
                 _decompose_array(mpgdat, 'o')
                 _decompose_array(mpgdat, 'r')
-                _interleave_arrays(mpgdat, 'authority', _auth_fields)
+                _interleave_arrays(mpgdat, 'auth', _auth_fields)
                 _integrate_field(mpgdat, 'I')
                 if code == 'x':
                     msgdat['op'] = _xfr_ops.get(msgdat['op'],
@@ -609,8 +610,8 @@ def decode_message(ts, addr, buf):
         pass
 
     if len(buf) > 0:
-        result['remnant'] = buf
-        _humanize_buffer(result, 'remnant')
+        result['remn'] = buf
+        _humanize_buffer(result, 'remn')
         pass
 
     return result

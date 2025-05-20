@@ -369,7 +369,7 @@ class Peer:
                         'user': usr['user'],
                         'client_name': usr['host'],
                         'client_addr': usr['args']['host_addr'],
-                        'ipv': usr['args']['ip_version'],
+                        'ipv': usr['args']['ip_vers'],
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
@@ -396,7 +396,7 @@ class Peer:
                         'user': ufn['user'],
                         'client_name': ufn['host'],
                         'client_addr': ufn['args']['host_addr'],
-                        'ipv': ufn['args']['ip_version'],
+                        'ipv': ufn['args']['ip_vers'],
                         'dn': ufn['args']['dn'],
                         'auth': ufn['args']['proto'],
                     })
