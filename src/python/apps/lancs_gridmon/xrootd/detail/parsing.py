@@ -588,16 +588,16 @@ def decode_message(ts, addr, buf):
                 _interleave_arrays(mpgdat, 'auth', _auth_fields)
                 _integrate_field(mpgdat, 'I')
                 if code == 'x':
-                    msgdat['op'] = _xfr_ops.get(msgdat['op'],
-                                                'unk_' + msgdat['op'])
-                    _integrate_field(msgdat, 'sz')
-                    _integrate_field(msgdat, 'rc')
-                    _reify_field(msgdat, 'tm')
-                    _reify_field(msgdat, 'tod')
+                    mpgdat['op'] = _xfr_ops.get(mpgdat['op'],
+                                                'unk_' + mpgdat['op'])
+                    _integrate_field(mpgdat, 'sz')
+                    _integrate_field(mpgdat, 'rc')
+                    _reify_field(mpgdat, 'tm')
+                    _reify_field(mpgdat, 'tod')
                 elif code == 'p':
-                    msgdat[('pfn' if msgdat.get('f') == 'p'
-                            else 'lfn')] = msgdat['xfn']
-                    del msgdat['xfn']
+                    mpgdat[('pfn' if mpgdat.get('f') == 'p'
+                            else 'lfn')] = mpgdat['xfn']
+                    del mpgdat['xfn']
                     pass
                 _expand_keys(mpgdat, _map_keys[code])
                 pass
