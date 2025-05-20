@@ -39,14 +39,14 @@ import re
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
 
 _mapping_kind = {
-    '=': 'server-id',
-    'd': 'user-path-id',
-    'i': 'user-info-id',
-    'u': 'log-auth-id',
-    'p': 'file-purge-id',
-    'U': 'experiment-id',
-    'T': 'token-id',
-    'x': 'xfer-id',
+    '=': 'server',
+    'd': 'user-path',
+    'i': 'user-info',
+    'u': 'log-auth',
+    'p': 'file-purge',
+    'U': 'experiment',
+    'T': 'token',
+    'x': 'xfer',
 }
 
 _auth_fields = { 'g': 'group', 'o': 'organization', 'r': 'role' }

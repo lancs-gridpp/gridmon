@@ -269,7 +269,7 @@ class Peer:
 
         ## A server-id mapping has a zero dictid, and just describes
         ## the peer in more detail.
-        if kind == 'server-id':
+        if kind == 'server':
             assert dictid == 0
             self._user.record_identity(self,
                                        info['userid']['host'],
@@ -278,14 +278,14 @@ class Peer:
 
         ## An xfer-id mapping has a zero dictid, so whatever it is,
         ## it's not actually defining a mapping.
-        if kind == 'xfer-id':
+        if kind == 'xfer':
             assert dictid == 0
             self.__call_user('file_transferred', ts, info)
             return
 
         ## A file-purge-id mapping has a zero dictid, so whatever it
         ## is, it's not actually defining a mapping.
-        if kind == 'file-purge-id':
+        if kind == 'file-purge':
             assert dictid == 0
             self.__call_user('file_purged', ts, info)
             return
