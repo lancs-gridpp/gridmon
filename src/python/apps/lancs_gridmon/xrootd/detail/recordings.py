@@ -30,12 +30,11 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 import lancs_gridmon.logfmt as logfmt
 
 class Recorder:
-    def __init__(self, logname, rmw):
-        self.t0 = time.time()
+    def __init__(self, t0, logname, rmw):
+        self.t0 = t0
 
         ## Maintain a sequence of parsed and restructured events.  The
         ## key is a timestamp (integer, milliseconds), and the value
