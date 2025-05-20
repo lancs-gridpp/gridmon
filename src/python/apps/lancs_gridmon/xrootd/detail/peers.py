@@ -385,8 +385,7 @@ class Peer:
                 ufn_p = ent['open'].get('lfn')
                 ufn = self.__replace_dictid(ts, ent['open'], 'user', 'file-open')
                 ufn_id = ent['open'].get('user_dictid')
-                rw = ent['open']['mode']
-                msg = { 'rw': rw }
+                msg = { 'rw': ent['open']['rw'] }
                 if ufn_p is not None:
                     msg['path'] = ufn_p
                     pass
