@@ -252,6 +252,8 @@ class Peer:
         return self._user.store_event(ts, self._pgm, self._host, self._inst,
                                       ev, data, ctxt)
 
+    ## Calls to this are set up in self.process (the 'mapping'
+    ## branch).
     def __mapping_sequenced(self, sid, ts, pseq, msg):
         self.__debug('ev=map num=%d msg=%s', pseq, msg)
 
@@ -292,13 +294,18 @@ class Peer:
 
         ## Although there are several types of mapping, they all seem
         ## to use the same dictionary space, so one dict is enough for
-        ## all types.
+        ## all types.  We record the mapping kind, but only for
+        ## diagnostics; we assume references are correctly used.
         self._ids[dictid] = {
             "expiry": ts + self._id_to,
             "type": status,
             "info": info,
         }
 
+        ## Keep track of dictids that don't get reported.  It could be
+        ## down to network loss, but it might also be that some
+        ## dictids are not reported because they're only referenced in
+        ## messages that are not sent due to configuration.
         if self._last_id is not None:
             skip = dictid - self._last_id
             if skip > 1 and skip < 0x80000000:
@@ -316,6 +323,7 @@ class Peer:
         self._last_id = dictid
         return
 
+    ## Calls to this are set up in self.process (the 'file' branch).
     def __file_event_sequenced(self, sid, ts, pseq, ents):
         self.__debug('ev=sid num=%d sid=%012x type=%s ents=%s',
                      pseq, sid, status, ents)
@@ -455,6 +463,8 @@ class Peer:
 
         pass
 
+    ## Calls to this are set up in self.process (the 'gstream'
+    ## branch).
     def __gstream_event_sequenced(self, sid, ts, pseq):
         ## TODO
         pass
