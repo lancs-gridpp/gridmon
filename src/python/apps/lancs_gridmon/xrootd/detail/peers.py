@@ -155,28 +155,6 @@ class Peer:
         obj[k] = r
         return r
 
-    def __call_user(self, fn, ts, *args, **kwargs):
-        """Call a user function if present, passing the supplied
-        timestamp, the program*, host* and instance*, and any
-        additional arguments.  *If these extra fields are missing, no
-        call is made.
-
-        """
-
-        ## Send nothing if we can't provide all the arguments.
-        if self._host is None:
-            return
-        assert self._pgm is not None
-        assert self._inst is not None
-
-        ## Send nothing if the function is not present.
-        attr = getattr(self._user, fn, None)
-        if attr is None or not callable(attr):
-            return
-
-        attr(ts, self._pgm, self._host, self._inst, *args, *kwargs)
-        pass
-
     def _get_map_resequencer(self, sid):
         seq = self._map_reseqs.get(sid)
         if seq is not None:
@@ -277,7 +255,7 @@ class Peer:
         ## Trace messages are not mapping messages, but they appear to
         ## belong to the same sequence.
         if 'traces' in msg:
-            self.__call_user('traces', ts, msg['traces'])
+            self.__traces_sequenced('traces', sid, ts, pseq, msg['traces'])
             return
 
         assert 'mapping' in msg
@@ -299,14 +277,14 @@ class Peer:
         ## it's not actually defining a mapping.
         if kind == 'xfer':
             assert dictid == 0
-            self.__call_user('file_transferred', ts, info)
+            self.__xfer_sequenced(sid, ts, pseq, info)
             return
 
         ## A file-purge-id mapping has a zero dictid, so whatever it
         ## is, it's not actually defining a mapping.
         if kind == 'file-purge':
             assert dictid == 0
-            self.__call_user('file_purged', ts, info)
+            self.__purge_sequenced(sid, ts, pseq, info)
             return
 
         ## Although there are several types of mapping, they all seem
@@ -446,6 +424,31 @@ class Peer:
     ## Calls to this are set up in self.process (the 'gstream'
     ## branch).
     def __gstream_event_sequenced(self, sid, ts, pseq):
+        ## TODO
+        pass
+
+    def __traces_sequenced(self, sid, ts, pseq, traces):
+        ## traces is an array of t-stream elements.  Each element is a
+        ## dict with a type field (window, disc, readv, readu, open,
+        ## appid, close, write_rq, read_rq), as defined here:
+        ## <https://xrootd.web.cern.ch/doc/dev57/xrd_monitoring.htm#_Toc138968531>
+
+        ## TODO
+        pass
+
+    def __xfer_sequenced(self, sid, ts, pseq, info):
+        ## info is a dictid definition with host, oprot, sess, sid and
+        ## user fields.  The args field also contains lfn, ts,
+        ## migr_stg_dur, op, exit, size and mon_ext.
+
+        ## TODO
+        pass
+
+    def __purge_sequenced(self, sid, ts, pseq, info):
+        ## info is a dictid definition with oprot, sess, sid and user
+        ## fields.  The args field also contains tm_{acc,mod,cre}, ts,
+        ## size and lfn/pfn.
+
         ## TODO
         pass
 
