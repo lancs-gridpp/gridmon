@@ -34,9 +34,17 @@ import functools
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
 class Peer:
-    def __init__(self, stod, addr, user,
+    def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None):
-        self._user = user
+        """mgr(self, pgm, host, inst) is invoked when the peer has
+        identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
+        is invoked to record an event ev (str) with parameters data
+        (dict) at time ts (seconds past epoch).
+
+        """
+
+        self._mgr = mgr
+        self._evrec = evrec
         self._seq_to = seq_timeout
         self._id_to = id_timeout
         self._domains = domains
@@ -244,8 +252,7 @@ class Peer:
     def __schedule_record(self, ts, ev, data, ctxt={}):
         if self._inst is None or self._host is None or self._pgm is None:
             return False
-        return self._user.store_event(ts, self._pgm, self._host, self._inst,
-                                      ev, data, ctxt)
+        return self._evrec(self._pgm, self._host, self._inst, ts, ev, data, ctxt)
 
     ## Calls to this are set up in self.process (the 'mapping'
     ## branch).
@@ -265,12 +272,11 @@ class Peer:
         dictid = mpg['dictid']
 
         ## A server-id mapping has a zero dictid, and just describes
-        ## the peer in more detail.
+        ## the peer in more detail.  Tell the manager that we know our
+        ## identity now.
         if kind == 'server':
             assert dictid == 0
-            self._user.record_identity(self,
-                                       info['userid']['host'],
-                                       info['pgm'], info['inst'])
+            self._mgr(self, info['pgm'], info['userid']['host'], info['inst'])
             return
 
         ## An xfer-id mapping has a zero dictid, so whatever it is,
