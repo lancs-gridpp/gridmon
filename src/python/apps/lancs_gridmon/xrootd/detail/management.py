@@ -80,7 +80,7 @@ class PeerManager:
             now = dgram['ts']
             msg = dgram['message']
             stod = msg['stod']
-            addr = (msg['peer']['host'], msg['peer']['port'])
+            addr = (dgram['peer']['host'], dgram['peer']['port'])
             pseq = msg['pseq']
             data = msg['data']
             typ = msg['type']
