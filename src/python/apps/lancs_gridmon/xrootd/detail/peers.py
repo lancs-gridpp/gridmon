@@ -298,7 +298,7 @@ class Peer:
         ## diagnostics; we assume references are correctly used.
         self._ids[dictid] = {
             "expiry": ts + self._id_to,
-            "type": status,
+            "type": kind,
             "info": info,
         }
 
