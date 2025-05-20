@@ -227,8 +227,7 @@ class Peer:
             ## 'file' messages (from the f-stream) need their own
             ## resequencing.  Submitting to the resequencer results in
             ## a potentially deferred call to
-            ## self.__file_event_sequenced(sid, now, pseq,
-            ## data['file']).
+            ## self.__file_event_sequenced(sid, now, pseq, data).
             self._get_file_resequencer(sid).submit(now, pseq, data)
             return
 
@@ -236,7 +235,7 @@ class Peer:
             ## 'gstream' messages need their own resequencing.
             ## Submitting to the resequencer results in a potentially
             ## deferred call to self.__gstream_event_sequenced(sid,
-            ## now, pseq, data['stream']).
+            ## now, pseq, data).
             sid = data['sid']
             self._get_gstream_resequencer(sid).submit(now, pseq, data)
             return
