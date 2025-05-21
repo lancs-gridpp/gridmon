@@ -156,7 +156,7 @@ class Peer:
             self.__warning('dictid=%d field=%s' +
                            ' ev=unknown-dictid' +
                            ' rec=%s', did, k, rec)
-            self.__schedule_record(ts, 'unk-dict', {
+            self.__schedule_record(now, 'unk-dict', {
                 'rec': rec,
                 'field': k,
             }, ctxt=None)
