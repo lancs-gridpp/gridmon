@@ -60,7 +60,7 @@ class XRootDFilter:
 
         pass
 
-    def handler(self):
+    def datagram_handler(self):
         return functools.partial(self.Handler, self)
 
     def __process(addr, dgram):

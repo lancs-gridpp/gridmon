@@ -159,7 +159,7 @@ apputils.prepare_log_rotation(config['log_params'], action=det_rec.relog)
 ## them to the right processor.
 msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
-                    msg_fltr.http_handler())
+                    msg_fltr.datagram_handler())
 
 ## Serve the combined schemata's documentation.  Use a separate
 ## thread.  There are no thread-safety considerations, as there is no
@@ -167,7 +167,7 @@ udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
 www_hist = metrics.MetricHistory(xrootd_summary_schema + xrootd_detail_schema,
                                  horizon=30)
 www_srv = HTTPServer((config['http']['host'], config['http']['port']),
-                     www_hist.handler())
+                     www_hist.http_handler())
 www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 
 with apputils.ProcessIDFile(config['pidfile']):
