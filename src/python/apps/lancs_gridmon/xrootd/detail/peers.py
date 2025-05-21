@@ -31,6 +31,7 @@
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import functools
+import logging
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
 class Peer:

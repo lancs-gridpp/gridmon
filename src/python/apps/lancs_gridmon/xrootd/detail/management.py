@@ -30,6 +30,8 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+from lancs_gridmon.xrootd.detail.peers import Peer
 from lancs_gridmon.xrootd.detail.recordings import Recorder as XRootDRecorder
 
 class PeerManager:
