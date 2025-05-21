@@ -37,7 +37,7 @@ class MetricConverter:
         self._hist = hist
         pass
 
-    def convert(self, addr, tree):
+    def convert(self, ts, addr, tree):
         pgm = tree.attrib['pgm']
 
         ## Extract timestamp data.

@@ -75,7 +75,7 @@ class PeerManager:
             pass
         pass
 
-    def process(self, addr, dgram):
+    def process(self, ts, addr, dgram):
         try:
             now = dgram['ts']
             msg = dgram['message']

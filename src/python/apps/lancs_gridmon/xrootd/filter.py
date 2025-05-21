@@ -55,7 +55,8 @@ class XRootDFilter:
             pass
 
         def handle(self):
-            self.xrootd_receiver.process(self.client_address, self.request[0])
+            now = time.time()
+            self.xrootd_receiver.process(now, self.client_address, self.request[0])
             pass
 
         pass
@@ -63,17 +64,16 @@ class XRootDFilter:
     def datagram_handler(self):
         return functools.partial(self.Handler, self)
 
-    def process(self, addr, dgram):
+    def process(self, ts, addr, dgram):
         ## Attempt to parse the data as XML.  If it fails to parse,
         ## let it be interpreted as a detailed message.  Pass the
         ## parsed data on to the right function, along with a
         ## timestamp and the source address.
-        now = time.time()
         try:
             tree = ElementTree.fromstring(dgram)
-            self._proc_sum(now, addr, tree)
+            self._proc_sum(ts, addr, tree)
         except xml.etree.ElementTree.ParseError:
-            self._proc_det(now, addr, decode_detailed_message(dgram))
+            self._proc_det(ts, addr, decode_detailed_message(ts, addr, dgram))
             pass
         pass
 
