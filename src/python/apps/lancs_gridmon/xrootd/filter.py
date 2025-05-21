@@ -50,13 +50,13 @@ class XRootDFilter:
 
     class Handler(DatagramRequestHandler):
         def __init__(self, receiver, *args, **kwargs):
-            self.xrootd_receiver = receiver
+            self._rcvr = receiver
             super().__init__(*args, **kwargs)
             pass
 
         def handle(self):
             now = time.time()
-            self.xrootd_receiver.process(now, self.client_address, self.request[0])
+            self._rcvr.process(now, self.client_address, self.request[0])
             pass
 
         pass
