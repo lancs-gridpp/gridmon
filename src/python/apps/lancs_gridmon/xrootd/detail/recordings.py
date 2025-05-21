@@ -36,6 +36,7 @@ import lancs_gridmon.logfmt as logfmt
 
 class Recorder:
     def __init__(self, t0, logname, rmw):
+        self._writer = rmw
         self.t0 = t0
 
         ## Maintain a sequence of parsed and restructured events.  The
@@ -111,7 +112,7 @@ class Recorder:
             now_key = self.event_limit / 1000
             data = { now_key: self.stats }
             # print('stats: %s' % self.stats)
-            self.rmw.install(data)
+            self._writer.install(data)
             assert now >= self.write_ts
             self.write_ts = now
             pass
