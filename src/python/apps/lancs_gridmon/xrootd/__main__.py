@@ -44,8 +44,10 @@ import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
 from lancs_gridmon.xrootd.summary.conversion \
     import MetricConverter as XRootDSummaryConverter
-from lancs_gridmon.xrootd.detail.management import XRootDPeerManager
-from lancs_gridmon.xrootd.detail.recordings import XRootDDetailRecorder
+from lancs_gridmon.xrootd.detail.management \
+    import PeerManager as XRootDPeerManager
+from lancs_gridmon.xrootd.detail.recordings \
+    import Recorder as XRootDDetailRecorder
 from lancs_gridmon.xrootd.filter import XRootDFilter
 from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 from lancs_gridmon.xrootd.summary import schema as xrootd_summary_schema
