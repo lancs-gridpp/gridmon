@@ -257,7 +257,7 @@ class Peer:
         ## Trace messages are not mapping messages, but they appear to
         ## belong to the same sequence.
         if typ == 'traces':
-            self.__traces_sequenced('traces', sid, ts, pseq, msg)
+            self.__traces_sequenced(sid, ts, pseq, msg)
             return
 
         assert typ == 'mapping'
