@@ -204,7 +204,7 @@ class Peer:
     ## working out what sequence it belongs to, and submitting it for
     ## resequencing.
     def process(self, now, pseq, typ, data):
-        if typ in [ 'mapping', 'traces' ] in data:
+        if typ in [ 'mapping', 'traces' ]:
             ## All mapping and trace messages belong to the same
             ## sequence.  Submitting to the resequencer results in a
             ## potentially deferred call to
