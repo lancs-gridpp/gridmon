@@ -425,7 +425,7 @@ class Peer:
 
     ## Calls to this are set up in self.process (the 'gstream'
     ## branch).
-    def __gstream_event_sequenced(self, sid, ts, pseq):
+    def __gstream_event_sequenced(self, sid, ts, pseq, data):
         ## TODO
         pass
 
