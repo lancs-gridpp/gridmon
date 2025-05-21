@@ -42,6 +42,8 @@ from http.server import HTTPServer
 
 import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
+from lancs_gridmon.xrootd.summary.conversion \
+    import MetricConverter as XRootDSummaryConverter
 from lancs_gridmon.xrootd.detail.management import XRootDPeerManager
 from lancs_gridmon.xrootd.detail.recordings import XRootDDetailRecorder
 from lancs_gridmon.xrootd.filter import XRootDFilter
@@ -133,8 +135,7 @@ sum_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
                                       schema=xrootd_summary_schema,
                                       job='xrootd',
                                       expiry=10*60)
-## TODO
-#sum_proc =
+sum_proc = XRootDSummaryConverter(sum_wtr)
 
 ## Prepare to process detailed messages.
 det_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
@@ -154,7 +155,7 @@ apputils.prepare_log_rotation(config['log_params'], action=det_rec.relog)
 
 ## Receive detailed and summary messages on the same socket, and send
 ## them to the right processor.
-msg_fltr = XRootDFilter(sum_proc.handler(), det_proc.process)
+msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
                     msg_fltr.http_handler())
 
