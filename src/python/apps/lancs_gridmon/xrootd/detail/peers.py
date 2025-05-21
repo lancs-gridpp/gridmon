@@ -164,7 +164,7 @@ class Peer:
         obj[k] = r
         return r
 
-    def _get_map_resequencer(self, sid):
+    def __get_map_resequencer(self, sid):
         seq = self._map_reseqs.get(sid)
         if seq is not None:
             return seq
@@ -176,7 +176,7 @@ class Peer:
         self._map_reseqs[sid] = seq
         return seq
 
-    def _get_file_resequencer(self, sid):
+    def __get_file_resequencer(self, sid):
         seq = self._file_reseqs.get(sid)
         if seq is not None:
             return seq
@@ -188,7 +188,7 @@ class Peer:
         self._file_reseqs[sid] = seq
         return seq
 
-    def _get_gstream_resequencer(self, sid):
+    def __get_gstream_resequencer(self, sid):
         seq = self._gstream_reseqs.get(sid)
         if seq is not None:
             return seq
@@ -229,7 +229,7 @@ class Peer:
             ## resequencing.  Submitting to the resequencer results in
             ## a potentially deferred call to
             ## self.__file_event_sequenced(sid, now, pseq, data).
-            self._get_file_resequencer(sid).submit(now, pseq, data)
+            self.__get_file_resequencer(sid).submit(now, pseq, data)
             return
 
         if typ == 'gstream':
@@ -238,7 +238,7 @@ class Peer:
             ## deferred call to self.__gstream_event_sequenced(sid,
             ## now, pseq, data).
             sid = data['sid']
-            self._get_gstream_resequencer(sid).submit(now, pseq, data)
+            self.__get_gstream_resequencer(sid).submit(now, pseq, data)
             return
 
         self.__warning('ev=unh type=%s nseq=%d data=%s', typ, pseq, data)
