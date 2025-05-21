@@ -57,6 +57,8 @@ class PeerManager:
         ## Set the timeout for missing sequence numbers.
         self._seq_to = seq_to
 
+        self._out_on = True
+
         pass
 
     def _identify(self, pgm, host, inst, peer):
@@ -76,6 +78,20 @@ class PeerManager:
             old.discard()
             pass
         pass
+
+    def check_identity(self):
+        ## Go through all peers.  If any are unidentified, halt all
+        ## output.
+        for addr, peer in self._peers.items():
+            if not peer.is_identified():
+                self._out_on = False
+                return
+            continue
+        self._out_on = True
+        for addr, peer in self._peers.items():
+            peer.continue_output()
+            continue
+        return
 
     def process(self, ts, addr, dgram):
         try:
