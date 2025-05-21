@@ -66,6 +66,7 @@ def get_config(raw_args):
         'silent': False,
         'endpoint': None,
         'pidfile': None,
+        'pcapfile': None,
         'fake_log': '/tmp/xrootd-detail.log',
         'domain_conf': None,
         'id_timeout_min': 120,
@@ -76,8 +77,8 @@ def get_config(raw_args):
     }
 
     from getopt import gnu_getopt
-    opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:",
-                            [ 'log=', 'log-file=', 'pid-file=' ])
+    opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:P:",
+                            [ 'log=', 'log-file=', 'pid-file=', 'pcap=' ])
     for opt, val in opts:
         if opt == '-h':
             config['horizon'] = int(val) * 60
@@ -89,6 +90,8 @@ def get_config(raw_args):
             config['fake_log'] = val
         elif opt == '-d':
             config['domain_conf'] = val
+        elif opt == '-P' or opt == '--pcap':
+            config['pcapfile'] = val
         elif opt == '-u':
             config['udp']['port'] = int(val)
         elif opt == '-U':
@@ -122,7 +125,14 @@ if config['silent']:
     apputils.silence_output()
     pass
 
-now = time.time()
+if config['pcapfile'] is None:
+    pcapsrc = None
+    now = time.time()
+else:
+    from lancs_gridmon.pcap import PCAPSource
+    pcapsrc = PCAPSource(config['pcapfile'])
+    now = pcapsrc.get_start()
+    pass
 
 ## Prepare to convert hostnames into domains, according to a
 ## configuration file that will be reloaded if its timestamp changes.
@@ -158,8 +168,14 @@ apputils.prepare_log_rotation(config['log_params'], action=det_rec.relog)
 ## Receive detailed and summary messages on the same socket, and send
 ## them to the right processor.
 msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
-udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
-                    msg_fltr.datagram_handler())
+
+if pcapsrc is None:
+    udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
+                        msg_fltr.datagram_handler())
+else:
+    pcapsrc.set_action(msg_fltr.process)
+    udp_srv = pcapsrc
+    pass
 
 ## Serve the combined schemata's documentation.  Use a separate
 ## thread.  There are no thread-safety considerations, as there is no
