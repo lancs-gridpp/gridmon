@@ -73,7 +73,7 @@ class ProcessIDFile:
         pass
 
     def __exit__(self, typ, val, tb):
-        if self.fn is None:
+        if self.fn is not None:
             os.remove(self.fn)
             return
         pass
