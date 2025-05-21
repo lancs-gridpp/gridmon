@@ -327,10 +327,10 @@ class Peer:
         ## The first entry is always a timing mark.
         hdr = ents[0]
         assert 'time' in hdr
-        t0 = hdr['tbeg']
-        t1 = hdr['tend']
+        t0 = hdr['time']['tbeg']
+        t1 = hdr['time']['tend']
         td = t1 - t0
-        nent = hdr['ntot']
+        nent = hdr['time']['ntot']
 
         scheduled = 0
         too_old = 0
