@@ -385,7 +385,7 @@ def decode_message(ts, addr, buf):
                         pass
                     pass
                 elif rtype == 3: # xfr
-                    dat = rent['close'] = dict()
+                    dat = rent['xfr'] = dict()
                     did = dat['file_dictid'] = _u32(rbuf, 0)
                     _get_stat_xfr(dat, rbuf, 4)
                     rbuf = rbuf[28:]
