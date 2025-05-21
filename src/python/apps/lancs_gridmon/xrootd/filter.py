@@ -63,7 +63,7 @@ class XRootDFilter:
     def datagram_handler(self):
         return functools.partial(self.Handler, self)
 
-    def __process(addr, dgram):
+    def __process(self, addr, dgram):
         ## Attempt to parse the data as XML.  If it fails to parse,
         ## let it be interpreted as a detailed message.  Pass the
         ## parsed data on to the right function, along with a
