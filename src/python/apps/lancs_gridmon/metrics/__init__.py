@@ -34,6 +34,7 @@ import threading
 import time
 import traceback
 import logging
+import functools
 from frozendict import frozendict
 
 from http.server import BaseHTTPRequestHandler
