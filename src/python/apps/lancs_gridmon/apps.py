@@ -44,13 +44,16 @@ def silence_output():
         pass
     pass
 
-def prepare_log_rotation(config):
+def prepare_log_rotation(config, action=None):
     logging.basicConfig(**config)
     if 'filename' in config:
         def handler(signum, frame):
             logging.root.handlers = []
             logging.basicConfig(**config)
             logging.info('rotation')
+            if callable(action):
+                action()
+                pass
             pass
         signal.signal(signal.SIGHUP, handler)
         pass
