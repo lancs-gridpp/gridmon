@@ -55,7 +55,7 @@ class XRootDFilter:
             pass
 
         def handle(self):
-            self.xrootd_receiver.__process(self.client_address, self.request[0])
+            self.xrootd_receiver.process(self.client_address, self.request[0])
             pass
 
         pass
@@ -63,7 +63,7 @@ class XRootDFilter:
     def datagram_handler(self):
         return functools.partial(self.Handler, self)
 
-    def __process(self, addr, dgram):
+    def process(self, addr, dgram):
         ## Attempt to parse the data as XML.  If it fails to parse,
         ## let it be interpreted as a detailed message.  Pass the
         ## parsed data on to the right function, along with a
