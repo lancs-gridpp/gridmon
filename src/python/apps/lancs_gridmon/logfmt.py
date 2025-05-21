@@ -30,8 +30,6 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import collections
-
 def _escape_char(c, chars):
     return '\\' + c if c in chars else c
 
@@ -57,9 +55,10 @@ def escape_value(text):
     return _escape(text, '\\"\n\r ')
 
 def _encode(data, pfx, ctxt):
+    from collections.abc import Mapping
     result = []
     for k, v in data.items():
-        if isinstance(v, collections.Mapping):
+        if isinstance(v, Mapping):
             result += _encode(v, pfx + k + '_', ctxt.get(k) or { })
         else:
             fmt = ctxt.get(k, '%s')
