@@ -72,9 +72,10 @@ class XRootDFilter:
         try:
             tree = ElementTree.fromstring(dgram)
             self._proc_sum(ts, addr, tree)
+            return
         except xml.etree.ElementTree.ParseError:
-            self._proc_det(ts, addr, decode_detailed_message(ts, addr, dgram))
             pass
+        self._proc_det(ts, addr, decode_detailed_message(ts, addr, dgram))
         pass
 
     pass
