@@ -36,11 +36,14 @@ import logging
 import threading
 import signal
 import functools
+import time
 from socketserver import UDPServer
 from http.server import HTTPServer
 
 import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
+from lancs_gridmon.xrootd.detail.management import XRootDPeerManager
+from lancs_gridmon.xrootd.detail.recordings import XRootDDetailRecorder
 from lancs_gridmon.xrootd.filter import XRootDFilter
 from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 from lancs_gridmon.xrootd.summary import schema as xrootd_summary_schema
@@ -59,6 +62,9 @@ def get_config(raw_args):
         'silent': False,
         'endpoint': None,
         'pidfile': None,
+        'fake_log': '/tmp/xrootd-detail.log',
+        'domain_conf': None,
+        'id_timeout_min': 120,
         'log_params': {
             'format': '%(asctime)s %(levelname)s %(message)s',
             'datefmt': '%Y-%m-%dT%H:%M:%S',
@@ -66,13 +72,19 @@ def get_config(raw_args):
     }
 
     from getopt import gnu_getopt
-    opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:",
+    opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:",
                             [ 'log=', 'log-file=', 'pid-file=' ])
     for opt, val in opts:
         if opt == '-h':
             config['horizon'] = int(val) * 60
         elif opt == '-z':
             config['silent'] = True
+        elif opt == '-i':
+            config['id_timeout_min'] = int(val)
+        elif opt == '-o':
+            config['fake_log'] = val
+        elif opt == '-d':
+            config['domain_conf'] = val
         elif opt == '-u':
             config['udp']['port'] = int(val)
         elif opt == '-U':
@@ -106,17 +118,43 @@ if config['silent']:
     apputils.silence_output()
     pass
 
-apputils.prepare_log_rotation(config['log_params'])
+now = time.time()
 
-## Prepare to process summary messages.  TODO
+## Prepare to convert hostnames into domains, according to a
+## configuration file that will be reloaded if its timestamp changes.
+if config['domain_conf'] is None:
+    domains = None
+else:
+    domains = domains.WatchingDomainDriver(config['domain_conf'])
+    pass
+
+## Prepare to process summary messages.
+sum_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
+                                      schema=xrootd_summary_schema,
+                                      job='xrootd',
+                                      expiry=10*60)
+## TODO
 #sum_proc =
 
-## Prepare to process detailed messages.  TODO
-#det_proc =
+## Prepare to process detailed messages.
+det_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
+                                      schema=xrootd_detail_schema,
+                                      job='xrootd_detail',
+                                      expiry=10*60)
+det_rec = XRootDDetailRecorder(now, config['fake_log'], det_wtr)
+det_proc = XRootDPeerManager(now,
+                             det_rec.store_event,
+                             det_rec.advance,
+                             domains=domains,
+                             id_to_min=config['id_timeout_min'])
+
+## Rotate logs on SIGHUP.  This includes the access log generated from
+## the detailed monitoring.
+apputils.prepare_log_rotation(config['log_params'], action=det_rec.relog)
 
 ## Receive detailed and summary messages on the same socket, and send
 ## them to the right processor.
-msg_fltr = XRootDFilter(sum_proc.handler(), det_proc.handler())
+msg_fltr = XRootDFilter(sum_proc.handler(), det_proc.process)
 udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
                     msg_fltr.http_handler())
 
