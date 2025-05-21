@@ -270,7 +270,8 @@ class Peer:
         ## identity now.
         if kind == 'server':
             assert dictid == 0
-            self._mgr(info['pgm'], info['userid']['host'], info['inst'], self)
+            self._mgr(info['args']['pgm'], info['host'],
+                      info['args']['inst'], self)
             return
 
         ## An xfer-id mapping has a zero dictid, so whatever it is,
