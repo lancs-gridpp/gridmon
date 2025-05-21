@@ -89,7 +89,7 @@ class Recorder:
     ## Increment a counter.  'data' is a dict with 'value', 'zero' and
     ## 'last' (empty on first use).  'inc' is amount to increase by.  't0'
     ## is the default reset time.  't1' is now.
-    def __inc(t1, data, inc):
+    def __inc(self, t1, data, inc):
         if 'value' not in data:
             data['value'] = 0
             data['zero'] = self.t0
