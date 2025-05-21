@@ -321,8 +321,8 @@ class Peer:
 
     ## Calls to this are set up in self.process (the 'file' branch).
     def __file_event_sequenced(self, sid, ts, pseq, ents):
-        self.__debug('ev=sid num=%d sid=%012x type=%s ents=%s',
-                     pseq, sid, status, ents)
+        self.__debug('ev=sid num=%d sid=%012x type=file ents=%s',
+                     pseq, sid, ents)
 
         ## The first entry is always a timing mark.
         hdr = ents[0]
