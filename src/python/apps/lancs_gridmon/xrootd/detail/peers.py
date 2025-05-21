@@ -208,12 +208,12 @@ class Peer:
             ## All mapping and trace messages belong to the same
             ## sequence.  Submitting to the resequencer results in a
             ## potentially deferred call to
-            ## self.__mapping_sequenced(sid, now, pseq, data).  We need
+            ## self.__mapping_sequenced(sid, now, pseq, typ, data).  We need
             ## to pass the whole message to that that function can
             ## handle the two broad classes of event distincty.
             self.__debug('sn=%d type=%s data=%s', pseq, typ, data)
             sid = data[0]['sid'] if typ == 'traces' else data['info']['sid']
-            self.__get_map_resequencer(sid).submit(now, pseq, data)
+            self.__get_map_resequencer(sid).submit(now, pseq, typ, data)
             return
 
         if typ == 'file':
@@ -251,20 +251,19 @@ class Peer:
 
     ## Calls to this are set up in self.process (the 'mapping'
     ## branch).
-    def __mapping_sequenced(self, sid, ts, pseq, msg):
-        self.__debug('ev=map num=%d msg=%s', pseq, msg)
+    def __mapping_sequenced(self, sid, ts, pseq, typ, msg):
+        self.__debug('ev=map num=%d type=%s msg=%s', pseq, typ, msg)
 
         ## Trace messages are not mapping messages, but they appear to
         ## belong to the same sequence.
-        if 'traces' in msg:
-            self.__traces_sequenced('traces', sid, ts, pseq, msg['traces'])
+        if typ == 'traces':
+            self.__traces_sequenced('traces', sid, ts, pseq, msg)
             return
 
-        assert 'mapping' in msg
-        mpg = msg['mapping']
-        kind = mpg['kind']
-        info = mpg['info']
-        dictid = mpg['dictid']
+        assert typ == 'mapping'
+        kind = msg['kind']
+        info = msg['info']
+        dictid = msg['dictid']
 
         ## A server-id mapping has a zero dictid, and just describes
         ## the peer in more detail.  Tell the manager that we know our
