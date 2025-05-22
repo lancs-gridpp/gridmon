@@ -125,6 +125,8 @@ if config['silent']:
     apputils.silence_output()
     pass
 
+logging.basicConfig(**config['log_params'])
+
 if config['pcapfile'] is None:
     pcapsrc = None
     now = time.time()
