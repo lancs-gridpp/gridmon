@@ -38,54 +38,54 @@ import lancs_gridmon.logfmt as logfmt
 class Recorder:
     def __init__(self, t0, logname, rmw):
         self._writer = rmw
-        self.t0 = t0
+        self._t0 = t0
 
         ## Maintain a sequence of parsed and restructured events.  The
         ## key is a timestamp (integer, milliseconds), and the value
         ## is a list of tuples (instance, host, program, event,
         ## params).
-        self.events = { }
+        self._events = { }
 
         ## How far back do we keep events?  Units are seconds.
-        self.horizon = 70
-        self.event_limit = self.t0 - self.horizon
+        self._horizon = 70
+        self._event_limit = self._t0 - self._horizon
 
         ## Remote-write new data at this interval.  Units are seconds.
-        self.write_interval = 60
-        self.write_ts = self.t0
+        self._write_interval = 60
+        self._write_ts = self._t0
 
         ## This holds ccumulated statistics, indexed by pgm, host,
         ## inst, client domain, stat (read, readv, write), then
         ## 'value', 'zero' (the time of the last counter reset), and
         ## 'last' (the time of the last increment).
-        self.stats = { }
+        self._stats = { }
 
-        self.log_name = logname
-        self.out = open(self.log_name, "a")
+        self._log_name = logname
+        self._out = open(self._log_name, "a")
         pass
 
     ## Re-open the fake log for appending, and replace our stream's FD
     ## with the new one.  This should be called on SIGHUP to allow log
     ## rotation.
     def relog(self):
-        with open(self.log_name, "a") as nf:
+        with open(self._log_name, "a") as nf:
             fd = nf.fileno()
-            os.dup2(fd, self.out.fileno())
+            os.dup2(fd, self._out.fileno())
             pass
         pass
 
     def log(self, ts, msg):
         tst = datetime.utcfromtimestamp(ts).isoformat('T', 'milliseconds')
-        self.out.write('%s %s\n' % (tst, msg))
+        self._out.write('%s %s\n' % (tst, msg))
         pass
 
     def store_event(self, pgm, host, inst, ts, ev, params, ctxt):
-        if ts < self.event_limit:
+        if ts < self._event_limit:
             logging.warning('discarding expired event@%.3f<%.3f %s:%s@%s %s %s' % \
-                      (ts, self.event_limit, pgm, inst, host, ev, params))
+                      (ts, self._event_limit, pgm, inst, host, ev, params))
             return True
         ts_ms = int(ts * 1000)
-        grp = self.events.setdefault(ts_ms, [ ])
+        grp = self._events.setdefault(ts_ms, [ ])
         grp.append((inst, host, pgm, ev, params, ctxt))
         logging.debug('installing event@%.3f %s:%s@%s %s %s' % \
                       (ts, pgm, inst, host, ev, params))
@@ -97,7 +97,7 @@ class Recorder:
     def __inc(self, t1, data, inc):
         if 'value' not in data:
             data['value'] = 0
-            data['zero'] = self.t0
+            data['zero'] = self._t0
             pass
         old = data['value']
         data['value'] += inc
@@ -112,33 +112,33 @@ class Recorder:
         pass
 
     def advance(self, now):
-        self.__release_events(now - self.horizon)
-        if now - self.write_ts > self.write_interval:
-            now_key = self.event_limit
-            data = { now_key: self.stats }
-            # print('stats: %s' % self.stats)
+        self.__release_events(now - self._horizon)
+        if now - self._write_ts > self._write_interval:
+            now_key = self._event_limit
+            data = { now_key: self._stats }
+            # print('stats: %s' % self._stats)
             self._writer.install(data)
-            assert now >= self.write_ts
-            self.write_ts = now
+            assert now >= self._write_ts
+            self._write_ts = now
             pass
         pass
 
     def __release_events(self, ts):
-        if ts < self.event_limit:
+        if ts < self._event_limit:
             return
         ts = int(ts * 1000) ## ts is in milliseconds.
-        ks = [ k for k in self.events if k < ts ]
+        ks = [ k for k in self._events if k < ts ]
         ks.sort()
         for k in ks:
-            for inst, host, pgm, ev, params, ctxt in self.events.pop(k):
+            for inst, host, pgm, ev, params, ctxt in self._events.pop(k):
                 t1 = k / 1000
                 if ctxt is not None:
                     self.log(t1, '%s@%s %s %s %s' %
                              (inst, host, pgm, ev, logfmt.encode(params, ctxt)))
                     pass
-                stats = self.stats.setdefault(pgm, { }) \
-                                  .setdefault(host, { }) \
-                                  .setdefault(inst, { })
+                stats = self._stats.setdefault(pgm, { }) \
+                                   .setdefault(host, { }) \
+                                   .setdefault(inst, { })
                 if ev == 'skip-dict' and 'n' in params:
                     substats = stats.setdefault('dicts', { })
                     sm = substats.setdefault('skip', { })
@@ -205,7 +205,7 @@ class Recorder:
                     pass
                 continue
             continue
-        self.event_limit = ts / 1000
+        self._event_limit = ts / 1000
         pass
 
     pass
