@@ -30,6 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os
 from datetime import datetime
 import lancs_gridmon.logfmt as logfmt
@@ -45,11 +46,11 @@ class Recorder:
         ## params).
         self.events = { }
 
-        ## How far back do we keep events?
+        ## How far back do we keep events?  Units are seconds.
         self.horizon = 70
-        self.event_limit = self.t0 - self.horizon * 1000
+        self.event_limit = self.t0 - self.horizon
 
-        ## Remote-write new data at this interval.
+        ## Remote-write new data at this interval.  Units are seconds.
         self.write_interval = 60
         self.write_ts = self.t0
 
@@ -79,16 +80,20 @@ class Recorder:
         pass
 
     def store_event(self, pgm, host, inst, ts, ev, params, ctxt):
-        ts = int(ts * 1000)
         if ts < self.event_limit:
+            logging.warning('discarding expired event@%.3f<%.3f %s:%s@%s %s %s' % \
+                      (ts, self.event_limit, pgm, inst, host, ev, params))
             return True
-        grp = self.events.setdefault(ts, [ ])
+        ts_ms = int(ts * 1000)
+        grp = self.events.setdefault(ts_ms, [ ])
         grp.append((inst, host, pgm, ev, params, ctxt))
+        logging.debug('installing expired event@%.3f %s:%s@%s %s %s' % \
+                      (ts, pgm, inst, host, ev, params))
         return False
 
     ## Increment a counter.  'data' is a dict with 'value', 'zero' and
     ## 'last' (empty on first use).  'inc' is amount to increase by.  't0'
-    ## is the default reset time.  't1' is now.
+    ## is the default reset time.  't1' is now.  Units are seconds.
     def __inc(self, t1, data, inc):
         if 'value' not in data:
             data['value'] = 0
@@ -109,7 +114,7 @@ class Recorder:
     def advance(self, now):
         self.__release_events(now - self.horizon)
         if now - self.write_ts > self.write_interval:
-            now_key = self.event_limit / 1000
+            now_key = self.event_limit
             data = { now_key: self.stats }
             # print('stats: %s' % self.stats)
             self._writer.install(data)
@@ -119,9 +124,9 @@ class Recorder:
         pass
 
     def __release_events(self, ts):
-        ts = int(ts * 1000)
         if ts < self.event_limit:
             return
+        ts = int(ts * 1000) ## ts is in milliseconds.
         ks = [ k for k in self.events if k < ts ]
         ks.sort()
         for k in ks:
@@ -200,7 +205,7 @@ class Recorder:
                     pass
                 continue
             continue
-        self.event_limit = ts
+        self.event_limit = ts / 1000
         pass
 
     pass
