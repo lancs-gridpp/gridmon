@@ -87,7 +87,7 @@ class Recorder:
         ts_ms = int(ts * 1000)
         grp = self.events.setdefault(ts_ms, [ ])
         grp.append((inst, host, pgm, ev, params, ctxt))
-        logging.debug('installing expired event@%.3f %s:%s@%s %s %s' % \
+        logging.debug('installing event@%.3f %s:%s@%s %s %s' % \
                       (ts, pgm, inst, host, ev, params))
         return False
 
