@@ -82,7 +82,7 @@ class Recorder:
     def store_event(self, pgm, host, inst, ts, ev, params, ctxt):
         if ts < self._event_limit:
             logging.warning('discarding expired event@%.3f<%.3f %s:%s@%s %s %s' % \
-                      (ts, self._event_limit, pgm, inst, host, ev, params))
+                            (ts, self._event_limit, pgm, inst, host, ev, params))
             return True
         ts_ms = int(ts * 1000)
         grp = self._events.setdefault(ts_ms, [ ])
@@ -92,8 +92,9 @@ class Recorder:
         return False
 
     ## Increment a counter.  'data' is a dict with 'value', 'zero' and
-    ## 'last' (empty on first use).  'inc' is amount to increase by.  't0'
-    ## is the default reset time.  't1' is now.  Units are seconds.
+    ## 'last' (empty on first use).  'inc' is amount to increase by.
+    ## 't0' is the default reset time.  't1' is now.  Units are
+    ## seconds.
     def __inc(self, t1, data, inc):
         if 'value' not in data:
             data['value'] = 0
