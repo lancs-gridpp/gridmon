@@ -78,7 +78,8 @@ def get_config(raw_args):
 
     from getopt import gnu_getopt
     opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:P:",
-                            [ 'log=', 'log-file=', 'pid-file=', 'pcap=' ])
+                            [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
+                              'pcap-limit=' ])
     for opt, val in opts:
         if opt == '-h':
             config['horizon'] = int(val) * 60
@@ -92,6 +93,8 @@ def get_config(raw_args):
             config['domain_conf'] = val
         elif opt == '-P' or opt == '--pcap':
             config['pcapfile'] = val
+        elif opt == '--pcap-limit':
+            config['pcaplim'] = int(val)
         elif opt == '-u':
             config['udp']['port'] = int(val)
         elif opt == '-U':
@@ -132,7 +135,7 @@ if config['pcapfile'] is None:
     now = time.time()
 else:
     from lancs_gridmon.pcap import PCAPSource
-    pcapsrc = PCAPSource(config['pcapfile'])
+    pcapsrc = PCAPSource(config['pcapfile'], config.get('pcaplim', None))
     now = pcapsrc.get_start()
     pass
 

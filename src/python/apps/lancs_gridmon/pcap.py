@@ -34,8 +34,9 @@ import subprocess
 import os
 
 class PCAPSource:
-    def __init__(self, src):
+    def __init__(self, src, limit=None):
         self._src = src
+        self._lim = limit
         pass
 
     def __open(self):
@@ -59,12 +60,18 @@ class PCAPSource:
 
     def serve_forever(self):
         with self.__open() as fin:
+            c = 0
             for line in fin:
                 words = line.split()
                 ts = float(words[0])
                 addr = (words[1], int(words[2]))
                 buf = bytearray.fromhex(words[3])
                 self._proc(ts, addr, buf)
+                if self._lim is not None:
+                    c += 1
+                    if c >= self._lim:
+                        break
+                    pass
                 continue
             pass
         pass
