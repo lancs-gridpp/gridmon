@@ -138,6 +138,9 @@ class Recorder:
         data['last'] = t1
         pass
 
+    def advance_to_clear(self):
+        return self.advance(max(self._events) / 1000 + self._horiz_ival)
+
     def advance(self, now):
         ## The time 'now' (in seconds) has been reached.  Data earlier
         ## than a period just before then ('back', in milliseconds)
