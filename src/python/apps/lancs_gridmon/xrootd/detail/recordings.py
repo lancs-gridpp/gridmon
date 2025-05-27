@@ -30,15 +30,18 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
 import logging
 import os
+import math
 from datetime import datetime
 import lancs_gridmon.logfmt as logfmt
 
 class Recorder:
-    def __init__(self, t0, logname, rmw):
+    def __init__(self, t0, logname, rmw, wr_ival=60, horizon=5*60, epoch=0):
         self._writer = rmw
-        self._t0 = t0
+        self._t0 = int(t0 * 1000)
+        self._epoch = epoch
 
         ## Maintain a sequence of parsed and restructured events.  The
         ## key is a timestamp (integer, milliseconds), and the value
@@ -47,19 +50,28 @@ class Recorder:
         self._events = { }
 
         ## How far back do we keep events?  Units are seconds.
-        self._horizon = 70
-        self._event_limit = self._t0 - self._horizon
+        self._horiz_ival = horizon
 
-        ## Remote-write new data at this interval.  Units are seconds.
-        self._write_interval = 60
-        self._write_ts = self._t0
+        ## We don't retain events earlier than the horizon (in ms).
+        ## It's initial value is our reset time.  This value is
+        ## updated by self.__release_events.
+        self._horiz = int(self._t0 * 1000)
 
-        ## This holds ccumulated statistics, indexed by pgm, host,
+        ## Remote-write new data at this interval.  Units are
+        ## milliseconds.
+        self._wr_ival = wr_ival = int(wr_ival * 1000)
+
+        ## Set the time (in ms) of the first write.  Round it forwards
+        ## to a multiple of the interval.
+        self._wr_ts = int(math.ceil(self._t0 / wr_ival) * wr_ival)
+
+        ## This holds accumulated statistics, indexed by pgm, host,
         ## inst, client domain, stat (read, readv, write), then
         ## 'value', 'zero' (the time of the last counter reset), and
         ## 'last' (the time of the last increment).
         self._stats = { }
 
+        ## We generate a 'fake' log based on various events.
         self._log_name = logname
         self._out = open(self._log_name, "a")
         pass
@@ -80,21 +92,32 @@ class Recorder:
         pass
 
     def store_event(self, pgm, host, inst, ts, ev, params, ctxt):
-        if ts < self._event_limit:
-            logging.warning('discarding expired event@%.3f<%.3f %s:%s@%s %s %s' % \
-                            (ts, self._event_limit, pgm, inst, host, ev, params))
-            return True
+        ## The timestamp of the event is in seconds.  We use an
+        ## integer number of milliseconds internally.
         ts_ms = int(ts * 1000)
-        grp = self._events.setdefault(ts_ms, [ ])
+
+        ## Events earlier than the horizon are discarded.
+        if ts_ms < self._horiz:
+            logging.warning(('expired event@%.3f<%.3f (%.3f behind)' +
+                             ' %s:%s@%s %s %s') % \
+                            (ts_ms / 1000 - self._epoch,
+                             self._horiz / 1000 - self._epoch,
+                             (self._horiz - ts_ms) / 1000,
+                             pgm, inst, host, ev, params))
+            return True
+
+        ## Ensure we have an entry at the specified time, and append
+        ## this event to it.
+        grp = self._events.setdefault(ts_ms, list())
         grp.append((inst, host, pgm, ev, params, ctxt))
         logging.debug('installing event@%.3f %s:%s@%s %s %s' % \
-                      (ts, pgm, inst, host, ev, params))
+                      (ts / 1000 - self._epoch, pgm, inst, host, ev, params))
         return False
 
-    ## Increment a counter.  'data' is a dict with 'value', 'zero' and
-    ## 'last' (empty on first use).  'inc' is amount to increase by.
-    ## 't0' is the default reset time.  't1' is now.  Units are
-    ## seconds.
+    ## Increment an integer counter.  'data' is a dict with 'value',
+    ## 'zero' and 'last' (empty on first use).  'inc' is amount to
+    ## increase by.  't0' is the default reset time.  't1' is now.
+    ## Units are seconds.
     def __inc(self, t1, data, inc):
         if 'value' not in data:
             data['value'] = 0
@@ -102,6 +125,9 @@ class Recorder:
             pass
         old = data['value']
         data['value'] += inc
+
+        ## Detect 64-bit wrap-around.  Interpolate where the reset
+        ## occurred.
         if data['value'] >= 0x8000000000000000:
             pdiff = 0x8000000000000000 - old
             wdiff = data['value'] - old
@@ -113,23 +139,68 @@ class Recorder:
         pass
 
     def advance(self, now):
-        self.__release_events(now - self._horizon)
-        if now - self._write_ts > self._write_interval:
-            now_key = self._event_limit
-            data = { now_key: self._stats }
-            # print('stats: %s' % self._stats)
-            self._writer.install(data)
-            assert now >= self._write_ts
-            self._write_ts = now
-            pass
-        pass
+        ## The time 'now' (in seconds) has been reached.  Data earlier
+        ## than a period just before then ('back', in milliseconds)
+        ## can be consumed.  We can't go backwards.
+        back = int((now - self._horiz_ival) * 1000)
+        if back <= self._horiz:
+            return
+        logging.debug('%.3f advancing from %.3f (+%.3fs)' % \
+                      (back / 1000 - self._epoch,
+                       self._horiz / 1000 - self._epoch,
+                       (back - self._horiz) / 1000))
+
+        ## Build up a message for a remote write.
+        data = dict()
+
+        while True:
+            ## The horizon must be behind the next write epoch, but
+            ## not by more then the write interval.  Advance the write
+            ## epoch until it is just ahead of the current horizon,
+            ## populating the message with a copy of the metrics each
+            ## time.
+            while self._horiz >= self._wr_ts:
+                logging.debug('point %.3f (wr-ep=%.3f)' % \
+                              (self._horiz / 1000 - self._epoch,
+                               self._wr_ts / 1000 - self._epoch))
+                data[self._horiz / 1000] = copy.deepcopy(self._stats)
+                self._wr_ts += self._wr_ival
+                continue
+            assert self._wr_ts > self._horiz
+
+            ## We can't aggregrate beyond the new horizon.  If the
+            ## next write epoch is beyond the new horizon, just
+            ## aggregate until then and stop.
+            if self._wr_ts > back:
+                self.__release_events(back)
+                logging.debug('released to %.3f (final)' % \
+                              (back / 1000 - self._epoch))
+                break
+
+            ## Aggregate metrics up to the next write epoch, and go
+            ## round again to ensure that the write epoch is again
+            ## ahead of the horizon.
+            self.__release_events(self._wr_ts)
+            logging.debug('released to %.3f' % \
+                          (self._horiz / 1000 - self._epoch))
+            assert self._wr_ts == self._horiz
+            continue
+
+        ## Send the message, if it's not empty.
+        self._writer.install(data)
+        return
 
     def __release_events(self, ts):
-        if ts < self._event_limit:
-            return
-        ts = int(ts * 1000) ## ts is in milliseconds.
+        ## This function updates the limit, and we can only move
+        ## forward.
+        assert ts >= self._horiz
+
+        ## Identify and sequence (millisecond) timestamps in our event
+        ## record until our new limit.
         ks = [ k for k in self._events if k < ts ]
         ks.sort()
+
+        ## Aggregate the events up until the new limit.
         for k in ks:
             for inst, host, pgm, ev, params, ctxt in self._events.pop(k):
                 t1 = k / 1000
@@ -206,7 +277,10 @@ class Recorder:
                     pass
                 continue
             continue
-        self._event_limit = ts / 1000
+
+        ## Set the new limit to indicate what we've already
+        ## aggregated.
+        self._horiz = ts
         pass
 
     pass
