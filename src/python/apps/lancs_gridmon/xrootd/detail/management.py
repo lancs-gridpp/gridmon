@@ -36,10 +36,11 @@ from lancs_gridmon.xrootd.detail.recordings import Recorder as XRootDRecorder
 
 class PeerManager:
     def __init__(self, now, evrec, adv, domains=None, id_to_min=120,
-                 seq_to=2):
+                 seq_to=2, epoch=0):
         self._evrec = evrec
         self._adv = adv
         self._domains = domains
+        self._epoch = epoch
 
         ## We map from client host/port to Peer.
         self._peers = { }
@@ -111,7 +112,8 @@ class PeerManager:
                     Peer(stod, addr, self._identify, self._evrec,
                          id_timeout=self._id_to,
                          seq_timeout=self._seq_to,
-                         domains=self._domains)
+                         domains=self._domains,
+                         epoch=self._epoch)
                 self.check_identity()
             elif stod < peer.stod:
                 ## Ignore messages from old instances.
