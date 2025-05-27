@@ -94,7 +94,7 @@ class PeerManager:
             continue
         return
 
-    def process(self, ts, addr, dgram):
+    def process(self, addr, dgram):
         try:
             now = dgram['ts']
             msg = dgram['message']

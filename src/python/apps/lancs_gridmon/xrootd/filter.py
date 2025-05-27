@@ -75,7 +75,7 @@ class XRootDFilter:
             return
         except xml.etree.ElementTree.ParseError:
             pass
-        self._proc_det(ts, addr, decode_detailed_message(ts, addr, dgram))
+        self._proc_det(addr, decode_detailed_message(ts, addr, dgram))
         pass
 
     pass
