@@ -199,6 +199,7 @@ with apputils.ProcessIDFile(config['pidfile']):
     logging.info('starting')
     try:
         udp_srv.serve_forever()
+        det_rec.advance_to_clear()
     except KeyboardInterrupt:
         pass
     logging.info('stopping')
