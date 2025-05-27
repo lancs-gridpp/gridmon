@@ -473,6 +473,8 @@ class RemoteMetricsWriter:
         ## Data is a dict with timestamps (in seconds) as keys.
         ## Values are a usually a dict hierarchy specified by the
         ## schema.  Each of these is referred to as a snapshot below.
+        if len(data) == 0:
+            return True
 
         ## Get all the timestamps in order.
         tss = [ ts for ts in data ]
