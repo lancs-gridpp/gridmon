@@ -72,8 +72,8 @@ class FixedSizeResequencer:
             ## This is the very first entry.  Assume we've just missed
             ## a few before.
             self.plim = self.pseq = self._advance(pseq, -self.init_expect)
-            logging.debug('%s ev=init pseq=%d plim=%d nseq=%d' %
-                          (self.logpfx, self.pseq, self.plim, pseq))
+            # logging.debug('%s ev=init pseq=%d plim=%d nseq=%d' %
+            #               (self.logpfx, self.pseq, self.plim, pseq))
             pass
         assert self._offset(self.plim) <= self.pmax
 
@@ -88,10 +88,10 @@ class FixedSizeResequencer:
         if self._offset(pseq) >= self.pmax:
             ## There's still time to wait for missing packets.  This
             ## new one is suspiciously early, so drop it.
-            logging.warning('%s ev=drop pseq=%d end=%d nseq=%d' %
-                            (self.logpfx, self.pseq,
-                             self._advance(self.pseq, self.pmax),
-                             pseq))
+            # logging.warning('%s ev=drop pseq=%d end=%d nseq=%d' %
+            #                 (self.logpfx, self.pseq,
+            #                  self._advance(self.pseq, self.pmax),
+            #                  pseq))
             if self.drop is not None:
                 self.drop(now, pseq, *args, **kwargs);
                 pass
@@ -101,8 +101,8 @@ class FixedSizeResequencer:
         expiry = now + self.timeout
         while self._offset(self.plim) < self._offset(pseq):
             self.cache[self.plim] = expiry
-            logging.debug('%s ev=to pseq=%d plim=%d exp=%d' %
-                          (self.logpfx, self.pseq, self.plim, expiry - now))
+            # logging.debug('%s ev=to pseq=%d plim=%d exp=%d' %
+            #               (self.logpfx, self.pseq, self.plim, expiry - now))
             self.plim = self._advance(self.plim, 1)
             continue
 
@@ -113,7 +113,7 @@ class FixedSizeResequencer:
         self.cache[pseq] = (now, expiry, args, kwargs)
         if type(old) is tuple:
             onow, oexpiry, oargs, okwargs = old
-            logging.warning('%s ev=replace nseq=%d' % (self.logpfx, pseq))
+            # logging.warning('%s ev=replace nseq=%d' % (self.logpfx, pseq))
             pass
 
         if pseq == self.plim:
@@ -122,8 +122,8 @@ class FixedSizeResequencer:
             assert self.cache[self.plim] is None
             pass
 
-        logging.debug('%s ev=exps pseq=%d plim=%d nseq=%d' %
-                      (self.logpfx, self.pseq, self.plim, pseq))
+        # logging.debug('%s ev=exps pseq=%d plim=%d nseq=%d' %
+        #               (self.logpfx, self.pseq, self.plim, pseq))
         assert self._offset(self.plim) <= self.pmax
 
         ## Decode all messages before any gaps that haven't expired.
@@ -146,15 +146,15 @@ class FixedSizeResequencer:
                 msg += str(min(9, int(ce - now)))
                 pass
             continue
-        logging.debug('%s ev=win pseq=%d plim=%d pat="%s"' %
-                      (self.logpfx, self.pseq, self.plim, msg))
+        # logging.debug('%s ev=win pseq=%d plim=%d pat="%s"' %
+        #               (self.logpfx, self.pseq, self.plim, msg))
         return
 
     def _clear(self, now, stop_if_early=False, cur=None):
-        logging.debug('%s ev=clear pseq=%d plim=%d%s%s' %
-                      (self.logpfx, self.pseq, self.plim,
-                       '' if cur is None else ' nseq=%d' % cur,
-                       ' early=yes' if stop_if_early else ''))
+        # logging.debug('%s ev=clear pseq=%d plim=%d%s%s' %
+        #               (self.logpfx, self.pseq, self.plim,
+        #                '' if cur is None else ' nseq=%d' % cur,
+        #                ' early=yes' if stop_if_early else ''))
         assert self._offset(self.plim) <= self.pmax
 
         while self.pseq != self.plim and self.pseq != cur:
