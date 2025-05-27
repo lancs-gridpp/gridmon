@@ -55,7 +55,7 @@ class Recorder:
         ## We don't retain events earlier than the horizon (in ms).
         ## It's initial value is our reset time.  This value is
         ## updated by self.__release_events.
-        self._horiz = int(self._t0 * 1000)
+        self._horiz = self._t0
 
         ## Remote-write new data at this interval.  Units are
         ## milliseconds.
