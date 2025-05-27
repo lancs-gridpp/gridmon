@@ -130,13 +130,14 @@ if config['silent']:
 
 logging.basicConfig(**config['log_params'])
 
+epoch = 0
 if config['pcapfile'] is None:
     pcapsrc = None
     now = time.time()
 else:
     from lancs_gridmon.pcap import PCAPSource
     pcapsrc = PCAPSource(config['pcapfile'], config.get('pcaplim', None))
-    now = pcapsrc.get_start()
+    epoch = now = pcapsrc.get_start() - 60 * 20
     pass
 
 ## Prepare to convert hostnames into domains, according to a
@@ -159,11 +160,13 @@ det_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
                                       schema=xrootd_detail_schema,
                                       job='xrootd_detail',
                                       expiry=10*60)
-det_rec = XRootDDetailRecorder(now, config['fake_log'], det_wtr)
+det_rec = XRootDDetailRecorder(now, config['fake_log'], det_wtr,
+                               epoch=epoch)
 det_proc = XRootDPeerManager(now,
                              det_rec.store_event,
                              det_rec.advance,
                              domains=domains,
+                             epoch=epoch,
                              id_to_min=config['id_timeout_min'])
 
 ## Rotate logs on SIGHUP.  This includes the access log generated from
