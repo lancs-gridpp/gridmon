@@ -99,7 +99,7 @@ class Peer:
         pass
 
     def __log(self, lvl, msg, *args):
-        msg = 'peer=%s:%d ' + msg
+        msg = 'mod=peers peer=%s:%d ' + msg
         args = self.addr + args
         if self._host is not None:
             msg = 'xrdid=%s@%s pgm=%s ' + msg
@@ -213,8 +213,8 @@ class Peer:
             ## self.__mapping_sequenced(sid, now, pseq, typ, data).  We need
             ## to pass the whole message to that that function can
             ## handle the two broad classes of event distincty.
-            self.__debug('sn=%d type=%s data=%s', pseq, typ, data)
             sid = data[0]['sid'] if typ == 'traces' else data['info']['sid']
+            #self.__debug('type=%s sn=%d sid=%012x', typ, pseq, sid)
             self.__get_map_resequencer(sid).submit(now, pseq, typ, data)
             return
 
@@ -243,7 +243,7 @@ class Peer:
             self.__get_gstream_resequencer(sid).submit(now, pseq, data)
             return
 
-        self.__warning('ev=unh type=%s nseq=%d data=%s', typ, pseq, data)
+        self.__warning('ev=unh type=%s sn=%d data=%s', typ, pseq, data)
         return
 
     def __schedule_record(self, ts, ev, data, ctxt={}):
