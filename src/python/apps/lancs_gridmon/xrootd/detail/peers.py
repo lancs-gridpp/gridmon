@@ -37,7 +37,7 @@ from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
-                 id_timeout=60*120, seq_timeout=2, domains=None):
+                 id_timeout=60*120, seq_timeout=2, domains=None, epoch=0):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -45,6 +45,7 @@ class Peer:
 
         """
 
+        self._epoch = epoch
         self._mgr = mgr
         self._evrec = evrec
         self._seq_to = seq_timeout
@@ -253,7 +254,8 @@ class Peer:
     ## Calls to this are set up in self.process (the 'mapping'
     ## branch).
     def __mapping_sequenced(self, sid, ts, pseq, typ, msg):
-        self.__debug('ev=map num=%d type=%s msg=%s', pseq, typ, msg)
+        self.__debug('ts=%.3f ev=map sn=%d type=%s',
+                     ts - self._epoch, pseq, typ)
 
         ## Trace messages are not mapping messages, but they appear to
         ## belong to the same sequence.
@@ -322,8 +324,8 @@ class Peer:
 
     ## Calls to this are set up in self.process (the 'file' branch).
     def __file_event_sequenced(self, sid, ts, pseq, ents):
-        self.__debug('ev=sid num=%d sid=%012x type=file ents=%s',
-                     pseq, sid, ents)
+        self.__debug('ts=%.3f ev=file sn=%d sid=%012x type=file',
+                     ts - self._epoch, pseq, sid)
 
         ## The first entry is always a timing mark.
         hdr = ents[0]
