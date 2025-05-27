@@ -111,7 +111,7 @@ class Recorder:
         grp = self._events.setdefault(ts_ms, list())
         grp.append((inst, host, pgm, ev, params, ctxt))
         logging.debug('installing event@%.3f %s:%s@%s %s %s' % \
-                      (ts / 1000 - self._epoch, pgm, inst, host, ev, params))
+                      (ts_ms / 1000 - self._epoch, pgm, inst, host, ev, params))
         return False
 
     ## Increment an integer counter.  'data' is a dict with 'value',
