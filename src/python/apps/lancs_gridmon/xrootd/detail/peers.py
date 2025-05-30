@@ -447,11 +447,13 @@ class Peer:
             pass
         bits = urlparse(ent['Peer'])
         ent['Peer_host'] = bits.hostname
+        ent['proto'] = bits.scheme
         self.__add_domain(ent, 'Peer_host', 'Peer_domain')
         params = {
             'dir': xeq['Type'],
             'ipv': xeq['IPv'],
             'peer': ent['Peer'],
+            'prot': ent['proto'],
             'cmdr_host': ent['Client']['host'],
             'streams': xeq['Strm'],
             'rc': xeq['RC'],
