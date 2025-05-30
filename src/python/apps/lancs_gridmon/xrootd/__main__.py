@@ -51,6 +51,7 @@ from lancs_gridmon.xrootd.detail.recordings \
 from lancs_gridmon.xrootd.filter import XRootDFilter
 from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 from lancs_gridmon.xrootd.summary import schema as xrootd_summary_schema
+import lancs_gridmon.domains
 
 def get_config(raw_args):
     config = {
@@ -143,9 +144,9 @@ else:
 ## Prepare to convert hostnames into domains, according to a
 ## configuration file that will be reloaded if its timestamp changes.
 if config['domain_conf'] is None:
-    domains = None
+    domcfg = None
 else:
-    domains = domains.WatchingDomainDriver(config['domain_conf'])
+    domcfg = lancs_gridmon.domains.WatchingDomainDeriver(config['domain_conf'])
     pass
 
 ## Prepare to process summary messages.
@@ -165,7 +166,7 @@ det_rec = XRootDDetailRecorder(now, config['fake_log'], det_wtr,
 det_proc = XRootDPeerManager(now,
                              det_rec.store_event,
                              det_rec.advance,
-                             domains=domains,
+                             domains=domcfg,
                              epoch=epoch,
                              id_to_min=config['id_timeout_min'])
 
