@@ -30,6 +30,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from urllib.parse import urlparse
 import functools
 import logging
 from lancs_gridmon.trees import merge_trees
@@ -428,7 +429,42 @@ class Peer:
     ## Calls to this are set up in self.process (the 'gstream'
     ## branch).
     def __gstream_event_sequenced(self, sid, ts, pseq, data):
+        if 'tpc' in data:
+            for ent in data['tpc']:
+                self.__handle_tpc(ent)
+                continue
+            return
         ## TODO
+        pass
+
+    def __handle_tpc(self, ent):
+        xeq = ent['Xeq']
+        self.__add_domain(ent['Client'], 'host', 'domain')
+        if xeq['Type'] == 'pull':
+            ent['Peer'] = ent['Src']
+        elif xeq['Type'] == 'push':
+            ent['Peer'] = ent['Dst']
+            pass
+        bits = urlparse(ent['Peer'])
+        ent['Peer_host'] = bits.hostname
+        self.__add_domain(ent, 'Peer_host', 'Peer_domain')
+        params = {
+            'dir': xeq['Type'],
+            'ipv': xeq['IPv'],
+            'peer': ent['Peer'],
+            'cmdr_host': ent['Client']['host'],
+            'streams': xeq['Strm'],
+            'rc': xeq['RC'],
+            'size': ent['Size'],
+            'duration': xeq['End_unix'] - xeq['Beg_unix'],
+        }
+        if 'Peer_domain' in ent:
+            params['peer_domain'] = ent['Peer_domain']
+            pass
+        if 'domain' in ent['Client']:
+            params['cmdr_domain'] = ent['Client']['domain']
+            pass
+        self.__schedule_record(xeq['End_unix'], 'tpc', params)
         pass
 
     def __traces_sequenced(self, sid, ts, pseq, traces):
