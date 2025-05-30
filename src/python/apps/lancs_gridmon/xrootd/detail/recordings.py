@@ -228,6 +228,24 @@ class Recorder:
                                     .setdefault(params['field'], { })
                     self.__inc(t1, substats, 1)
                     pass
+                elif ev == 'tpc':
+                    substats = stats.setdefault('tpc', { }) \
+                                    .setdefault(params['dir'], { }) \
+                                    .setdefault(params['ipv'], { }) \
+                                    .setdefault(params['prot'], { }) \
+                                    .setdefault(params['streams'], { }) \
+                                    .setdefault(params['cmdr_domain'], { }) \
+                                    .setdefault(params['peer_domain'], {
+                                        'count': dict(),
+                                        'success': dict(),
+                                        'volume': dict(),
+                                        'duration': dict(),
+                                    })
+                    self.__inc(t1, substats['count'], 1)
+                    self.__inc(t1, substats['success'],
+                               1 if params['rc'] == 0 else 0)
+                    self.__inc(t1, substats['volume'], params['size'])
+                    self.__inc(t1, substats['duration'], params['duration'])
                 elif ev == 'disconnect' and \
                    'prot' in params and \
                    'client_domain' in params and \
