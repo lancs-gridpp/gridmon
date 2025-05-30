@@ -257,7 +257,10 @@ def _numeralize_time(d, k, fmt='%Y-%m-%dT%H:%M:%S.%fZ'):
     n = d.get(k)
     if n is None:
         return False
-    dt = datetime.datetime.strptime(n, fmt).timestamp()
+    dt = datetime.datetime \
+                 .strptime(n, fmt) \
+                 .replace(tzinfo=datetime.timezone.utc) \
+                 .timestamp()
     d[k + '_unix'] = dt
     return True
 
