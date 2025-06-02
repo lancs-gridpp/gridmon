@@ -529,32 +529,38 @@ def decode_message(ts, addr, buf):
             buf = buf[8:]
             while len(buf) >= 8:
                 typ = _u8(buf, 0)
-                subtyp = typ & 0x0f
-                typ &= 0xf0
-                dlen = _u8(buf, 1) * 8
-                rbuf = buf[0:dlen]
-                buf = buf[dlen:]
 
                 rent = dict()
-                rlist.append(rent)
+                rlst.append(rent)
                 if typ == 0x00:
                     rent['type'] = 'redtime'
-                    rent['size'] = _u32(rbuf, 0) & 0xffffff
-                    rent['time'] = _u32(rbuf, 1)
+                    rent['size'] = _u32(buf, 0) & 0xffffff
+                    rent['time'] = _u32(buf, 4)
+                    buf = buf[8:]
                 elif typ == 0xf0:
+                    ## TODO: This never occurs in the array, as the
+                    ## first 8 bytes of the payload are 'it'!
                     rent['type'] = 'redsid'
-                    rent['sid'] = _u64(rbuf, 0) & 0xffffffffffff
-                elif typ == 0x80 or typ == 0x90:
+                    rent['sid'] = _u64(buf, 0) & 0xffffffffffff
+                    buf = buf[8:]
+                elif (typ & 0xf0) in [ 0x80, 0x90]:
+                    subtyp = typ & 0x0f
+                    typ &= 0xf0
                     rent['type'] = 'redirect' if typ == 0x80 else 'redlocal'
-                    rent['port'] = _u16(rbuf, 2)
-                    rent['user_dictid'] = _u32(rbuf, 4)
-                    rent['referent'] = _decode_null_term(rbuf[8:])
-                    _decompose_server_path(rent, 'referent')
                     rent['op'] = _redir_ops.get(subtyp, 'unk_%02X' % subtyp)
+                    rent['port'] = _u16(buf, 2)
+                    rent['user_dictid'] = _u32(buf, 4)
+
+                    dlen = (_u8(buf, 1) + 1) * 8
+                    rent['referent'] = _decode_null_term(buf[8:dlen])
+                    _decompose_server_path(rent, 'referent')
+                    buf = buf[dlen:]
                 else:
+                    dlen = (_u8(buf, 1) + 1) * 8
                     rent['type'] = 'unk_%02X' % (typ | subtyp)
-                    rent['resv_1_%d' % dlen] = rbuf[1:]
+                    rent['resv_1_%d' % dlen] = buf[8:dlen]
                     _humanize_buffer(rent, 'resv_1_%d' % dlen)
+                    buf = buf[dlen:]
                     pass
                 continue
             pass
