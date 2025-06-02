@@ -616,7 +616,7 @@ def decode_message(ts, addr, buf):
             if len(lines) > 0:
                 mpg['lines'] = lines
                 pass
-            
+
             buf = b''
             pass
         pass
