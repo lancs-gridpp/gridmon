@@ -57,11 +57,11 @@ def get_config(raw_args):
     config = {
         'udp': {
             'host': '',
-            'port': 9485,
+            'port': 9484,
         },
         'http': {
             'host': 'localhost',
-            'port': 8744,
+            'port': 8743,
         },
         'horizon': 60 * 30,
         'silent': False,
