@@ -631,7 +631,7 @@ if __name__ == '__main__':
     ## bytes.
     import yaml
     for line in sys.stdin:
-        words = line.split()
+        words = line.split(sep='\t')
         ts = float(words[0])
         addr = (words[1], int(words[2]))
         buf = bytearray.fromhex(words[3])
