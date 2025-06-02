@@ -522,7 +522,7 @@ def decode_message(ts, addr, buf):
                 continue
             pass
         elif code == 'r':
-            msg['type'] = 'redirect'
+            msg['type'] = 'rstream'
             red = msg['data'] = dict()
             red['sid'] = _u64(buf, 0) & 0xffffffffffff
             rlst = red['items'] = list()
