@@ -299,8 +299,6 @@ def decode_message(ts, addr, buf):
 
     if len(buf) < 8:
         result['error'] = 'too-short'
-        result['remn'] = buf
-        _humanize_buffer(result, 'remn')
     else:
         msg = result['message'] = dict()
         code = msg['code'] = buf[0:1].decode('ascii')
