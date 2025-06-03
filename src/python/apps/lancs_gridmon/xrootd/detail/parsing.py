@@ -548,7 +548,7 @@ def decode_message(ts, addr, buf):
                     typ &= 0xf0
                     rent['type'] = 'redirect' if typ == 0x80 else 'redlocal'
                     rent['op'] = _redir_ops.get(subtyp, 'unk_%02X' % subtyp)
-                    rent['port'] = _u16(buf, 2)
+                    rent['referent_port'] = _u16(buf, 2)
                     rent['user_dictid'] = _u32(buf, 4)
 
                     dlen = (_u8(buf, 1) + 1) * 8
