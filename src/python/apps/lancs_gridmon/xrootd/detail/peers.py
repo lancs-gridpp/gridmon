@@ -207,14 +207,16 @@ class Peer:
     ## working out what sequence it belongs to, and submitting it for
     ## resequencing.
     def process(self, now, pseq, typ, data):
-        if typ in [ 'mapping', 'traces' ]:
-            ## All mapping and trace messages belong to the same
-            ## sequence.  Submitting to the resequencer results in a
-            ## potentially deferred call to
-            ## self.__mapping_sequenced(sid, now, pseq, typ, data).  We need
-            ## to pass the whole message to that that function can
-            ## handle the two broad classes of event distincty.
-            sid = data[0]['sid'] if typ == 'traces' else data['info']['sid']
+        if typ in [ 'mapping', 'traces', 'rstream' ]:
+            ## All mapping, trace and rstream messages belong to the
+            ## same sequence.  Submitting to the resequencer results
+            ## in a potentially deferred call to
+            ## self.__mapping_sequenced(sid, now, pseq, typ, data).
+            ## We need to pass the whole message to that that function
+            ## can handle the two broad classes of event distincty.
+            sid = data[0]['sid'] if typ == 'traces' else \
+                data['sid'] if typ == 'rstream' else \
+                data['info']['sid']
             #self.__debug('type=%s sn=%d sid=%012x', typ, pseq, sid)
             self.__get_map_resequencer(sid).submit(now, pseq, typ, data)
             return
@@ -262,6 +264,12 @@ class Peer:
         ## belong to the same sequence.
         if typ == 'traces':
             self.__traces_sequenced(sid, ts, pseq, msg)
+            return
+
+        ## r-stream messages are not mapping messages, by they appear
+        ## to belong to the same sequence.
+        if typ == 'rstream':
+            self.__rstream_sequenced(sid, ts, pseq, msg)
             return
 
         assert typ == 'mapping'
@@ -467,6 +475,56 @@ class Peer:
             params['cmdr_domain'] = ent['Client']['domain']
             pass
         self.__schedule_record(xeq['End_unix'], 'tpc', params)
+        pass
+
+    def __rstream_sequenced(self, sid, ts, pseq, msg):
+        ## Distribute the entries within the window.
+        last_start = None
+        for i, ent in enumerate(msg['items']):
+            if ent['type'] == 'redtime':
+                if last_start is not None:
+                    t0 = msg['items'][last_start]['time']
+                    t1 = t0 + ent['size']
+                    for j in range(last_start + 1, i):
+                        frac = (j - (last_start + 1)) / (i - (last_start + 1))
+                        tj = t0 + (t1 - t0) * frac
+                        msg['items'][j]['ts'] = tj
+                        continue
+                    pass
+                last_start = i
+                pass
+            continue
+
+        ## Convert the entries into events.
+        for ent in msg['items']:
+            if ent['type'] == 'redirect':
+                now = ent['ts']
+                rec = {
+                    'redhost': ent['referent_server'],
+                    'redport': ent['referent_port'],
+                    'redpath': ent['referent_path'],
+                    'op': ent['op'],
+                }
+                if (usr := self.__replace_dictid(now, ent, 'user',
+                                                 'redirect')) is not None:
+                    merge_trees(rec, {
+                        'prot': usr['prot'],
+                        'user': usr['user'],
+                        'client_name': usr['host'],
+                        'client_addr': usr['args']['host_addr'],
+                        'ipv': usr['args']['ip_vers'],
+                        'dn': usr['args']['dn'],
+                        'auth': usr['args']['proto'],
+                    })
+                    pass
+                self.__add_domain(rec, 'client_name', 'client_domain')
+                self.__schedule_record(now, 'redirect', rec)
+                pass
+            elif ent['type'] == 'redlocal':
+                ## TODO
+                pass
+            continue
+
         pass
 
     def __traces_sequenced(self, sid, ts, pseq, traces):
