@@ -478,25 +478,38 @@ class Peer:
         pass
 
     def __rstream_sequenced(self, sid, ts, pseq, msg):
+        items = msg['items']
+
         ## Distribute the entries within the window.
+        def distrib(i0, i1, t0, t1):
+            di = i1 - i0
+            for j in range(i0, i1):
+                frac = (j - i0) / di
+                tj = t0 + (t1 - t0) * frac
+                assert items[j]['type'] != 'redtime'
+                items[j]['ts'] = tj
+                continue
+            pass
+
         last_start = None
-        for i, ent in enumerate(msg['items']):
+        for i, ent in enumerate(items):
             if ent['type'] == 'redtime':
                 if last_start is not None:
-                    t0 = msg['items'][last_start]['time']
-                    t1 = t0 + ent['size']
-                    for j in range(last_start + 1, i):
-                        frac = (j - (last_start + 1)) / (i - (last_start + 1))
-                        tj = t0 + (t1 - t0) * frac
-                        msg['items'][j]['ts'] = tj
-                        continue
+                    t0 = items[last_start]['time']
+                    distrib(last_start + 1, i, t0, t0 + ent['size'])
                     pass
                 last_start = i
                 pass
             continue
+        if last_start is not None and last_start + 1 != len(items):
+            self.__warning('unbracketed %d redirections',
+                           len(items) - (last_start + 1))
+            t0 = items[last_start]['time']
+            distrib(last_start + 1, len(items), t0, t0)
+            pass
 
         ## Convert the entries into events.
-        for ent in msg['items']:
+        for ent in items:
             if ent['type'] == 'redirect':
                 now = ent['ts']
                 rec = {
