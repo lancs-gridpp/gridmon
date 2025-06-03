@@ -181,6 +181,7 @@ msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 if pcapsrc is None:
     udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
                         msg_fltr.datagram_handler())
+    udp_srv.max_packet_size = 65536
 else:
     pcapsrc.set_action(msg_fltr.process)
     udp_srv = pcapsrc
