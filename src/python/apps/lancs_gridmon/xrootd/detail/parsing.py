@@ -35,6 +35,7 @@ import struct
 import sys
 import os
 import re
+import logging
 
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
 
@@ -306,6 +307,11 @@ def decode_message(ts, addr, buf):
         msg['plen'] = _u16(buf, 2)
         msg['stod'] = _u32(buf, 4)
         _humanize_timestamp(msg, 'stod', '%Y-%m-%dT%H:%M:%S%z')
+        assert msg['plen'] <= len(buf)
+        if msg['plen'] > len(buf):
+            logging.warning('int len %d > pkt len %d' % \
+                            (msg['plen'], len(buf)))
+            pass
         buf = buf[8:]
 
         if code == 'f':
