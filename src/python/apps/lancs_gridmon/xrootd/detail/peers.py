@@ -505,8 +505,8 @@ class Peer:
                     'redpath': ent['referent_path'],
                     'op': ent['op'],
                 }
-                if (usr := self.__replace_dictid(now, ent, 'user',
-                                                 'redirect')) is not None:
+                usr = self.__replace_dictid(now, ent, 'user', 'redirect')
+                if usr is not None:
                     merge_trees(rec, {
                         'prot': usr['prot'],
                         'user': usr['user'],
