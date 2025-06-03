@@ -104,6 +104,11 @@ class PeerManager:
             data = msg['data']
             typ = msg['type']
 
+            if 'remn_octets' in msg:
+                logging.warning('from %s:%d at %.3f remnant %s' % \
+                                (addr[0], addr[1], now, msg['remn_octets']))
+                pass
+
             ## Locate the peer record.  Replace with a new one if the
             ## start time has increased.
             peer = self._peers.get(addr)
