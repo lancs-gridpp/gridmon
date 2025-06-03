@@ -74,6 +74,7 @@ class Recorder:
         ## We generate a 'fake' log based on various events.
         self._log_name = logname
         self._out = open(self._log_name, "a")
+        self.log(self._t0 / 1000, 'start')
         pass
 
     ## Re-open the fake log for appending, and replace our stream's FD
