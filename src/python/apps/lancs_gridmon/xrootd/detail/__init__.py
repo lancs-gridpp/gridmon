@@ -32,6 +32,35 @@
 
 schema = [
     {
+        'base': 'xrootd_redirection',
+        'type': 'counter',
+        'help': 'redirections',
+        'select': lambda e: [ (pgm, h, i, ipv, prot, h2, p2)
+                              for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              if 'redir' in e[pgm][h][i]
+                              for ipv in e[pgm][h][i]['redir']
+                              for prot in e[pgm][h][i]['redir'][ipv]
+                              for h2 in e[pgm][h][i]['redir'][ipv][prot]
+                              for p2 in e[pgm][h][i]['redir'][ipv][prot][h2] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['redir'] \
+                       [t[3]][t[4]][t[5]][t[6]]['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['redir'] \
+                         [t[3]][t[4]][t[5]][t[6]]['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'ip_version': ('%s', lambda t, d: t[3]),
+            'protocol': ('%s', lambda t, d: t[4]),
+            'redhost': ('%s', lambda t, d: t[5]),
+            'redport': ('%d', lambda t, d: t[6]),
+        },
+    },
+
+    {
         'base': 'xrootd_tpc',
         'type': 'counter',
         'help': 'third-party copies',

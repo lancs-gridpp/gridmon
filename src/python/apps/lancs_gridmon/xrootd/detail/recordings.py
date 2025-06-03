@@ -228,6 +228,17 @@ class Recorder:
                                     .setdefault(params['field'], { })
                     self.__inc(t1, substats, 1)
                     pass
+                elif ev == 'redirect' and \
+                     'ipv' in params and \
+                     'prot' in params and \
+                     'redhost' in params and \
+                     'redport' in params:
+                    substats = stats.setdefault('redir', { }) \
+                                    .setdefault(params['ipv'], { }) \
+                                    .setdefault(params['prot'], { }) \
+                                    .setdefault(params['redhost'], { }) \
+                                    .setdefault(params['redport'], { })
+                    self.__inc(t1, substats, 1)
                 elif ev == 'tpc':
                     substats = stats.setdefault('tpc', { }) \
                                     .setdefault(params['dir'], { }) \
