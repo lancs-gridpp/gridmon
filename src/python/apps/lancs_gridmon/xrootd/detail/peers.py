@@ -75,13 +75,13 @@ class Peer:
 
     def __add_domain(self, data, key_out, key_in):
         if self._domains is None:
-            return
+            return False
         host = data.get(key_out)
         if host is None:
-            return
+            return False
         dom = self._domains.derive(host)
         data[key_in] = dom
-        return
+        return True
 
     def __id_get(self, now, dictid):
         r = self._ids.get(dictid)
