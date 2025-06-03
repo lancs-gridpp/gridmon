@@ -49,7 +49,7 @@ class PCAPSource:
     def get_start(self):
         with self.__open() as fin:
             for line in fin:
-                words = line.split()
+                words = line.split('\t')
                 return float(words[0])
             pass
         pass
@@ -62,9 +62,12 @@ class PCAPSource:
         with self.__open() as fin:
             c = 0
             for line in fin:
-                words = line.split()
+                words = line.split('\t')
                 ts = float(words[0])
-                addr = (words[1], int(words[2]))
+                try:
+                    addr = (words[1], int(words[2]))
+                except ValueError:
+                    continue
                 buf = bytearray.fromhex(words[3])
                 self._proc(ts, addr, buf)
                 if self._lim is not None:
