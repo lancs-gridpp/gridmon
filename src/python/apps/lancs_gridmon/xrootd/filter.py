@@ -41,7 +41,7 @@ from lancs_gridmon.xrootd.detail.parsing import decode_message \
 class XRootDFilter:
     def __init__(self, proc_sum, proc_det):
         """Invokes proc_sum(timestamp, address, xml_doc_tree) or
-        proc_det(timestamp, address, dict_tree).
+        proc_det(timestamp, dict_tree).
 
         """
         self._proc_sum = proc_sum
@@ -77,7 +77,7 @@ class XRootDFilter:
             pass
         dm = decode_detailed_message(ts, addr, dgram)
         if dm is not None:
-            self._proc_det(addr, dm)
+            self._proc_det(dm)
             pass
         pass
 
