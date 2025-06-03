@@ -38,7 +38,8 @@ from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
-                 id_timeout=60*120, seq_timeout=2, domains=None, epoch=0):
+                 id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
+                 fake_port=None):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -46,6 +47,7 @@ class Peer:
 
         """
 
+        self._fake_port = fake_port
         self._epoch = epoch
         self._mgr = mgr
         self._evrec = evrec
@@ -518,6 +520,9 @@ class Peer:
                     'redpath': ent['referent_path'],
                     'op': ent['op'],
                 }
+                if self._fake_port is not None:
+                    rec['redport'] = self._fake_port
+                    pass
                 usr = self.__replace_dictid(now, ent, 'user', 'redirect')
                 if usr is not None:
                     merge_trees(rec, {

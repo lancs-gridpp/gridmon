@@ -69,6 +69,7 @@ def get_config(raw_args):
         'pidfile': None,
         'pcapfile': None,
         'fake_log': '/tmp/xrootd-detail.log',
+        'fake_port': None,
         'domain_conf': None,
         'id_timeout_min': 120,
         'log_params': {
@@ -80,7 +81,7 @@ def get_config(raw_args):
     from getopt import gnu_getopt
     opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:P:",
                             [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
-                              'pcap-limit=' ])
+                              'pcap-limit=', 'fake-port=' ])
     for opt, val in opts:
         if opt == '-h':
             config['horizon'] = int(val) * 60
@@ -96,6 +97,8 @@ def get_config(raw_args):
             config['pcapfile'] = val
         elif opt == '--pcap-limit':
             config['pcaplim'] = int(val)
+        elif opt == '--fake-port':
+            config['fake_port'] = int(val)
         elif opt == '-u':
             config['udp']['port'] = int(val)
         elif opt == '-U':
@@ -168,6 +171,7 @@ det_proc = XRootDPeerManager(now,
                              det_rec.advance,
                              domains=domcfg,
                              epoch=epoch,
+                             fake_port=config['fake_port'],
                              id_to_min=config['id_timeout_min'])
 
 ## Rotate logs on SIGHUP.  This includes the access log generated from
