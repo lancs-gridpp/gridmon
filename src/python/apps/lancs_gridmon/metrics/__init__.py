@@ -375,7 +375,7 @@ class MetricHistory:
 
     def http_handler(self, **kwargs):
         """Get an HTTP handler that serves this history."""
-        return functools.partial(MetricsHTTPHandler, self, **kwargs)
+        return functools.partial(MetricsHTTPHandler, hist=self, **kwargs)
 
     pass
 
