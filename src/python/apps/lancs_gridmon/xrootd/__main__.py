@@ -79,7 +79,7 @@ def get_config(raw_args):
     }
 
     from getopt import gnu_getopt
-    opts, args = gnu_getopt(sys.argv[1:], "zh:u:U:t:T:E:i:o:d:P:",
+    opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:",
                             [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
                               'pcap-limit=', 'fake-port=' ])
     for opt, val in opts:
