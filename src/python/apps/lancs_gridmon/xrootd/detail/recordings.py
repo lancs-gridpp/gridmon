@@ -240,7 +240,9 @@ class Recorder:
                                     .setdefault(params['redhost'], { }) \
                                     .setdefault(params['redport'], { })
                     self.__inc(t1, substats, 1)
-                elif ev == 'tpc':
+                elif ev == 'tpc' and \
+                     'cmdr_domain' in params and \
+                     'peer_domain' in params:
                     substats = stats.setdefault('tpc', { }) \
                                     .setdefault(params['dir'], { }) \
                                     .setdefault(params['ipv'], { }) \
