@@ -53,137 +53,197 @@ from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 from lancs_gridmon.xrootd.summary import schema as xrootd_summary_schema
 import lancs_gridmon.domains
 
+def convert_duration(obj, key, *keys):
+    from lancs_gridmon.timing import parse_duration
+    pfx = [ key ] + list(keys)
+    tail = pfx[-1]
+    pfx = pfx[:-1]
+    for p in pfx:
+        if p not in obj:
+            return False
+        obj = obj[p]
+        continue
+    if tail not in obj:
+        return False
+    obj[tail] = parse_duration(obj[tail])
+    return True
+
 def get_config(raw_args):
     config = {
-        'udp': {
-            'host': '',
-            'port': 9484,
+        'source': {
+            'xrootd': {
+                'host': '',
+                'port': 9484,
+            },
+            'pcap': {
+                'filename': None,
+                'limit': None,
+            },
         },
-        'http': {
-            'host': 'localhost',
-            'port': 8743,
+        'destination': {
+            'scrape': {
+                'host': 'localhost',
+                'port': 8743,
+            },
+            'push': {
+                'endpoint': None,
+            },
+            'log': '/tmp/xrootd-detail.log',
         },
-        'horizon': 60 * 30,
-        'silent': False,
-        'endpoint': None,
-        'pidfile': None,
-        'pcapfile': None,
-        'fake_log': '/tmp/xrootd-detail.log',
-        'fake_port': None,
-        'domain_conf': None,
-        'id_timeout_min': 120,
-        'log_params': {
-            'format': '%(asctime)s %(levelname)s %(message)s',
-            'datefmt': '%Y-%m-%dT%H:%M:%S',
+        'process': {
+            'silent': False,
+            'id_filename': None,
+            'log': {
+                'format': '%(asctime)s %(levelname)s %(message)s',
+                'datefmt': '%Y-%m-%dT%H:%M:%S',
+            },
+        },
+        'data': {
+            'horizon': '30m', ## in use?
+            'fake_port': None,
+            'dictids': {
+                'timeout': '2h',
+            },
+            'domains': {
+                'filename': None,
+            },
         },
     }
 
+    ## Parse command-line arguments and load configuration.
+    import yaml
+    from lancs_gridmon.trees import merge_trees
     from getopt import gnu_getopt
     opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:",
                             [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
                               'pcap-limit=', 'fake-port=' ])
+
+    ## Treat all plain arguments as YAML files to be loaded and
+    ## merged.
+    for arg in args:
+        with open(arg, 'r') as fh:
+            loaded = yaml.load(fh, Loader=yaml.SafeLoader)
+            pass
+        merge_trees(config, loaded, mismatch=+1)
+        continue
+
+    ## Override with in-line options.
     for opt, val in opts:
         if opt == '-h':
-            config['horizon'] = int(val) * 60
+            config['data']['horizon'] = val
         elif opt == '-z':
-            config['silent'] = True
+            config['process']['silent'] = True
         elif opt == '-i':
-            config['id_timeout_min'] = int(val)
+            config['data']['dictids']['timeout'] = val
         elif opt == '-o':
-            config['fake_log'] = val
+            config['destination']['log'] = val
         elif opt == '-d':
-            config['domain_conf'] = val
+            config['data']['domains']['filename'] = val
         elif opt == '-P' or opt == '--pcap':
-            config['pcapfile'] = val
+            config['source']['pcap']['filename'] = val
         elif opt == '--pcap-limit':
             config['pcaplim'] = int(val)
         elif opt == '--fake-port':
-            config['fake_port'] = int(val)
+            config['data']['fake_port'] = int(val)
         elif opt == '-u':
-            config['udp']['port'] = int(val)
+            config['source']['xrootd']['port'] = int(val)
         elif opt == '-U':
-            config['udp']['host'] = val
+            config['source']['xrootd']['host'] = val
         elif opt == '-E':
-            config['endpoint'] = val
+            config['destination']['push']['endpoint'] = val
         elif opt == '-t':
-            config['http']['port'] = int(val)
+            config['destination']['scrape']['port'] = int(val)
         elif opt == '-T':
-            config['http']['host'] = val
+            config['destination']['scrape']['host'] = val
         elif opt == '--log':
-            config['log_params']['level'] = getattr(logging, val.upper(), None)
-            if not isinstance(config['log_params']['level'], int):
-                raise RuntimeError('bad log level [%s]\n' % val)
-            pass
+            config['process']['log']['level'] = val
         elif opt == '--log-file':
-            config['log_params']['filename'] = val
+            config['process']['log']['filename'] = val
         elif opt == '--pid-file':
             if not val.endswith('.pid'):
-                raise RuntimeError('pid filename %s must end with .pid\n' % val)
-            config['pidfile'] = val
+                raise RuntimeError('pid filename %s must end with .pid' % val)
+            config['process']['id_filename'] = val
         else:
             raise AssertionError('unreachable')
         continue
+
+    convert_duration(config, 'data', 'dictids', 'timeout')
+    convert_duration(config, 'data', 'horizon')
+    if 'level' in config['process']['log']:
+        if isinstance(config['process']['log']['level'], str):
+            config['process']['log']['level'] = \
+                getattr(logging, config['process']['log']['level'].upper())
+            pass
+        if not isinstance(config['process']['log']['level'], int):
+            raise RuntimeError('bad log level [%s]\n' %
+                               config['process']['log']['level'])
+        pass
 
     return config
 
 config = get_config(sys.argv[1:])
 
-if config['silent']:
+if config['process']['silent']:
     apputils.silence_output()
     pass
 
-logging.basicConfig(**config['log_params'])
+logging.basicConfig(**config['process']['log'])
 
 epoch = 0
-if config['pcapfile'] is None:
+if config['source']['pcap']['filename'] is None:
     pcapsrc = None
     now = time.time()
 else:
     from lancs_gridmon.pcap import PCAPSource
-    pcapsrc = PCAPSource(config['pcapfile'], config.get('pcaplim', None))
+    pcapsrc = PCAPSource(config['source']['pcap']['filename'],
+                         config['source']['pcap']['limit'])
     epoch = now = pcapsrc.get_start() - 60 * 20
     pass
 
 ## Prepare to convert hostnames into domains, according to a
 ## configuration file that will be reloaded if its timestamp changes.
-if config['domain_conf'] is None:
+if config['data']['domains']['filename'] is None:
     domcfg = None
 else:
-    domcfg = lancs_gridmon.domains.WatchingDomainDeriver(config['domain_conf'])
+    domcfg = lancs_gridmon.domains.WatchingDomainDeriver(
+        config['data']['domains']['filename'])
     pass
 
 ## Prepare to process summary messages.
-sum_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
-                                      schema=xrootd_summary_schema,
-                                      job='xrootd',
-                                      expiry=10*60)
+sum_wtr = metrics.RemoteMetricsWriter(
+    endpoint=config['destination']['push']['endpoint'],
+    schema=xrootd_summary_schema,
+    job='xrootd',
+    expiry=10*60)
 sum_proc = XRootDSummaryConverter(sum_wtr)
 
 ## Prepare to process detailed messages.
-det_wtr = metrics.RemoteMetricsWriter(endpoint=config['endpoint'],
-                                      schema=xrootd_detail_schema,
-                                      job='xrootd_detail',
-                                      expiry=10*60)
-det_rec = XRootDDetailRecorder(now, config['fake_log'], det_wtr,
+det_wtr = metrics.RemoteMetricsWriter(
+    endpoint=config['destination']['push']['endpoint'],
+    schema=xrootd_detail_schema,
+    job='xrootd_detail',
+    expiry=10*60)
+det_rec = XRootDDetailRecorder(now, config['destination']['log'], det_wtr,
                                epoch=epoch)
 det_proc = XRootDPeerManager(now,
                              det_rec.store_event,
                              det_rec.advance,
                              domains=domcfg,
                              epoch=epoch,
-                             fake_port=config['fake_port'],
-                             id_to_min=config['id_timeout_min'])
+                             fake_port=config['data']['fake_port'],
+                             id_to=config['data']['dictids']['timeout'])
 
 ## Rotate logs on SIGHUP.  This includes the access log generated from
 ## the detailed monitoring.
-apputils.prepare_log_rotation(config['log_params'], action=det_rec.relog)
+apputils.prepare_log_rotation(config['process']['log'], action=det_rec.relog)
 
 ## Receive detailed and summary messages on the same socket, and send
 ## them to the right processor.
 msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 
 if pcapsrc is None:
-    udp_srv = UDPServer((config['udp']['host'], config['udp']['port']),
+    udp_srv = UDPServer((config['source']['xrootd']['host'],
+                         config['source']['xrootd']['port']),
                         msg_fltr.datagram_handler())
     udp_srv.max_packet_size = 65536
 else:
@@ -196,11 +256,12 @@ else:
 ## shared mutable data.
 www_hist = metrics.MetricHistory(xrootd_summary_schema + xrootd_detail_schema,
                                  horizon=30)
-www_srv = HTTPServer((config['http']['host'], config['http']['port']),
+www_srv = HTTPServer((config['destination']['scrape']['host'],
+                      config['destination']['scrape']['port']),
                      www_hist.http_handler())
 www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 
-with apputils.ProcessIDFile(config['pidfile']):
+with apputils.ProcessIDFile(config['process']['id_filename']):
     www_thrd.start()
     logging.info('starting')
     try:
