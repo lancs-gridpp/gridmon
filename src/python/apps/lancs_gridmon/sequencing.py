@@ -58,9 +58,12 @@ class FixedSizeResequencer:
         self._cache = [ None ] * self._psz
         pass
 
+    ## How far ahead of _pseq is idx in the cycle?
     def __offset(self, idx):
         return (idx + self._psz - self._pseq) % self._psz
 
+    ## What is base + ln within the cycle?  base is assumed to be
+    ## within the cycle.  ln must be >= _psz.
     def __advance(self, base, ln):
         assert ln >= -self._psz
         return (base + ln + self._psz) % self._psz
