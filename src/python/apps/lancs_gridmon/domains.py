@@ -63,6 +63,7 @@ def derive_domain(text, rules):
 
 import os
 import yaml
+import logging
 
 class WatchingDomainDeriver:
     def __init__(self, filename):
@@ -75,6 +76,7 @@ class WatchingDomainDeriver:
         new_mtime = os.path.getmtime(self.filename)
         if self.rules is not None and new_mtime <= self.mtime:
             return
+        logging.info('opening %s for domains' % self.filename)
         with open(self.filename, 'r') as fh:
             self.rules = yaml.load(fh, Loader=yaml.SafeLoader)['domains']
             pass
