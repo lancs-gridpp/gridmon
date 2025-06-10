@@ -53,14 +53,14 @@ class FixedSizeResequencer:
         self._logpfx = logpfx
         self._init_expect = init_expect
 
-        self._pseq = None
-        self._plim = None
+        self._base = None
+        self._lim = None
         self._cache = [ None ] * self._psz
         pass
 
     ## How far ahead of _pseq is idx in the cycle?
     def __offset(self, idx):
-        return (idx + self._psz - self._pseq) % self._psz
+        return (idx + self._psz - self._base) % self._psz
 
     ## What is base + ln within the cycle?  base is assumed to be
     ## within the cycle.  ln must be >= _psz.
@@ -71,14 +71,14 @@ class FixedSizeResequencer:
     def submit(self, now, pseq, *args, **kwargs):
         if pseq < 0 or pseq >= self._psz:
             raise IndexError('pseq %d not in [0, %d)' % (pseq, self._psz))
-        if self._pseq is None:
+        if self._base is None:
             ## This is the very first entry.  Assume we've just missed
             ## a few before.
-            self._plim = self._pseq = self.__advance(pseq, -self._init_expect)
-            # logging.debug('%s ev=init pseq=%d plim=%d nseq=%d' %
-            #               (self._logpfx, self._pseq, self._plim, pseq))
+            self._lim = self._base = self.__advance(pseq, -self._init_expect)
+            # logging.debug('%s ev=init base=%d lim=%d nseq=%d' %
+            #               (self._logpfx, self._base, self._lim, pseq))
             pass
-        assert self.__offset(self._plim) <= self._pmax
+        assert self.__offset(self._lim) <= self._pmax
 
         ## Clear out expired expectations, and process any stored
         ## entries if they should be processed by now.  Stop if we
@@ -91,9 +91,9 @@ class FixedSizeResequencer:
         if self.__offset(pseq) >= self._pmax:
             ## There's still time to wait for missing packets.  This
             ## new one is suspiciously early, so drop it.
-            # logging.warning('%s ev=drop pseq=%d end=%d nseq=%d' %
-            #                 (self._logpfx, self._pseq,
-            #                  self.__advance(self._pseq, self._pmax),
+            # logging.warning('%s ev=drop base=%d end=%d nseq=%d' %
+            #                 (self._logpfx, self._base,
+            #                  self.__advance(self._base, self._pmax),
             #                  pseq))
             if self._drop is not None:
                 self._drop(now, pseq, *args, **kwargs);
@@ -102,15 +102,15 @@ class FixedSizeResequencer:
 
         ## Set expiries on missing entries just before this one.
         expiry = now + self._timeout
-        while self.__offset(self._plim) < self.__offset(pseq):
-            self._cache[self._plim] = expiry
-            # logging.debug('%s ev=to pseq=%d plim=%d exp=%d' %
-            #               (self._logpfx, self._pseq, self._plim, expiry - now))
-            self._plim = self.__advance(self._plim, 1)
+        while self.__offset(self._lim) < self.__offset(pseq):
+            self._cache[self._lim] = expiry
+            # logging.debug('%s ev=to base=%d lim=%d exp=%d' %
+            #               (self._logpfx, self._base, self._lim, expiry - now))
+            self._lim = self.__advance(self._lim, 1)
             continue
 
         ## Store the entry for later processing.
-        assert self.__offset(self._plim) < self._pmax
+        assert self.__offset(self._lim) < self._pmax
         assert self.__offset(pseq) <= self._pmax
         old = self._cache[pseq]
         self._cache[pseq] = (now, expiry, args, kwargs)
@@ -119,24 +119,24 @@ class FixedSizeResequencer:
             # logging.warning('%s ev=replace nseq=%d' % (self._logpfx, pseq))
             pass
 
-        if pseq == self._plim:
+        if pseq == self._lim:
             ## Step over the one we've just added.
-            self._plim = self.__advance(self._plim, 1)
-            assert self._cache[self._plim] is None
+            self._lim = self.__advance(self._lim, 1)
+            assert self._cache[self._lim] is None
             pass
 
-        # logging.debug('%s ev=exps pseq=%d plim=%d nseq=%d' %
-        #               (self._logpfx, self._pseq, self._plim, pseq))
-        assert self.__offset(self._plim) <= self._pmax
+        # logging.debug('%s ev=exps base=%d lim=%d nseq=%d' %
+        #               (self._logpfx, self._base, self._lim, pseq))
+        assert self.__offset(self._lim) <= self._pmax
 
         ## Decode all messages before any gaps that haven't expired.
         self.__clear(now)
 
         msg = ''
-        n = self.__offset(self._plim)
+        n = self.__offset(self._lim)
         assert n <= self._pmax
         for i in range(0, n):
-            sn = self.__advance(self._pseq, i)
+            sn = self.__advance(self._base, i)
             ce = self._cache[sn]
             if type(ce) is tuple:
                 ts, exp, oargs, okwargs = ce
@@ -149,20 +149,20 @@ class FixedSizeResequencer:
                 msg += str(min(9, int(ce - now)))
                 pass
             continue
-        # logging.debug('%s ev=win pseq=%d plim=%d pat="%s"' %
-        #               (self._logpfx, self._pseq, self._plim, msg))
+        # logging.debug('%s ev=win base=%d lim=%d pat="%s"' %
+        #               (self._logpfx, self._base, self._lim, msg))
         return
 
     def __clear(self, now, stop_if_early=False, cur=None):
-        # logging.debug('%s ev=clear pseq=%d plim=%d%s%s' %
-        #               (self._logpfx, self._pseq, self._plim,
+        # logging.debug('%s ev=clear base=%d lim=%d%s%s' %
+        #               (self._logpfx, self._base, self._lim,
         #                '' if cur is None else ' nseq=%d' % cur,
         #                ' early=yes' if stop_if_early else ''))
-        assert self.__offset(self._plim) <= self._pmax
+        assert self.__offset(self._lim) <= self._pmax
 
-        while self._pseq != self._plim and self._pseq != cur:
+        while self._base != self._lim and self._base != cur:
             adv = False
-            ce = self._cache[self._pseq]
+            ce = self._cache[self._base]
             assert ce is not None
 
             try:
@@ -171,19 +171,19 @@ class FixedSizeResequencer:
                     if stop_if_early and exp > now:
                         return
                     adv = True
-                    self._action(ts, self._pseq, *args, **kwargs);
+                    self._action(ts, self._base, *args, **kwargs);
                     pass
                 else:
                     if ce > now:
                         return
                     adv = True
                     if self._lost is not None:
-                        self._lost(ce, self._pseq)
+                        self._lost(ce, self._base)
                     pass
             finally:
                 if adv:
-                    self._cache[self._pseq] = None
-                    self._pseq = self.__advance(self._pseq, 1)
+                    self._cache[self._base] = None
+                    self._base = self.__advance(self._base, 1)
                     pass
                 pass
             continue
