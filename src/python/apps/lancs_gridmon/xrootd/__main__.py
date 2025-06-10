@@ -201,6 +201,7 @@ if config['process']['silent']:
 logging.basicConfig(**config['process']['log'])
 
 normalize_path(config['source']['pcap'], 'filename')
+normalize_path(config['destination'], 'log')
 normalize_path(config['data']['domains'], 'filename')
 normalize_path(config['process']['log'], 'filename')
 normalize_path(config['process'], 'id_filename')
