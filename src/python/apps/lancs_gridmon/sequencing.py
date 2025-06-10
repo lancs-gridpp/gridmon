@@ -44,97 +44,97 @@ class FixedSizeResequencer:
         if init_expect > window:
             raise IndexError('init_expect %d must <= window %d' %
                              (init_expect, window))
-        self.pmax = window
-        self.psz = scope
-        self.timeout = timeout
-        self.action = action
-        self.drop = drop
-        self.lost = lost
-        self.logpfx = logpfx
-        self.init_expect = init_expect
+        self._pmax = window
+        self._psz = scope
+        self._timeout = timeout
+        self._action = action
+        self._drop = drop
+        self._lost = lost
+        self._logpfx = logpfx
+        self._init_expect = init_expect
 
-        self.pseq = None
-        self.plim = None
-        self.cache = [ None ] * self.psz
+        self._pseq = None
+        self._plim = None
+        self._cache = [ None ] * self._psz
         pass
 
-    def _offset(self, idx):
-        return (idx + self.psz - self.pseq) % self.psz
+    def __offset(self, idx):
+        return (idx + self._psz - self._pseq) % self._psz
 
-    def _advance(self, base, ln):
-        assert ln >= -self.psz
-        return (base + ln + self.psz) % self.psz
+    def __advance(self, base, ln):
+        assert ln >= -self._psz
+        return (base + ln + self._psz) % self._psz
 
     def submit(self, now, pseq, *args, **kwargs):
-        if pseq < 0 or pseq >= self.psz:
-            raise IndexError('pseq %d not in [0, %d)' % (pseq, self.psz))
-        if self.pseq is None:
+        if pseq < 0 or pseq >= self._psz:
+            raise IndexError('pseq %d not in [0, %d)' % (pseq, self._psz))
+        if self._pseq is None:
             ## This is the very first entry.  Assume we've just missed
             ## a few before.
-            self.plim = self.pseq = self._advance(pseq, -self.init_expect)
+            self._plim = self._pseq = self.__advance(pseq, -self._init_expect)
             # logging.debug('%s ev=init pseq=%d plim=%d nseq=%d' %
-            #               (self.logpfx, self.pseq, self.plim, pseq))
+            #               (self._logpfx, self._pseq, self._plim, pseq))
             pass
-        assert self._offset(self.plim) <= self.pmax
+        assert self.__offset(self._plim) <= self._pmax
 
         ## Clear out expired expectations, and process any stored
         ## entries if they should be processed by now.  Stop if we
         ## encounter a missing entry that hasn't expired.  Stop if we
         ## meet the slot for our new entry; even if the entry has
         ## expired, let's shove it in.
-        #self._clear(now, stop_if_early=True, cur=pseq)
-        self._clear(now, stop_if_early=True)
+        #self.__clear(now, stop_if_early=True, cur=pseq)
+        self.__clear(now, stop_if_early=True)
 
-        if self._offset(pseq) >= self.pmax:
+        if self.__offset(pseq) >= self._pmax:
             ## There's still time to wait for missing packets.  This
             ## new one is suspiciously early, so drop it.
             # logging.warning('%s ev=drop pseq=%d end=%d nseq=%d' %
-            #                 (self.logpfx, self.pseq,
-            #                  self._advance(self.pseq, self.pmax),
+            #                 (self._logpfx, self._pseq,
+            #                  self.__advance(self._pseq, self._pmax),
             #                  pseq))
-            if self.drop is not None:
-                self.drop(now, pseq, *args, **kwargs);
+            if self._drop is not None:
+                self._drop(now, pseq, *args, **kwargs);
                 pass
             return
 
         ## Set expiries on missing entries just before this one.
-        expiry = now + self.timeout
-        while self._offset(self.plim) < self._offset(pseq):
-            self.cache[self.plim] = expiry
+        expiry = now + self._timeout
+        while self.__offset(self._plim) < self.__offset(pseq):
+            self._cache[self._plim] = expiry
             # logging.debug('%s ev=to pseq=%d plim=%d exp=%d' %
-            #               (self.logpfx, self.pseq, self.plim, expiry - now))
-            self.plim = self._advance(self.plim, 1)
+            #               (self._logpfx, self._pseq, self._plim, expiry - now))
+            self._plim = self.__advance(self._plim, 1)
             continue
 
         ## Store the entry for later processing.
-        assert self._offset(self.plim) < self.pmax
-        assert self._offset(pseq) <= self.pmax
-        old = self.cache[pseq]
-        self.cache[pseq] = (now, expiry, args, kwargs)
+        assert self.__offset(self._plim) < self._pmax
+        assert self.__offset(pseq) <= self._pmax
+        old = self._cache[pseq]
+        self._cache[pseq] = (now, expiry, args, kwargs)
         if type(old) is tuple:
             onow, oexpiry, oargs, okwargs = old
-            # logging.warning('%s ev=replace nseq=%d' % (self.logpfx, pseq))
+            # logging.warning('%s ev=replace nseq=%d' % (self._logpfx, pseq))
             pass
 
-        if pseq == self.plim:
+        if pseq == self._plim:
             ## Step over the one we've just added.
-            self.plim = self._advance(self.plim, 1)
-            assert self.cache[self.plim] is None
+            self._plim = self.__advance(self._plim, 1)
+            assert self._cache[self._plim] is None
             pass
 
         # logging.debug('%s ev=exps pseq=%d plim=%d nseq=%d' %
-        #               (self.logpfx, self.pseq, self.plim, pseq))
-        assert self._offset(self.plim) <= self.pmax
+        #               (self._logpfx, self._pseq, self._plim, pseq))
+        assert self.__offset(self._plim) <= self._pmax
 
         ## Decode all messages before any gaps that haven't expired.
-        self._clear(now)
+        self.__clear(now)
 
         msg = ''
-        n = self._offset(self.plim)
-        assert n <= self.pmax
+        n = self.__offset(self._plim)
+        assert n <= self._pmax
         for i in range(0, n):
-            sn = self._advance(self.pseq, i)
-            ce = self.cache[sn]
+            sn = self.__advance(self._pseq, i)
+            ce = self._cache[sn]
             if type(ce) is tuple:
                 ts, exp, oargs, okwargs = ce
                 msg += 'M'
@@ -147,19 +147,19 @@ class FixedSizeResequencer:
                 pass
             continue
         # logging.debug('%s ev=win pseq=%d plim=%d pat="%s"' %
-        #               (self.logpfx, self.pseq, self.plim, msg))
+        #               (self._logpfx, self._pseq, self._plim, msg))
         return
 
-    def _clear(self, now, stop_if_early=False, cur=None):
+    def __clear(self, now, stop_if_early=False, cur=None):
         # logging.debug('%s ev=clear pseq=%d plim=%d%s%s' %
-        #               (self.logpfx, self.pseq, self.plim,
+        #               (self._logpfx, self._pseq, self._plim,
         #                '' if cur is None else ' nseq=%d' % cur,
         #                ' early=yes' if stop_if_early else ''))
-        assert self._offset(self.plim) <= self.pmax
+        assert self.__offset(self._plim) <= self._pmax
 
-        while self.pseq != self.plim and self.pseq != cur:
+        while self._pseq != self._plim and self._pseq != cur:
             adv = False
-            ce = self.cache[self.pseq]
+            ce = self._cache[self._pseq]
             assert ce is not None
 
             try:
@@ -168,19 +168,19 @@ class FixedSizeResequencer:
                     if stop_if_early and exp > now:
                         return
                     adv = True
-                    self.action(ts, self.pseq, *args, **kwargs);
+                    self._action(ts, self._pseq, *args, **kwargs);
                     pass
                 else:
                     if ce > now:
                         return
                     adv = True
-                    if self.lost is not None:
-                        self.lost(ce, self.pseq)
+                    if self._lost is not None:
+                        self._lost(ce, self._pseq)
                     pass
             finally:
                 if adv:
-                    self.cache[self.pseq] = None
-                    self.pseq = self._advance(self.pseq, 1)
+                    self._cache[self._pseq] = None
+                    self._pseq = self.__advance(self._pseq, 1)
                     pass
                 pass
             continue
