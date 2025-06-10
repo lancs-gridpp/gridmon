@@ -99,6 +99,7 @@ class FixedSizeResequencer:
                 self._drop(now, pseq, *args, **kwargs);
                 pass
             return
+        assert self.__offset(pseq) < self._pmax
 
         ## Set expiries on missing entries just before this one.
         expiry = now + self._timeout
@@ -108,10 +109,11 @@ class FixedSizeResequencer:
             #               (self._logpfx, self._base, self._lim, expiry - now))
             self._lim = self.__advance(self._lim, 1)
             continue
+        assert self.__offset(self._lim) >= self.__offset(pseq)
 
         ## Store the entry for later processing.
-        assert self.__offset(self._lim) < self._pmax
-        assert self.__offset(pseq) <= self._pmax
+        assert self.__offset(self._lim) <= self._pmax
+        assert self.__offset(pseq) < self._pmax
         old = self._cache[pseq]
         self._cache[pseq] = (now, expiry, args, kwargs)
         if type(old) is tuple:
