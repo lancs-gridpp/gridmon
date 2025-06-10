@@ -53,6 +53,17 @@ from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 from lancs_gridmon.xrootd.summary import schema as xrootd_summary_schema
 import lancs_gridmon.domains
 
+def normalize_path(obj, key):
+    from os.path import expanduser as expand_user_path
+    if key not in obj:
+        return False
+    p = obj.get(key, None)
+    if p is None:
+        return False
+    p = expand_user_path(p)
+    obj[key] = p
+    return True
+
 def convert_duration(obj, key, *keys):
     from lancs_gridmon.timing import parse_duration
     pfx = [ key ] + list(keys)
@@ -188,6 +199,11 @@ if config['process']['silent']:
     pass
 
 logging.basicConfig(**config['process']['log'])
+
+normalize_path(config['source']['pcap'], 'filename')
+normalize_path(config['data']['domains'], 'filename')
+normalize_path(config['process']['log'], 'filename')
+normalize_path(config['process'], 'id_filename')
 
 epoch = 0
 if config['source']['pcap']['filename'] is None:
