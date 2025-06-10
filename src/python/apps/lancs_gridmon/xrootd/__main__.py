@@ -198,13 +198,13 @@ if config['process']['silent']:
     apputils.silence_output()
     pass
 
-logging.basicConfig(**config['process']['log'])
-
 normalize_path(config['source']['pcap'], 'filename')
 normalize_path(config['destination'], 'log')
 normalize_path(config['data']['domains'], 'filename')
 normalize_path(config['process']['log'], 'filename')
 normalize_path(config['process'], 'id_filename')
+
+logging.basicConfig(**config['process']['log'])
 
 epoch = 0
 if config['source']['pcap']['filename'] is None:
