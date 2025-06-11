@@ -159,7 +159,7 @@ class Recorder:
 
         while True:
             ## The horizon must be behind the next write epoch, but
-            ## not by more then the write interval.  Advance the write
+            ## not by more than the write interval.  Advance the write
             ## epoch until it is just ahead of the current horizon,
             ## populating the message with a copy of the metrics each
             ## time.
