@@ -106,10 +106,7 @@ def get_config(raw_args):
         'process': {
             'silent': False,
             'id_filename': None,
-            'log': {
-                'format': '%(asctime)s %(levelname)s %(message)s',
-                'datefmt': '%Y-%m-%dT%H:%M:%S',
-            },
+            'log': apputils.default_log_config(),
         },
         'data': {
             'horizon': '30m', ## in use?
@@ -205,8 +202,6 @@ normalize_path(config['destination'], 'log')
 normalize_path(config['data']['domains'], 'filename')
 normalize_path(config['process']['log'], 'filename')
 normalize_path(config['process'], 'id_filename')
-
-logging.basicConfig(**config['process']['log'])
 
 epoch = 0
 if config['source']['pcap']['filename'] is None:

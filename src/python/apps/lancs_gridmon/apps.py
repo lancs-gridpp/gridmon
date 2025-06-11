@@ -34,6 +34,7 @@ import os
 import sys
 import logging
 import signal
+import time
 
 def silence_output():
     ## Mainly for use with cron, send stdout and stderr to /dev/null.
@@ -44,7 +45,14 @@ def silence_output():
         pass
     pass
 
+def default_log_config():
+    return {
+        'format': '%(asctime)s %(levelname)s %(message)s',
+        'datefmt': '%Y-%m-%dT%H:%M:%SZ',
+    }
+
 def prepare_log_rotation(config, action=None):
+    logging.Formatter.converter = time.gmtime
     logging.basicConfig(**config)
     if 'filename' in config:
         def handler(signum, frame):
