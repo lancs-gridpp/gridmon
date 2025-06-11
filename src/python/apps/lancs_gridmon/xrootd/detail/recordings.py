@@ -191,6 +191,9 @@ class Recorder:
             continue
 
         ## Send the message, if it's not empty.
+        if len(data) > 0:
+            logging.info('xrootd monitor writing %s' % list(data.keys()))
+            pass
         self._writer.install(data)
         return
 
