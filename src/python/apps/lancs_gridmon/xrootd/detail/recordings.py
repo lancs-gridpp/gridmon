@@ -73,8 +73,7 @@ class Recorder:
 
         ## We generate a 'fake' log based on various events.
         self._log_name = logname
-        self._out = open(self._log_name, "a")
-        self.log(self._t0 / 1000, 'start')
+        self._out = None
         pass
 
     ## Re-open the fake log for appending, and replace our stream's FD
@@ -90,6 +89,13 @@ class Recorder:
     def log(self, ts, msg):
         tst = datetime.utcfromtimestamp(ts).isoformat('T', 'milliseconds')
         self._out.write('%s %s\n' % (tst, msg))
+        pass
+
+    def start(self):
+        if self._out is None:
+            self._out = open(self._log_name, "a")
+            self.log(self._t0 / 1000, 'start')
+            pass
         pass
 
     def store_event(self, pgm, host, inst, ts, ev, params, ctxt):

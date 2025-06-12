@@ -278,6 +278,7 @@ www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 with apputils.ProcessIDFile(config['process']['id_filename']):
     www_thrd.start()
     logging.info('starting')
+    det_rec.start()
     try:
         udp_srv.serve_forever()
         det_rec.advance_to_clear()
