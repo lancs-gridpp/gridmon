@@ -96,6 +96,42 @@ schema = [
     },
 
     {
+        'base': 'xrootd_tpc_failure',
+        'type': 'counter',
+        'help': 'failed third-party copies',
+        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+                              for pgm in e
+                              for h in e[pgm]
+                              for i in e[pgm][h]
+                              if 'tpc' in e[pgm][h][i]
+                              for dire in e[pgm][h][i]['tpc']
+                              for ipv in e[pgm][h][i]['tpc'][dire]
+                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
+                              for nstr in e[pgm][h][i]['tpc'][dire][ipv] \
+                              [prot]
+                              for cdom in e[pgm][h][i]['tpc'][dire][ipv] \
+                              [prot][nstr]
+                              for pdom in e[pgm][h][i]['tpc'][dire][ipv] \
+                              [prot][nstr][cdom] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
+                       [t[4]][t[5]][t[6]][t[7]][t[8]]['failure']['value']),
+            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
+                         [t[4]][t[5]][t[6]][t[7]][t[8]]['failure']['zero']),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0]),
+            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
+            'direction': ('%s', lambda t, d: t[3]),
+            'ip_version': ('%s', lambda t, d: t[4]),
+            'protocol': ('%s', lambda t, d: t[5]),
+            'streams': ('%s', lambda t, d: t[6]),
+            'commander_domain': ('%s', lambda t, d: t[7]),
+            'peer_domain': ('%s', lambda t, d: t[8]),
+        },
+    },
+
+    {
         'base': 'xrootd_tpc_success',
         'type': 'counter',
         'help': 'successful third-party copies',

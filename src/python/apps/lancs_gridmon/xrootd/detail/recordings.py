@@ -261,12 +261,15 @@ class Recorder:
                                     .setdefault(params['peer_domain'], {
                                         'count': dict(),
                                         'success': dict(),
+                                        'failure': dict(),
                                         'volume': dict(),
                                         'duration': dict(),
                                     })
                     self.__inc(t1, substats['count'], 1)
                     self.__inc(t1, substats['success'],
                                1 if params['rc'] == 0 else 0)
+                    self.__inc(t1, substats['failure'],
+                               1 if params['rc'] != 0 else 0)
                     self.__inc(t1, substats['volume'], params['size'])
                     self.__inc(t1, substats['duration'], params['duration'])
                 elif ev == 'disconnect' and \
