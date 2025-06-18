@@ -222,7 +222,8 @@ class Peer:
 
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
-    ## resequencing.
+    ## resequencing.  Return true if the supplied data was neither
+    ## used nor logged.
     def process(self, now, pseq, typ, data):
         if typ in [ 'mapping', 'traces', 'rstream' ]:
             ## All mapping, trace and rstream messages belong to the
@@ -235,8 +236,7 @@ class Peer:
                 data['sid'] if typ == 'rstream' else \
                 data['info']['sid']
             #self.__debug('type=%s sn=%d sid=%012x', typ, pseq, sid)
-            self.__get_map_resequencer(sid).submit(now, pseq, typ, data)
-            return
+            return self.__get_map_resequencer(sid).submit(now, pseq, typ, data)
 
         if typ == 'file':
             ## The first entry must be a timing mark, and includes the
@@ -251,8 +251,7 @@ class Peer:
             ## resequencing.  Submitting to the resequencer results in
             ## a potentially deferred call to
             ## self.__file_event_sequenced(sid, now, pseq, data).
-            self.__get_file_resequencer(sid).submit(now, pseq, data)
-            return
+            return self.__get_file_resequencer(sid).submit(now, pseq, data)
 
         if typ == 'gstream':
             ## 'gstream' messages need their own resequencing.
@@ -260,11 +259,10 @@ class Peer:
             ## deferred call to self.__gstream_event_sequenced(sid,
             ## now, pseq, data).
             sid = data['sid']
-            self.__get_gstream_resequencer(sid).submit(now, pseq, data)
-            return
+            return self.__get_gstream_resequencer(sid).submit(now, pseq, data)
 
         self.__warning('ev=unh type=%s sn=%d data=%s', typ, pseq, data)
-        return
+        return True
 
     def __schedule_record(self, ts, ev, data, ctxt={}):
         if self._inst is None or self._host is None or self._pgm is None:

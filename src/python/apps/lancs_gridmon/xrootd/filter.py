@@ -34,6 +34,7 @@ from socketserver import DatagramRequestHandler
 import functools
 import time
 import xml
+import logging
 from defusedxml import ElementTree
 from lancs_gridmon.xrootd.detail.parsing import decode_message \
     as decode_detailed_message
@@ -56,7 +57,10 @@ class XRootDFilter:
 
         def handle(self):
             now = time.time()
-            self._rcvr.process(now, self.client_address, self.request[0])
+            if self._rcvr.process(now, self.client_address, self.request[0]):
+                logging.warning('unparsed from %s:%d: %s' % \
+                                (self.client_address + (self.request[0],)))
+                pass
             pass
 
         pass
@@ -68,18 +72,17 @@ class XRootDFilter:
         ## Attempt to parse the data as XML.  If it fails to parse,
         ## let it be interpreted as a detailed message.  Pass the
         ## parsed data on to the right function, along with a
-        ## timestamp and the source address.
+        ## timestamp and the source address.  Return true if the
+        ## datagram was neither interpreted nor logged.
         try:
             tree = ElementTree.fromstring(dgram)
-            self._proc_sum(ts, addr, tree)
-            return
+            return self._proc_sum(ts, addr, tree)
         except xml.etree.ElementTree.ParseError:
             pass
         dm = decode_detailed_message(ts, addr, dgram)
         if dm is not None:
-            self._proc_det(dm)
-            pass
-        pass
+            return self._proc_det(dm)
+        return True
 
     pass
 

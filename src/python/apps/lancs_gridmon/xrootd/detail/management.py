@@ -95,6 +95,8 @@ class PeerManager:
             continue
         return
 
+    ## Return true if the supplied datagram was not fully accepted and
+    ## not logged.
     def process(self, dgram):
         try:
             now = dgram['ts']
@@ -124,11 +126,11 @@ class PeerManager:
                 self.check_identity()
             elif stod < peer.stod:
                 ## Ignore messages from old instances.
-                return
+                return True
 
             ## Submit the message to be incorporated into the peer
             ## record.
-            peer.process(now, pseq, typ, data)
+            return peer.process(now, pseq, typ, data)
         except Exception as e:
             logging.error('error processing %s' % dgram)
             raise e
@@ -141,6 +143,6 @@ class PeerManager:
                 pass
             self._adv(now)
             pass
-        return
+        pass
 
     pass

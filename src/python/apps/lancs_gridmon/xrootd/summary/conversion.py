@@ -37,6 +37,7 @@ class MetricConverter:
         self._hist = hist
         pass
 
+    ## Return true if the supplied data was neither used nor logged.
     def convert(self, ts, addr, tree):
         pgm = tree.attrib['pgm']
 
@@ -57,13 +58,13 @@ class MetricConverter:
         ## Get an instance identifier.
         blk = stats.get('info')
         if blk is None:
-            logging.warning('no info from %s:%d' % addr)
-            return
+            logging.warning('summary from %s:%d lacks <info>' % addr)
+            return False
         host = blk.find('host').text
         name = blk.find('name').text
         inst = (host, name, pgm)
-        logging.info('instance %s:%s@%s from %s:%d' %
-                     ((pgm, name, host) + addr))
+        logging.info('summary from %s:%d %s:%s@%s okay' %
+                     (addr + (pgm, name, host)))
 
         ## Extract other metadata.
         port = int(blk.find('port').text)
@@ -205,6 +206,6 @@ class MetricConverter:
         ## Get the entry we want to populate, indexed by timestamp and
         ## by (host, name).
         self._hist.install( { timestamp: { inst: data } } )
-        return
+        return False
 
     pass

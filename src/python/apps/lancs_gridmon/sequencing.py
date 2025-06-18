@@ -68,6 +68,7 @@ class FixedSizeResequencer:
         assert ln >= -self._psz
         return (base + ln + self._psz) % self._psz
 
+    ## Return true if the supplied data was neither used nor logged.
     def submit(self, now, pseq, *args, **kwargs):
         if pseq < 0 or pseq >= self._psz:
             raise IndexError('pseq %d not in [0, %d)' % (pseq, self._psz))
@@ -97,8 +98,8 @@ class FixedSizeResequencer:
             #                  pseq))
             if self._drop is not None:
                 self._drop(now, pseq, *args, **kwargs);
-                pass
-            return
+                return False
+            return True
         assert self.__offset(pseq) < self._pmax
 
         ## Set expiries on missing entries just before this one.
@@ -153,7 +154,7 @@ class FixedSizeResequencer:
             continue
         # logging.debug('%s ev=win base=%d lim=%d pat="%s"' %
         #               (self._logpfx, self._base, self._lim, msg))
-        return
+        return False
 
     def __clear(self, now, stop_if_early=False, cur=None):
         # logging.debug('%s ev=clear base=%d lim=%d%s%s' %
