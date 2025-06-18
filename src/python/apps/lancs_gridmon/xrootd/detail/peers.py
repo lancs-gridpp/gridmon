@@ -173,7 +173,7 @@ class Peer:
         seq = self._map_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 32,
+        seq = Resequencer(256, 128,
                           functools.partial(self.__mapping_sequenced, sid),
                           timeout=self._seq_to,
                           logpfx='peer=%s:%d seq=map sid=%012x' %
@@ -185,7 +185,7 @@ class Peer:
         seq = self._file_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 32,
+        seq = Resequencer(256, 128,
                           functools.partial(self.__file_event_sequenced, sid),
                           timeout=self._seq_to,
                           logpfx='peer=%s:%d seq=file sid=%012x' %
@@ -197,7 +197,7 @@ class Peer:
         seq = self._gstream_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 32,
+        seq = Resequencer(256, 128,
                           functools.partial(self.__gstream_event_sequenced, sid),
                           timeout=self._seq_to,
                           logpfx='peer=%s:%d seq=gstream sid=%012x' %
