@@ -176,10 +176,15 @@ class Peer:
         seq = Resequencer(256, 128,
                           functools.partial(self.__mapping_sequenced, sid),
                           timeout=self._seq_to,
+                          drop=self.__drop_mapping,
                           logpfx='peer=%s:%d seq=map sid=%012x' %
                           (self.addr + (sid,)))
         self._map_reseqs[sid] = seq
         return seq
+
+    def __drop_mapping(self, now, pseq, typ, data):
+        self.__info('drop-map pseq=%d typ=%s data=%s' % (pseq, typ, data))
+        pass
 
     def __get_file_resequencer(self, sid):
         seq = self._file_reseqs.get(sid)
@@ -188,10 +193,15 @@ class Peer:
         seq = Resequencer(256, 128,
                           functools.partial(self.__file_event_sequenced, sid),
                           timeout=self._seq_to,
+                          drop=self.__drop_file,
                           logpfx='peer=%s:%d seq=file sid=%012x' %
                           (self.addr + (sid,)))
         self._file_reseqs[sid] = seq
         return seq
+
+    def __drop_file(self, now, pseq, data):
+        self.__info('drop-file pseq=%d data=%s' % (pseq, data))
+        pass
 
     def __get_gstream_resequencer(self, sid):
         seq = self._gstream_reseqs.get(sid)
@@ -200,10 +210,15 @@ class Peer:
         seq = Resequencer(256, 128,
                           functools.partial(self.__gstream_event_sequenced, sid),
                           timeout=self._seq_to,
+                          drop=self.__drop_gstream,
                           logpfx='peer=%s:%d seq=gstream sid=%012x' %
                           (self.addr + (sid,)))
         self._gstream_reseqs[sid] = seq
         return seq
+
+    def __drop_gstream(self, now, pseq, data):
+        self.__info('drop-gstream pseq=%d data=%s' % (pseq, data))
+        pass
 
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
