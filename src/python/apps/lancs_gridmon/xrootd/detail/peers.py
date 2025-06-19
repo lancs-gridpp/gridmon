@@ -182,8 +182,9 @@ class Peer:
         self._map_reseqs[sid] = seq
         return seq
 
-    def __drop_mapping(self, now, pseq, typ, data):
-        self.__info('drop-map pseq=%d typ=%s data=%s' % (pseq, typ, data))
+    def __drop_mapping(self, now, base, lim, pseq, typ, data):
+        self.__info('ev=drop-map pseq=%d base=%d lim=%d typ=%s data=%s' % \
+                    (pseq, base, lim, typ, data))
         pass
 
     def __get_file_resequencer(self, sid):
@@ -199,8 +200,9 @@ class Peer:
         self._file_reseqs[sid] = seq
         return seq
 
-    def __drop_file(self, now, pseq, data):
-        self.__info('drop-file pseq=%d data=%s' % (pseq, data))
+    def __drop_file(self, now, base, lim, pseq, data):
+        self.__info('drop-file pseq=%d base=%d lim=%d data=%s' % \
+                    (pseq, base, lim, data))
         pass
 
     def __get_gstream_resequencer(self, sid):
@@ -216,8 +218,9 @@ class Peer:
         self._gstream_reseqs[sid] = seq
         return seq
 
-    def __drop_gstream(self, now, pseq, data):
-        self.__info('drop-gstream pseq=%d data=%s' % (pseq, data))
+    def __drop_gstream(self, now, base, lim, pseq, data):
+        self.__info('drop-gstream pseq=%d base=%d lim=%d data=%s' % \
+                    (pseq, base, lim, data))
         pass
 
     ## Accept a decoded packet for processing.  This usually means

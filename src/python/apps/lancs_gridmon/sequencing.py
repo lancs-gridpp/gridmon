@@ -97,7 +97,8 @@ class FixedSizeResequencer:
             #                  self.__advance(self._base, self._pmax),
             #                  pseq))
             if self._drop is not None:
-                self._drop(now, pseq, *args, **kwargs);
+                self._drop(now, self._base, self.__offset(self._pmax),
+                           pseq, *args, **kwargs);
                 return False
             return True
         assert self.__offset(pseq) < self._pmax
