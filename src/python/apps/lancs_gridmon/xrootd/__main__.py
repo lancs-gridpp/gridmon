@@ -109,7 +109,7 @@ def get_config(raw_args):
             'log': apputils.default_log_config(),
         },
         'data': {
-            'horizon': '30m', ## in use?
+            'horizon': '5m',
             'fake_port': None,
             'dictids': {
                 'timeout': '2h',
@@ -243,7 +243,8 @@ det_wtr = metrics.RemoteMetricsWriter(
     job=config['destination']['push']['detail_job'],
     expiry=10*60)
 det_rec = XRootDDetailRecorder(now, config['destination']['log'], det_wtr,
-                               epoch=epoch)
+                               epoch=epoch,
+                               horizon=config['data']['horizon'])
 det_proc = XRootDPeerManager(now,
                              det_rec.store_event,
                              det_rec.advance,
