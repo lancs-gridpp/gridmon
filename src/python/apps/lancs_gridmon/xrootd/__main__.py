@@ -114,6 +114,10 @@ def get_config(raw_args):
             'dictids': {
                 'timeout': '2h',
             },
+            'sequencing': {
+                "window": 240,
+                "timeout": '750ms',
+            },
             'domains': {
                 'filename': None,
             },
@@ -178,6 +182,7 @@ def get_config(raw_args):
         continue
 
     convert_duration(config, 'data', 'dictids', 'timeout')
+    convert_duration(config, 'data', 'sequencing', 'timeout')
     convert_duration(config, 'data', 'horizon')
     if 'level' in config['process']['log']:
         if isinstance(config['process']['log']['level'], str):
@@ -245,7 +250,9 @@ det_proc = XRootDPeerManager(now,
                              domains=domcfg,
                              epoch=epoch,
                              fake_port=config['data']['fake_port'],
-                             id_to=config['data']['dictids']['timeout'])
+                             id_to=config['data']['dictids']['timeout'],
+                             seq_to=config['data']['sequencing']['timeout'],
+                             seq_win=config['data']['sequencing']['window'])
 
 ## Rotate logs on SIGHUP.  This includes the access log generated from
 ## the detailed monitoring.

@@ -39,7 +39,7 @@ from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
-                 fake_port=None):
+                 fake_port=None, seq_window=128):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -47,6 +47,7 @@ class Peer:
 
         """
 
+        self._seq_win = seq_window
         self._fake_port = fake_port
         self._epoch = epoch
         self._mgr = mgr
@@ -173,7 +174,7 @@ class Peer:
         seq = self._map_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 128,
+        seq = Resequencer(256, self._seq_win,
                           functools.partial(self.__mapping_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_mapping,
@@ -191,7 +192,7 @@ class Peer:
         seq = self._file_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 128,
+        seq = Resequencer(256, self._seq_win,
                           functools.partial(self.__file_event_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_file,
@@ -209,7 +210,7 @@ class Peer:
         seq = self._gstream_reseqs.get(sid)
         if seq is not None:
             return seq
-        seq = Resequencer(256, 128,
+        seq = Resequencer(256, self._seq_win,
                           functools.partial(self.__gstream_event_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_gstream,
