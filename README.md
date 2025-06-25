@@ -48,19 +48,20 @@ For example:
 ```
 scrape_configs:
   - job_name: 'alerts'
+    scrape_interval: 15s
     static_configs:
       - targets:
           - 'localhost:9093'
   - job_name: 'statics'
-    scrape_interval: 15s
-    metrics_path: '/ip.metrics'
+    scrape_interval: 1m
     static_configs:
       - targets:
-          - 'localhost:80'
+          - 'localhost:9363'
 ```
 
-The second entry specifies that `http://localhost:80/ip.metrics` is to be fetched every 15 seconds.
-`metrics_path` is `/metrics` by default, so the first entry fetches `http://localhost:9093/metrics` at whatever the default interval is.
+The first entry causes `http://localhost:9093/metrics` to be fetched every 15 seconds.
+These metrics will have a `job` label of `alerts`.
+The second entry causes `http://localhost:9363/metrics` to be fetched every minute, with a `job` label of `statics`.
 
 
 ### Remote-write
