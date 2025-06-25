@@ -66,10 +66,19 @@ The second entry causes `http://localhost:9363/metrics` to be fetched every minu
 
 ### Remote-write
 
-There doesn't seem to be much authoritative-looking documentation on this, but there might be a [specification](https://docs.google.com/document/d/1LPhVRSFkGNSuU1fBd81ulhsCPR4hkSZyyBj1SZ8fWOM/edit#).
-Prometheus needs to run with `--enable-feature=remote-write-receiver` to enable such an endpoint, which is at `/api/v1/write` on port 9090 by default.
-For example, a typical endpoint might be `http://localhost:9090/api/v1/write`.
+At the time of writing the code, there didn't seem to be much authoritative-looking documentation on the Prometheus Remote-Write interface.
+The code was based on this [draft specification](https://docs.google.com/document/d/1LPhVRSFkGNSuU1fBd81ulhsCPR4hkSZyyBj1SZ8fWOM/edit#), but versions [1.0](https://prometheus.io/docs/specs/prw/remote_write_spec/) and [2.0](https://prometheus.io/docs/specs/prw/remote_write_spec_2_0/) have since been released.
 
+Prometheus needs to run with `--enable-feature=remote-write-receiver` to enable a remote-write endpoint, which is at `/api/v1/write` on port 9090 by default.
+For example, a typical endpoint might be `http://localhost:9090/api/v1/write`, and must be given to the applications through various means:
+
+| application | switch | YAML |
+|-------------|--------|------|
+| `perfsonar-stats` | `-M` | N/A |
+| `xrootd-monitor` | `-E` | `destination.push.endpoint` |
+| `xrootd-stats` | `-E` | N/A |
+| `xrootd-detail` | `-M` | N/A |
+| `cephhealth-export` | `-M` | N/A |
 
 ## Domain information
 
