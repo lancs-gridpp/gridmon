@@ -1013,7 +1013,7 @@ class Detailer:
             self.release_events(now - self.horizon)
             if now - self.write_ts > self.write_interval:
                 now_key = self.event_limit / 1000
-                data = { now_key: self.stats }
+                data = { now_key: { 'detail': self.stats } }
                 # print('stats: %s' % self.stats)
                 self.rmw.install(data)
                 self.write_ts = now

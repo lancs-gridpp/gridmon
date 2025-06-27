@@ -35,20 +35,22 @@ schema = [
         'base': 'xrootd_redirection',
         'type': 'counter',
         'help': 'redirections',
-        'select': lambda e: [ (pgm, h, i, ipv, prot, h2, p2)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'redir' in e[pgm][h][i]
-                              for ipv in e[pgm][h][i]['redir']
-                              for prot in e[pgm][h][i]['redir'][ipv]
-                              for h2 in e[pgm][h][i]['redir'][ipv][prot]
-                              for p2 in e[pgm][h][i]['redir'][ipv][prot][h2] ],
+        'select': lambda e: [
+            (pgm, h, i, ipv, prot, h2, p2)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'redir' in e['detail'][pgm][h][i]
+            for ipv in e['detail'][pgm][h][i]['redir']
+            for prot in e['detail'][pgm][h][i]['redir'][ipv]
+            for h2 in e['detail'][pgm][h][i]['redir'][ipv][prot]
+            for p2 in e['detail'][pgm][h][i]['redir'][ipv][prot][h2]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['redir'] \
-                       [t[3]][t[4]][t[5]][t[6]]['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['redir'] \
-                         [t[3]][t[4]][t[5]][t[6]]['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['redir'][t[3]][t[4]][t[5]][t[6]]['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['redir'][t[3]][t[4]][t[5]][t[6]]['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -64,24 +66,28 @@ schema = [
         'base': 'xrootd_tpc',
         'type': 'counter',
         'help': 'third-party copies',
-        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'tpc' in e[pgm][h][i]
-                              for dire in e[pgm][h][i]['tpc']
-                              for ipv in e[pgm][h][i]['tpc'][dire]
-                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
-                              for nstr in e[pgm][h][i]['tpc'][dire][ipv][prot]
-                              for cdom in e[pgm][h][i]['tpc'][dire][ipv][prot] \
-                              [nstr]
-                              for pdom in e[pgm][h][i]['tpc'][dire][ipv][prot] \
-                              [nstr][cdom] ],
+        'select': lambda e: [
+            (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'tpc' in e['detail'][pgm][h][i]
+            for dire in e['detail'][pgm][h][i]['tpc']
+            for ipv in e['detail'][pgm][h][i]['tpc'][dire]
+            for prot in e['detail'][pgm][h][i]['tpc'][dire][ipv]
+            for nstr in e['detail'][pgm][h][i]['tpc'][dire][ipv][prot]
+            for cdom in e['detail'][pgm][h][i]['tpc'][dire][ipv][prot] \
+            [nstr]
+            for pdom in e['detail'][pgm][h][i]['tpc'][dire][ipv][prot] \
+            [nstr][cdom]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                       [t[4]][t[5]][t[6]][t[7]][t[8]]['count']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                         [t[4]][t[5]][t[6]][t[7]][t[8]]['count']['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                       ['count']['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                         ['count']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -99,25 +105,29 @@ schema = [
         'base': 'xrootd_tpc_failure',
         'type': 'counter',
         'help': 'failed third-party copies',
-        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'tpc' in e[pgm][h][i]
-                              for dire in e[pgm][h][i]['tpc']
-                              for ipv in e[pgm][h][i]['tpc'][dire]
-                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
-                              for nstr in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot]
-                              for cdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr]
-                              for pdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr][cdom] ],
+        'select': lambda e: [
+            (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'tpc' in e['detail'][pgm][h][i]
+            for dire in e['detail'][pgm][h][i]['tpc']
+            for ipv in e['detail'][pgm][h][i]['tpc'][dire]
+            for prot in e['detail'][pgm][h][i]['tpc'][dire][ipv]
+            for nstr in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot]
+            for cdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr]
+            for pdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr][cdom]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                       [t[4]][t[5]][t[6]][t[7]][t[8]]['failure']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                         [t[4]][t[5]][t[6]][t[7]][t[8]]['failure']['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                       ['failure']['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                         ['failure']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -135,25 +145,29 @@ schema = [
         'base': 'xrootd_tpc_success',
         'type': 'counter',
         'help': 'successful third-party copies',
-        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'tpc' in e[pgm][h][i]
-                              for dire in e[pgm][h][i]['tpc']
-                              for ipv in e[pgm][h][i]['tpc'][dire]
-                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
-                              for nstr in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot]
-                              for cdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr]
-                              for pdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr][cdom] ],
+        'select': lambda e: [
+            (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'tpc' in e['detail'][pgm][h][i]
+            for dire in e['detail'][pgm][h][i]['tpc']
+            for ipv in e['detail'][pgm][h][i]['tpc'][dire]
+            for prot in e['detail'][pgm][h][i]['tpc'][dire][ipv]
+            for nstr in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot]
+            for cdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr]
+            for pdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr][cdom]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                       [t[4]][t[5]][t[6]][t[7]][t[8]]['success']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                         [t[4]][t[5]][t[6]][t[7]][t[8]]['success']['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                       ['success']['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                         ['success']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -172,25 +186,29 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'volume transferred by third-party copies',
-        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'tpc' in e[pgm][h][i]
-                              for dire in e[pgm][h][i]['tpc']
-                              for ipv in e[pgm][h][i]['tpc'][dire]
-                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
-                              for nstr in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot]
-                              for cdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr]
-                              for pdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr][cdom] ],
+        'select': lambda e: [
+            (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'tpc' in e['detail'][pgm][h][i]
+            for dire in e['detail'][pgm][h][i]['tpc']
+            for ipv in e['detail'][pgm][h][i]['tpc'][dire]
+            for prot in e['detail'][pgm][h][i]['tpc'][dire][ipv]
+            for nstr in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot]
+            for cdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr]
+            for pdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr][cdom]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                       [t[4]][t[5]][t[6]][t[7]][t[8]]['volume']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                         [t[4]][t[5]][t[6]][t[7]][t[8]]['volume']['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                       ['volume']['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                         ['volume']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -209,25 +227,29 @@ schema = [
         'type': 'counter',
         'unit': 'seconds',
         'help': 'time spent on third-party copies',
-        'select': lambda e: [ (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
-                              for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'tpc' in e[pgm][h][i]
-                              for dire in e[pgm][h][i]['tpc']
-                              for ipv in e[pgm][h][i]['tpc'][dire]
-                              for prot in e[pgm][h][i]['tpc'][dire][ipv]
-                              for nstr in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot]
-                              for cdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr]
-                              for pdom in e[pgm][h][i]['tpc'][dire][ipv] \
-                              [prot][nstr][cdom] ],
+        'select': lambda e: [
+            (pgm, h, i, dire, ipv, prot, nstr, cdom, pdom)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'tpc' in e['detail'][pgm][h][i]
+            for dire in e['detail'][pgm][h][i]['tpc']
+            for ipv in e['detail'][pgm][h][i]['tpc'][dire]
+            for prot in e['detail'][pgm][h][i]['tpc'][dire][ipv]
+            for nstr in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot]
+            for cdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr]
+            for pdom in e['detail'][pgm][h][i]['tpc'][dire][ipv] \
+            [prot][nstr][cdom]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                       [t[4]][t[5]][t[6]][t[7]][t[8]]['duration']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]]['tpc'][t[3]] \
-                         [t[4]][t[5]][t[6]][t[7]][t[8]]['duration']['zero']),
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                       ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                       ['duration']['value']),
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
+                         ['tpc'][t[3]][t[4]][t[5]][t[6]][t[7]][t[8]] \
+                         ['duration']['zero']),
         },
         'attrs': {
             'pgm': ('%s', lambda t, d: t[0]),
@@ -245,15 +267,18 @@ schema = [
         'base': 'xrootd_dictid_skip',
         'type': 'counter',
         'help': 'dictids skipped over',
-        'select': lambda e: [ (pgm, h, i) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'dicts' in e[pgm][h][i]
-                              if 'skip' in e[pgm][h][i]['dicts'] ],
+        'select': lambda e: [
+            (pgm, h, i)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'dicts' in e['detail'][pgm][h][i]
+            if 'skip' in e['detail'][pgm][h][i]['dicts']
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['dicts']['skip']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['dicts']['skip']['zero']),
         },
         'attrs': {
@@ -266,17 +291,20 @@ schema = [
         'base': 'xrootd_dictid_unknown',
         'type': 'counter',
         'help': 'undefined referenced dictids',
-        'select': lambda e: [ (pgm, h, i, rec, f) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'dicts' in e[pgm][h][i]
-                              if 'unk' in e[pgm][h][i]['dicts']
-                              for rec in e[pgm][h][i]['dicts']['unk']
-                              for f in e[pgm][h][i]['dicts']['unk'][rec] ],
+        'select': lambda e: [
+            (pgm, h, i, rec, f)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'dicts' in e['detail'][pgm][h][i]
+            if 'unk' in e['detail'][pgm][h][i]['dicts']
+            for rec in e['detail'][pgm][h][i]['dicts']['unk']
+            for f in e['detail'][pgm][h][i]['dicts']['unk'][rec]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['dicts']['unk'][t[3]][t[4]]['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['dicts']['unk'][t[3]][t[4]]['zero']),
         },
         'attrs': {
@@ -292,17 +320,20 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes received per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'write' in e[pgm][h][i]['prot'][pro][d] ],
+        'select': lambda e: [
+            (pgm, h, i, pro, d)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'write' in e['detail'][pgm][h][i]['prot'][pro][d]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['prot'][t[3]][t[4]]['write']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['prot'][t[3]][t[4]]['write']['zero']),
         },
         'attrs': {
@@ -318,17 +349,19 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'read' in e[pgm][h][i]['prot'][pro][d] ],
+        'select': lambda e: [
+            (pgm, h, i, pro, d)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'read' in e['detail'][pgm][h][i]['prot'][pro][d] ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['prot'][t[3]][t[4]]['read']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['prot'][t[3]][t[4]]['read']['zero']),
         },
         'attrs': {
@@ -344,17 +377,20 @@ schema = [
         'type': 'counter',
         'unit': 'bytes',
         'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'readv' in e[pgm][h][i]['prot'][pro][d] ],
+        'select': lambda e: [
+            (pgm, h, i, pro, d)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'readv' in e['detail'][pgm][h][i]['prot'][pro][d]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['prot'][t[3]][t[4]]['readv']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['prot'][t[3]][t[4]]['readv']['zero']),
         },
         'attrs': {
@@ -369,17 +405,20 @@ schema = [
         'base': 'xrootd_data_closes',
         'type': 'counter',
         'help': 'number of closes',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'closes' in e[pgm][h][i]['prot'][pro][d] ],
+        'select': lambda e: [
+            (pgm, h, i, pro, d)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'closes' in e['detail'][pgm][h][i]['prot'][pro][d]
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['prot'][t[3]][t[4]]['closes']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['prot'][t[3]][t[4]]['closes']['zero']),
         },
         'attrs': {
@@ -395,19 +434,20 @@ schema = [
         'type': 'counter',
         'help': 'number of forced closes',
         'select': lambda e: [
-            (pgm, h, i, pro, d) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'forced-closes' in e[pgm][h][i]['prot'][pro][d] and \
-            'value' in e[pgm][h][i]['prot'][pro][d]['forced-closes']
-        ],
+            (pgm, h, i, pro, d)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'forced-closes' in e['detail'][pgm][h][i]['prot'][pro][d] and \
+            'value' in e['detail'][pgm][h][i]['prot'][pro][d]['forced-closes']
+        ] if 'detail' in e else list(),
         'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_total': ('%d', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                        ['prot'][t[3]][t[4]]['forced-closes']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
+            '_created': ('%.3f', lambda t, d: d['detail'][t[0]][t[1]][t[2]] \
                          ['prot'][t[3]][t[4]]['forced-closes']['zero']),
         },
         'attrs': {
@@ -423,27 +463,31 @@ schema = [
         'type': 'counter',
         'help': 'number of disconnnects',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'disconnects' in e[pgm][h][i]['prot'][pro][d] \
+            (pgm, h, i, pro, d, ipv, aut)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'ip_version' in e['detail'][pgm][h][i]['prot'][pro][d]
+            for ipv in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version']
+            if 'auth' in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]
+            for aut in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]['auth']
+            if 'disconnects' in e['detail'][pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
-        ],
+        ] if 'detail' in e else list(),
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                       [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                        ['disconnects']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                         [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                          ['disconnects']['zero']),
         },
         'attrs': {
@@ -461,27 +505,31 @@ schema = [
         'type': 'counter',
         'help': 'number of opens',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'opens' in e[pgm][h][i]['prot'][pro][d] \
+            (pgm, h, i, pro, d, ipv, aut)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'ip_version' in e['detail'][pgm][h][i]['prot'][pro][d]
+            for ipv in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version']
+            if 'auth' in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]
+            for aut in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]['auth']
+            if 'opens' in e['detail'][pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
-        ],
+        ] if 'detail' in e else list(),
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                       [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                        ['opens']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                         [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                          ['opens']['zero']),
         },
         'attrs': {
@@ -499,27 +547,31 @@ schema = [
         'type': 'counter',
         'help': 'number of opens for read-write',
         'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'rw-opens' in e[pgm][h][i]['prot'][pro][d] \
+            (pgm, h, i, pro, d, ipv, aut)
+            for pgm in e['detail']
+            for h in e['detail'][pgm]
+            for i in e['detail'][pgm][h]
+            if 'prot' in e['detail'][pgm][h][i]
+            for pro in e['detail'][pgm][h][i]['prot']
+            for d in e['detail'][pgm][h][i]['prot'][pro]
+            if 'ip_version' in e['detail'][pgm][h][i]['prot'][pro][d]
+            for ipv in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version']
+            if 'auth' in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]
+            for aut in e['detail'][pgm][h][i]['prot'][pro][d] \
+            ['ip_version'][ipv]['auth']
+            if 'rw-opens' in e['detail'][pgm][h][i]['prot'][pro][d] \
             ['ip_version'][ipv]['auth'][aut]
-        ],
+        ] if 'detail' in e else list(),
         'samples': {
             '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
+                       lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                       [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                        ['rw-opens']['value']),
             '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
+                         lambda t, d: d['detail'][t[0]][t[1]][t[2]]['prot'] \
+                         [t[3]][t[4]]['ip_version'][t[5]]['auth'][t[6]] \
                          ['rw-opens']['zero']),
         },
         'attrs': {

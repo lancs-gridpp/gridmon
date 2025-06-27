@@ -205,7 +205,7 @@ class MetricConverter:
 
         ## Get the entry we want to populate, indexed by timestamp and
         ## by (host, name).
-        self._hist.install( { timestamp: { inst: data } } )
+        self._hist.install( { timestamp: { 'summary': { inst: data } } } )
         return False
 
     pass

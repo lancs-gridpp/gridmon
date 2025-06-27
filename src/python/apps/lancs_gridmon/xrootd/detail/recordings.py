@@ -173,7 +173,9 @@ class Recorder:
                 logging.debug('point %.3f (wr-ep=%.3f)' % \
                               (self._horiz / 1000 - self._epoch,
                                self._wr_ts / 1000 - self._epoch))
-                data[self._horiz / 1000] = copy.deepcopy(self._stats)
+                data[self._horiz / 1000] = {
+                    'detail': copy.deepcopy(self._stats),
+                }
                 self._wr_ts += self._wr_ival
                 continue
             assert self._wr_ts > self._horiz

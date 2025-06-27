@@ -252,7 +252,7 @@ class ReportReceiver:
 
         ## Get the entry we want to populate, indexed by timestamp and
         ## by (host, name).
-        self.hist.install( { timestamp: { inst: data } } )
+        self.hist.install( { timestamp: { "summary": { inst: data } } } )
         return
 
     pass
