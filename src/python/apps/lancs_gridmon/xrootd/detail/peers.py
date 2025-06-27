@@ -36,6 +36,46 @@ import logging
 from lancs_gridmon.trees import merge_trees
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
+class Stats:
+    def __init__(self):
+        self._lost = 0
+        self._dropped = 0
+        self._counted = 0
+        pass
+
+    def lost(self):
+        self._lost += 1
+        self._counted += 1
+        pass
+
+    def acted_upon(self):
+        self._counted += 1
+        pass
+
+    def dropped(self):
+        self._dropped += 1
+        pass
+
+    def aggregate(self, other):
+        other._lost += self._lost
+        self._lost = 0
+
+        other._dropped += self._dropped
+        self._dropped = 0
+
+        other._counted += self._counted
+        self._counted = 0
+        pass
+
+    def aggregate_to_map(self, m, k):
+        v = m.get(k, None)
+        if v is None:
+            return False
+        self.aggregate(v)
+        return True
+
+    pass
+
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
@@ -64,6 +104,10 @@ class Peer:
         self._file_reseqs = dict() ## indexed by sid
         self._gstream_reseqs = dict() ## indexed by sid
 
+        self._map_stats = Stats()
+        self._file_stats = Stats()
+        self._gstream_stats = Stats()
+
         ## Learn identities supplied by the server, as specified by
         ## monitor mapping messages.  Index is the dictid.  Values are
         ## a map with 'expiry' timestamp (which could be updated),
@@ -74,6 +118,12 @@ class Peer:
         self._ids = dict()
         self.__info('ev=new-entry')
         self._last_id = None
+        pass
+
+    def aggregate(self, stats):
+        self._map_stats.aggregate_to_map(stats, "mapping")
+        self._file_stats.aggregate_to_map(stats, "file")
+        self._gstream_stats.aggregate_to_map(stats, "gstream")
         pass
 
     def __add_domain(self, data, key_out, key_in):
@@ -178,12 +228,18 @@ class Peer:
                           functools.partial(self.__mapping_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_mapping,
+                          lost=self.__lost_mapping,
                           logpfx='peer=%s:%d seq=map sid=%012x' %
                           (self.addr + (sid,)))
         self._map_reseqs[sid] = seq
         return seq
 
+    def __lost_mapping(self, et, pseq):
+        self._map_stats.lost()
+        pass
+
     def __drop_mapping(self, now, base, lim, pseq, typ, data):
+        self._map_stats.dropped()
         self.__info('ev=drop-map pseq=%d base=%d lim=%d typ=%s data=%s' % \
                     (pseq, base, lim, typ, data))
         pass
@@ -196,12 +252,18 @@ class Peer:
                           functools.partial(self.__file_event_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_file,
+                          lost=self.__lost_file,
                           logpfx='peer=%s:%d seq=file sid=%012x' %
                           (self.addr + (sid,)))
         self._file_reseqs[sid] = seq
         return seq
 
+    def __lost_file(self, et, pseq):
+        self._file_stats.lost()
+        pass
+
     def __drop_file(self, now, base, lim, pseq, data):
+        self._file_stats.dropped()
         self.__info('drop-file pseq=%d base=%d lim=%d data=%s' % \
                     (pseq, base, lim, data))
         pass
@@ -214,12 +276,18 @@ class Peer:
                           functools.partial(self.__gstream_event_sequenced, sid),
                           timeout=self._seq_to,
                           drop=self.__drop_gstream,
+                          lost=self.__lost_gstream,
                           logpfx='peer=%s:%d seq=gstream sid=%012x' %
                           (self.addr + (sid,)))
         self._gstream_reseqs[sid] = seq
         return seq
 
+    def __lost_gstream(self, et, pseq):
+        self._gstream_stats.lost()
+        pass
+
     def __drop_gstream(self, now, base, lim, pseq, data):
+        self._gstream_stats.dropped()
         self.__info('drop-gstream pseq=%d base=%d lim=%d data=%s' % \
                     (pseq, base, lim, data))
         pass
@@ -276,6 +344,7 @@ class Peer:
     ## Calls to this are set up in self.process (the 'mapping'
     ## branch).
     def __mapping_sequenced(self, sid, ts, pseq, typ, msg):
+        self._map_stats.acted_upon()
         self.__debug('ts=%.3f ev=map sn=%d type=%s',
                      ts - self._epoch, pseq, typ)
 
@@ -352,6 +421,7 @@ class Peer:
 
     ## Calls to this are set up in self.process (the 'file' branch).
     def __file_event_sequenced(self, sid, ts, pseq, ents):
+        self._file_stats.acted_upon()
         self.__debug('ts=%.3f ev=file sn=%d sid=%012x type=file',
                      ts - self._epoch, pseq, sid)
 
@@ -456,6 +526,7 @@ class Peer:
     ## Calls to this are set up in self.process (the 'gstream'
     ## branch).
     def __gstream_event_sequenced(self, sid, ts, pseq, data):
+        self._gstream_stats.acted_upon()
         if 'tpc' in data:
             for ent in data['tpc']:
                 self.__handle_tpc(ent)

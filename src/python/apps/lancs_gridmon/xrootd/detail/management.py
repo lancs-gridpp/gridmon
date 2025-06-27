@@ -30,8 +30,9 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import threading
 import logging
-from lancs_gridmon.xrootd.detail.peers import Peer
+from lancs_gridmon.xrootd.detail.peers import Peer, Stats as PeerStats
 from lancs_gridmon.xrootd.detail.recordings import Recorder as XRootDRecorder
 
 class PeerManager:
@@ -62,6 +63,21 @@ class PeerManager:
 
         self._out_on = True
 
+        self._stats = {
+            "mapping": PeerStats(),
+            "file": PeerStats(),
+            "gstream": PeerStats(),
+        }
+
+        self._lock = threading.Lock()
+        pass
+
+    def aggregate(self):
+        with self._lock:
+            for k, v in self._peers.items():
+                v.aggregate(self._stats)
+                continue
+            pass
         pass
 
     def _identify(self, pgm, host, inst, peer):
@@ -96,9 +112,14 @@ class PeerManager:
             continue
         return
 
+    def process(self, dgram):
+        with self._lock:
+            return self.__process(dgram)
+        pass
+
     ## Return true if the supplied datagram was not fully accepted and
     ## not logged.
-    def process(self, dgram):
+    def __process(self, dgram):
         try:
             now = dgram['ts']
             msg = dgram['message']
