@@ -728,3 +728,45 @@ if __name__ == '__main__':
         t0 = t1
         continue
     pass
+
+def keys_now(e, *args):
+    if len(args) == 0:
+        # print('for %s in %s yields end' % (args, e))
+        return [ tuple() ]
+    if isinstance(args[0], int):
+        if args[0] < 1:
+            # print('for %s in %s completes' % (args, e))
+            return keys_now(e, *args[1:])
+        # print('for %s in %s yields sub' % (args, e))
+        return [
+            i for j in [
+                [ (k, *n) for n in keys_now(v, *(args[0] - 1, *args[1:])) ]
+                for k, v in e.items()
+            ] for i in j
+        ]
+        # result = list()
+        # for k, v in e.items():
+        #     result += [
+        #         (k, *n) for n in keys_now(v, *(args[0] - 1, *args[1:]))
+        #     ]
+        #     continue
+        # return result
+    if args[0] in e:
+        # print('for %s in %s passes' % (args, e))
+        return keys_now(e[args[0]], *args[1:])
+    return list()
+
+def keys(*args):
+    return lambda e: keys_now(e, *args)
+
+def walk_now(t, d, *args):
+    if len(args) == 0:
+        return d
+    if isinstance(args[0], int):
+        if args[0] < 1:
+            return walk_now(t, d, *args[1:])
+        return walk_now(t[1:], d[t[0]], args[0] - 1, *args[1:])
+    return walk_now(t, d[args[0]], *args[1:])
+
+def walk(*args):
+    return lambda t, d: walk_now(t, d, *args)
