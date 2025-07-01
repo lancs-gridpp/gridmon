@@ -35,6 +35,7 @@ import functools
 import time
 import xml
 import logging
+import traceback
 from defusedxml import ElementTree
 from lancs_gridmon.xrootd.detail.parsing import decode_message \
     as decode_detailed_message
@@ -79,9 +80,13 @@ class XRootDFilter:
             return self._proc_sum(ts, addr, tree)
         except xml.etree.ElementTree.ParseError:
             pass
-        dm = decode_detailed_message(ts, addr, dgram)
-        if dm is not None:
-            return self._proc_det(dm)
+        try:
+            dm = decode_detailed_message(ts, addr, dgram)
+            if dm is not None:
+                return self._proc_det(dm)
+        except Exception as e:
+            logging.error(traceback.format_exc())
+            pass
         return True
 
     pass
