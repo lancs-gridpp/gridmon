@@ -169,8 +169,11 @@ def _decode_null_term(buf):
 _swvers_fmt = re.compile(r'^([^/]+)/(.+)$')
 
 def _software_version(txt):
-    name, vers = _swvers_fmt.match(txt).groups()
-    return { 'name': name, 'version': vers }
+    m = _swvers_fmt.match(txt)
+    if m:
+        name, vers = m.groups()
+        return { 'name': name, 'version': vers }
+    return { 'unparsed': txt }
 
 def _parse_field(d, k, f):
     v = d.get(k)
