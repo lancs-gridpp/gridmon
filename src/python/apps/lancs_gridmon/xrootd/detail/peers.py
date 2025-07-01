@@ -74,6 +74,13 @@ class Stats:
         self.aggregate(v)
         return True
 
+    def as_dict(self):
+        return {
+            'lost': self._lost,
+            'dropped': self._dropped,
+            'counted': self._counted,
+        }
+
     pass
 
 class Peer:
