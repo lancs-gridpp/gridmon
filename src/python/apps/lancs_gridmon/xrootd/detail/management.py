@@ -78,7 +78,7 @@ class PeerManager:
                 v.aggregate(self._stats)
                 continue
             pass
-        pass
+        return { k: v.as_dict() for k, v in self._stats.items() }
 
     def _identify(self, pgm, host, inst, peer):
         ## Check to see if anything has changed.
