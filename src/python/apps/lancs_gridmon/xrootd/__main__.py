@@ -273,14 +273,60 @@ else:
     udp_srv = pcapsrc
     pass
 
+def update_live_metrics(start_time, pmgr, hist):
+    now = (time.time() * 1000) // 1000
+    data = dict()
+    data[now] = {
+        'meta': {
+            'start': start_time,
+            'sequencing': pmgr.aggregate(),
+        },
+    }
+    hist.install(data)
+    pass
+
+from lancs_gridmon.metrics import keys as metric_keys, walk as metric_walk
+
+meta_schema = [
+    {
+        'base': 'xrootd_collector_start_time',
+        'type': 'counter',
+        'help': 'start time of collector',
+        'unit': 'seconds',
+        'select': lambda e: [ tuple() ],
+        'samples': {
+            '_total': ('%.3f', metric_walk('meta', 'start')),
+        },
+        'attrs': { },
+    },
+
+    {
+        'base': 'xrootd_collector_sequencing',
+        'type': 'counter',
+        'help': 'resequencing events for detailed reports',
+        'select': metric_keys('meta', 'sequencing', 2),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'sequencing', 2)),
+        },
+        'attrs': {
+            'stream': ('%s', lambda t, d: t[0]),
+            'event': ('%s', lambda t, d: t[1]),
+        },
+    },
+]
+
 ## Serve the combined schemata's documentation.  Use a separate
 ## thread.  There are no thread-safety considerations, as there is no
 ## shared mutable data.
-www_hist = metrics.MetricHistory(xrootd_summary_schema + xrootd_detail_schema,
+www_hist = metrics.MetricHistory(xrootd_summary_schema + \
+                                 xrootd_detail_schema + \
+                                 meta_schema,
                                  horizon=30)
+www_updater = functools.partial(update_live_metrics, now, det_proc,
+                                www_hist)
 www_srv = HTTPServer((config['destination']['scrape']['host'],
                       config['destination']['scrape']['port']),
-                     www_hist.http_handler())
+                     www_hist.http_handler(prescrape=www_updater))
 www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 
 with apputils.ProcessIDFile(config['process']['id_filename']):
