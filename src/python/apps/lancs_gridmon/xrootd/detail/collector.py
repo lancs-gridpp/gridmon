@@ -43,7 +43,6 @@ import json
 import signal
 import os
 from datetime import datetime
-from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
 from lancs_gridmon.trees import merge_trees

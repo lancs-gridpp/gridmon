@@ -35,7 +35,6 @@ import time
 import traceback
 import logging
 import functools
-from frozendict import frozendict
 
 from http.server import BaseHTTPRequestHandler
 
@@ -470,6 +469,8 @@ class RemoteMetricsWriter:
         return True
 
     def install(self, data, mismatch=0):
+        from frozendict import frozendict
+
         ## Data is a dict with timestamps (in seconds) as keys.
         ## Values are a usually a dict hierarchy specified by the
         ## schema.  Each of these is referred to as a snapshot below.
