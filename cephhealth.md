@@ -2,7 +2,50 @@
 
 Ceph can be made to collect SMART metrics to ascertain the health of its discs.
 `cephhealth-exporter` pulls these metrics at a scheduled time, and pushes them into Prometheus.
-At the scheduled time, it performs this command to identify all OSD numbers:
+
+
+## Run-time dependencies
+
+`cephhealth-exporter` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, so try one of these:
+
+```
+sudo dnf install python3-snappy python3-protobuf python3-frozendict
+```
+
+```
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict
+```
+
+
+## Command-line arguments
+
+The following arguments are accepted:
+
+- `-l INT` &ndash; the number of seconds of lag; default 20
+- `-s HH:MM` &ndash; Add the time of day to the daily schedule.
+  Ceph is scanned at each scheduled time.
+- `-h INT` &ndash; seconds of horizon, beyond which metrics are discarded; 30 is the default
+- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
+- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
+- `-M ENDPOINT` &ndash; Push metrics to a remote-write endpoint.
+- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
+  Use this in a cronjob to obviate starting a separate shell to perform redirection.
+- `--log=LEVEL` &ndash; Set the log level.
+  `info` is good.
+- `--log-file=FILE` &ndash; Append logging to a file.
+- `--disk-limit=INT` &ndash; Stop after getting non-empty data from this many discs.
+  This is intended mainly for debugging on a small scale, without having to wait six minutes to scrape 700 discs!
+- `--now` &ndash; Perform a single scrape of the discs immediately, then settle into the configured schedule.
+
+Any remaining arguments are prefixed to the executed commands described below.
+This allows the script to run on a different host to Ceph, and SSH into it, for example.
+Use `--` if any of these additional arguments could be mistaken for switches to this script.
+
+
+
+## Metrics
+
+At the time(s) scheduled by `-s` and `--now`, `cephhealth-exporter` performs this command to identify all OSD numbers:
 
 ```
 ceph osd ls --format=json
@@ -61,24 +104,3 @@ For example, to get a list of discs with at least one defect, include which OSD 
 ```
 (last_over_time(cephhealth_scsi_grown_defect_list_total[1d1h]) > 0) * on(devid) group_right() avg without (device_ids, devices) (label_replace(label_replace(avg without (exported_instance, instance, job) (ceph_disk_occupation), "devid", '$2', "device_ids", `([^=]+=[^,]+,)?[^=]+=(.*)`), "disk", '$2', "devices", `([^,]+,)?(.*)`)) * on(devid) group_left(path) last_over_time(cephhealth_metadata[1d1h])
 ```
-
-The following arguments are accepted:
-
-- `-l INT` &ndash; the number of seconds of lag; default 20
-- `-s HH:MM` &ndash; Add the time of day to the daily schedule.
-  Ceph is scanned at each scheduled time.
-- `-h INT` &ndash; seconds of horizon, beyond which metrics are discarded; 30 is the default
-- `-t PORT` &ndash; port number to bind to (HTTP/TCP); 8799 is the default
-- `-T HOST` &ndash; hostname/IP address to bind to (HTTP/TCP); empty string is `INADDR_ANY`; `localhost` is default
-- `-z` &ndash; Open `/dev/null` and duplicate it to `stdout` and `stderr`.
-  Use this in a cronjob to obviate starting a separate shell to perform redirection.
-- `--log=LEVEL` &ndash; Set the log level.
-  `info` is good.
-- `--log-file=FILE` &ndash; Append logging to a file.
-- `--disk-limit=INT` &ndash; Stop after getting non-empty data from this many discs.
-  This is intended mainly for debugging on a small scale, without having to wait six minutes to scrape 700 discs!
-- `--now` &ndash; Perform a single scrape of the discs immediately, then settle into the configured schedule.
-
-Any remaining arguments are prefixed to the executed commands.
-This allows the script to run on a different host to Ceph, and SSH into it, for example.
-Use `--` if any of the arguments could be mistaken for switches to this script.

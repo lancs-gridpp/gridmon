@@ -7,6 +7,22 @@ by [Detailed Monitoring Data Format](https://xrootd.slac.stanford.edu/doc/dev51/
 It pushes some metrics derived from these into Prometheus, and generates a `logfmt`-compatible log for Loki to tail.
 It also runs an HTTP server, and serves metric documentation over it in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md).
 
+
+## Run-time dependencies
+
+`xrootd-detail` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, so try one of these:
+
+```
+sudo dnf install python3-snappy python3-protobuf python3-frozendict
+```
+
+```
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict
+```
+
+
+## Command-line arguments
+
 The following arguments are accepted:
 
 - `-u PORT` &ndash; port number to bind to (UDP); 9486 is the default

@@ -3,6 +3,24 @@
 The script `kafka-exporter` connects to one or more Kafka queues as a consumer, and counts messages, key bytes, value bytes and connections.
 These can be scraped as Prometheus-compatible metrics.
 
+
+## Run-time dependencies
+
+Try one of these:
+
+```
+sudo dnf install python3-kafka
+```
+
+```
+sudo apt-get install python3-kafka
+```
+
+If you haven't got `python3-kafka`, you could try `pip3 install kafka`.
+
+
+## Command-line arguments
+
 The following arguments are accepted:
 
 - `-f FILE` Load queue configuration from YAML file.

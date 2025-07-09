@@ -4,15 +4,25 @@ These are bespoke scripts to augment metrics available for collection by Prometh
 
 ## Installation
 
-[Binodeps](https://github.com/simpsonst/binodeps) is required to use the `Makefile`.
-You'll also need [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/), and `defusedxml` and `frozendict` Python 3 packages, so try one of these:
+[Binodeps](https://github.com/simpsonst/binodeps) is required to use the `Makefile`:
 
 ```
-sudo dnf install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-kafka
-sudo apt-get install protobuf-compiler python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-kafka
+cd /tmp
+git clone https://github.com/simpsonst/binodeps.git
+cd binodeps
+make
+sudo make install
 ```
 
-(Technically, you'll probably only need the Python packages to run some of the scripts, not to build/install.)
+You'll also need [Protocol Buffers](https://developers.google.com/protocol-buffers), so try one of these:
+
+```
+sudo dnf install protobuf-compiler
+```
+
+```
+sudo apt-get install protobuf-compiler
+```
 
 To install to the default location `/usr/local`:
 
@@ -38,7 +48,7 @@ Python/Bash sources and executables are then installed in `/usr/local/share/grid
 ## Configuration of Prometheus
 
 For each script, either Prometheus scrapes the running process with an HTTP GET, or the process pushes metrics into Prometheus as soon as it has them.
-Even if pushing is preferred, the existence of an endpoint for scraping is often retain, as it allows metrics' documentation like `# HELP` to be loaded, and it's an easy way to detect when a collector has failed.
+Even if pushing is preferred, the existence of an endpoint for scraping is often retained, as it allows metrics' documentation like `# HELP` to be loaded, and it's an easy way to detect when a collector has failed.
 
 ### Scraping
 
@@ -78,7 +88,7 @@ For example, a typical endpoint might be `http://localhost:9090/api/v1/write`, a
 | `xrootd-monitor` | `-E` | `destination.push.endpoint` |
 | `xrootd-stats` | `-E` | N/A |
 | `xrootd-detail` | `-M` | N/A |
-| `cephhealth-export` | `-M` | N/A |
+| `cephhealth-exporter` | `-M` | N/A |
 
 ## Domain information
 

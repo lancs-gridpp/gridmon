@@ -2,6 +2,22 @@
 
 The script `perfsonar-stats` pulls data from the `esmond` service of a PerfSONAR instance, and turns it into Prometheus-compatible metrics.
 
+
+## Run-time dependencies
+
+`perfsonar-stats` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, so try one of these:
+
+```
+sudo dnf install python3-snappy python3-protobuf python3-frozendict
+```
+
+```
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict
+```
+
+
+## Command-line arguments
+
 The following arguments are accepted:
 
 - `-h INT` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default

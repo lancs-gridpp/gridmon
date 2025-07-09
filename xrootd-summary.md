@@ -7,6 +7,22 @@ The script listens on a UDP socket, and stores timestamped metrics in XML [Summa
 It also runs an HTTP server, and serves timestamped metrics over it in [OpenMetrics format](https://github.com/OpenObservability/OpenMetrics/blob/main/specification/OpenMetrics.md).
 The script distinguishes HTTP clients by `Authorization` header, and remembers the last time each client was successfully issued with metrics, and so only serves metrics with later timestamps.
 
+
+## Run-time dependencies
+
+`xrootd-stats` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, and `defusedxml` for parsing XRootD summary reports, so try one of these:
+
+```
+sudo dnf install python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+```
+
+```
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+```
+
+
+## Command-line arguments
+
 The following arguments are accepted:
 
 - `-h INT` &ndash; minutes of horizon, beyond which metrics are discarded; 30 is the default
