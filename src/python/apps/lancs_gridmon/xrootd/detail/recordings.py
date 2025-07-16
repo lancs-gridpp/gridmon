@@ -94,7 +94,7 @@ class Recorder:
     def start(self):
         if self._out is None:
             self._out = open(self._log_name, "a")
-            self.log(self._t0 / 1000, 'start')
+            self.log(self._t0 / 1000, 'event=start')
             pass
         pass
 
@@ -220,8 +220,8 @@ class Recorder:
             for inst, host, pgm, ev, params, ctxt in self._events.pop(k):
                 t1 = k / 1000
                 if ctxt is not None:
-                    self.log(t1, '%s@%s %s %s %s' %
-                             (inst, host, pgm, ev, logfmt.encode(params, ctxt)))
+                    self.log(t1, 'event=%s xrdid=%s@%s pgm=%s %s' %
+                             (ev, inst, host, pgm, logfmt.encode(params, ctxt)))
                     pass
                 stats = self._stats.setdefault(pgm, { }) \
                                    .setdefault(host, { }) \
