@@ -39,7 +39,7 @@ def _escape(text, chars):
 def escape_key(text):
     return _escape(text, '\\\n\r =')
 
-def escape_value(text):
+def escape_value(text, lim=3):
     if text == '':
         return '""'
 
@@ -48,7 +48,7 @@ def escape_value(text):
     for c in text:
         if c == ' ':
             n += 1
-            if n >= 3:
+            if lim is not None and n >= lim:
                 return '"%s"' % _escape(text, '\\"\n\r')
             pass
         continue
@@ -62,7 +62,8 @@ def _encode(data, pfx, ctxt):
             result += _encode(v, pfx + k + '_', ctxt.get(k) or { })
         else:
             fmt = ctxt.get(k, '%s')
-            result.append(escape_key(pfx + k) + '=' + escape_value(fmt % (v,)))
+            result.append(escape_key(pfx + k) + '=' + \
+                          escape_value(fmt % (v,), lim=1))
             continue
         pass
     return result
