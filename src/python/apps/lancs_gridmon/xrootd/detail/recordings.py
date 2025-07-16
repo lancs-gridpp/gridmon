@@ -88,7 +88,7 @@ class Recorder:
 
     def log(self, ts, msg):
         tst = datetime.utcfromtimestamp(ts).isoformat('T', 'milliseconds')
-        self._out.write('%s %s\n' % (tst, msg))
+        self._out.write('%sZ %s\n' % (tst, msg))
         pass
 
     def start(self):
