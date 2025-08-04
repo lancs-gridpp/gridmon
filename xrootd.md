@@ -33,6 +33,7 @@ source:
   xrootd:
     host: ""
     port: 9484
+    rcvbuf: null
   pcap:
     filename: null
     limit: null
@@ -70,6 +71,10 @@ process:
 `source.xrootd` specifies the UDP host and port to bind to for receiving XRootD monitoring messages.
 By default, all interfaces are bound to, using port 9484.
 `-U` overrides the hostname, and `-u` overrides the port.
+
+`source.xrootd.rcvbuf` causes `SO_RCVBUF` to be set on the socket.
+Doing so might help prevent losses of UDP packets in the kernel as they queue up, which might occur while the process is busy setting up a remote-write message or delivering it.
+You might also need to change kernel parameter `net.core.rmem_max` to allow for higher values.
 
 If `source.pcap.filename: file` is specified (also set with `-P file` or `--pcap=file`), no UDP socket is created.
 Instead, the file is treated as a PCAP recording, and read using:

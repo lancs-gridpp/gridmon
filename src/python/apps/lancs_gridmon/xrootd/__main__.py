@@ -37,6 +37,7 @@ import threading
 import signal
 import functools
 import time
+import socket
 from socketserver import UDPServer
 from http.server import HTTPServer
 
@@ -268,6 +269,12 @@ if pcapsrc is None:
                          config['source']['xrootd']['port']),
                         msg_fltr.datagram_handler())
     udp_srv.max_packet_size = 65536
+    if 'rcvbuf' in config['source']['xrootd']:
+        rcvbuf = int(config['source']['xrootd']['rcvbuf'])
+        udp_srv.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
+        rcvbuf = udp_srv.socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+        logging.info('rcvbuf set to %d' % rcvbuf)
+        pass
 else:
     pcapsrc.set_action(msg_fltr.process)
     udp_srv = pcapsrc
