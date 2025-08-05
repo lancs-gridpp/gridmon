@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ## Copyright (c) 2022, Lancaster University
 ## All rights reserved.
 ##
@@ -32,5 +30,32 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export PYTHONPATH="${0%/*}/python3/apps.zip"
-exec python3 -m lancs_gridmon.xrootd.summary.collector "$@"
+def merge_trees(a, b, pfx=(), mismatch=0):
+    for key, nv in b.items():
+        ## Add a value if not already present.
+        if key not in a:
+            a[key] = nv
+            continue
+
+        ## Compare the old value with the new.  Apply recursively if
+        ## they are both dictionaries.
+        ov = a[key]
+        if isinstance(ov, dict) and isinstance(nv, dict):
+            merge_trees(ov, nv, pfx + (key,), mismatch=mismatch)
+            continue
+
+        if mismatch < 0:
+            ## Use the old value.
+            continue
+        if mismatch > 0:
+            ## Replace the old value.
+            a[key] = nv
+            continue
+
+        ## The new value and the existing value must match.
+        if ov != nv:
+            raise Exception('bad merge (%s over %s at %s)' %
+                            (nv, ov, '.'.join(pfx + (key,))))
+
+        continue
+    pass

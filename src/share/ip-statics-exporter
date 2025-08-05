@@ -34,4 +34,4 @@
 
 export PYTHONPATH="${0%/*}/python3/apps.zip"
 export GRIDMON_SHAREDIR="${0%/*}"
-exec python3 -m statics "$@"
+exec python3 -m lancs_gridmon.statics "$@"

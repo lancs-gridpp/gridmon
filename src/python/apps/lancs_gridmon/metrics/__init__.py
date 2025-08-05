@@ -34,39 +34,11 @@ import threading
 import time
 import traceback
 import logging
-from frozendict import frozendict
+import functools
 
 from http.server import BaseHTTPRequestHandler
 
-def _merge(a, b, pfx=(), mismatch=0):
-    for key, nv in b.items():
-        ## Add a value if not already present.
-        if key not in a:
-            a[key] = nv
-            continue
-
-        ## Compare the old value with the new.  Apply recursively if
-        ## they are both dictionaries.
-        ov = a[key]
-        if isinstance(ov, dict) and isinstance(nv, dict):
-            _merge(ov, nv, pfx + (key,), mismatch=mismatch)
-            continue
-
-        if mismatch < 0:
-            ## Use the old value.
-            continue
-        if mismatch > 0:
-            ## Replace the old value.
-            a[key] = nv
-            continue
-
-        ## The new value and the existing value must match.
-        if ov != nv:
-            raise Exception('bad merge (%s over %s at %s)' %
-                            (nv, ov, '.'.join(pfx + (key,))))
-
-        continue
-    pass
+from lancs_gridmon.trees import merge_trees
 
 def _safe_mod(spec, idx, snapshot):
     vals = list()
@@ -181,7 +153,7 @@ class MetricHistory:
             threshold = int(time.time()) - self.horizon
 
             ## Merge the new data with the old.
-            _merge(self.entries, samples, mismatch=mismatch)
+            merge_trees(self.entries, samples, mismatch=mismatch)
 
             ## Discard old entries.
             for k in [ k for k in self.entries if k < threshold ]:
@@ -400,6 +372,10 @@ class MetricHistory:
             pass
         pass
 
+    def http_handler(self, **kwargs):
+        """Get an HTTP handler that serves this history."""
+        return functools.partial(MetricsHTTPHandler, hist=self, **kwargs)
+
     pass
 
 
@@ -493,9 +469,13 @@ class RemoteMetricsWriter:
         return True
 
     def install(self, data, mismatch=0):
+        from frozendict import frozendict
+
         ## Data is a dict with timestamps (in seconds) as keys.
         ## Values are a usually a dict hierarchy specified by the
         ## schema.  Each of these is referred to as a snapshot below.
+        if len(data) == 0:
+            return True
 
         ## Get all the timestamps in order.
         tss = [ ts for ts in data ]
@@ -607,7 +587,7 @@ class RemoteMetricsWriter:
         expiry = self.expiry + lasttime
 
         ## Convert the timeseries into write request.
-        import remote_write_pb2 as pb
+        import lancs_gridmon.metrics.remote_write_pb2 as pb
 
         rw = pb.WriteRequest()
         for labs, vals in series.items():
@@ -749,3 +729,45 @@ if __name__ == '__main__':
         t0 = t1
         continue
     pass
+
+def keys_now(e, *args):
+    if len(args) == 0:
+        # print('for %s in %s yields end' % (args, e))
+        return [ tuple() ]
+    if isinstance(args[0], int):
+        if args[0] < 1:
+            # print('for %s in %s completes' % (args, e))
+            return keys_now(e, *args[1:])
+        # print('for %s in %s yields sub' % (args, e))
+        return [
+            i for j in [
+                [ (k, *n) for n in keys_now(v, *(args[0] - 1, *args[1:])) ]
+                for k, v in e.items()
+            ] for i in j
+        ]
+        # result = list()
+        # for k, v in e.items():
+        #     result += [
+        #         (k, *n) for n in keys_now(v, *(args[0] - 1, *args[1:]))
+        #     ]
+        #     continue
+        # return result
+    if args[0] in e:
+        # print('for %s in %s passes' % (args, e))
+        return keys_now(e[args[0]], *args[1:])
+    return list()
+
+def keys(*args):
+    return lambda e: keys_now(e, *args)
+
+def walk_now(t, d, *args):
+    if len(args) == 0:
+        return d
+    if isinstance(args[0], int):
+        if args[0] < 1:
+            return walk_now(t, d, *args[1:])
+        return walk_now(t[1:], d[t[0]], args[0] - 1, *args[1:])
+    return walk_now(t, d[args[0]], *args[1:])
+
+def walk(*args):
+    return lambda t, d: walk_now(t, d, *args)

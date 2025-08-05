@@ -905,7 +905,7 @@ if __name__ == '__main__':
     from getopt import gnu_getopt
 
     ## Local libraries
-    import metrics
+    import lancs_gridmon.metrics as metrics
 
     todfmt = re.compile(r'([0-9]{1,2}):([0-9]{1,2})')
     def get_tod_offset(text):

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ## Copyright (c) 2022, Lancaster University
 ## All rights reserved.
 ##
@@ -32,5 +30,32 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export PYTHONPATH="${0%/*}/python3/apps.zip"
-exec python3 -m lancs_gridmon.xrootd.summary.collector "$@"
+import re
+
+_elems = [ ('w', 7), ('d', 24), ('h', 60),
+           ('m', 60), ('s', 1000, 'X'), ('ms', 1000), ('us', 1) ]
+
+_dur_pat = r'^' + r''.join([ r'(?:(\d+)(?:' + t[0] + r'(?![a-z]))' +
+                             (r'?' if len(t) >= 3 and '?' in t[2] else r'') +
+                             r')?' for t in _elems ]) + r'$'
+_dur_fmt = re.compile(_dur_pat)
+
+def parse_duration(s):
+    m = _dur_fmt.match(str(s))
+    if m is None:
+        return None
+    r = 0
+    for i, spec in enumerate(_elems):
+        if m[i + 1] is not None:
+            r += int(m[i + 1])
+            pass
+        r *= spec[1]
+        continue
+    return r / 1000000
+
+if __name__ == '__main__':
+    import sys
+    for s in sys.argv[1:]:
+        print('%s -> %s' % (s, parse_duration(s)))
+        continue
+    pass

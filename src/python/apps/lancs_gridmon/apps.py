@@ -1,5 +1,3 @@
-#!/bin/bash
-
 ## Copyright (c) 2022, Lancaster University
 ## All rights reserved.
 ##
@@ -32,5 +30,60 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export PYTHONPATH="${0%/*}/python3/apps.zip"
-exec python3 -m lancs_gridmon.xrootd.summary.collector "$@"
+import os
+import sys
+import logging
+import signal
+import time
+
+def silence_output():
+    ## Mainly for use with cron, send stdout and stderr to /dev/null.
+    with open('/dev/null', 'w') as devnull:
+        fd = devnull.fileno()
+        os.dup2(fd, sys.stdout.fileno())
+        os.dup2(fd, sys.stderr.fileno())
+        pass
+    pass
+
+def default_log_config():
+    return {
+        'format': '%(asctime)s %(levelname)s %(message)s',
+        'datefmt': '%Y-%m-%dT%H:%M:%SZ',
+    }
+
+def prepare_log_rotation(config, action=None):
+    logging.Formatter.converter = time.gmtime
+    logging.basicConfig(**config)
+    if 'filename' in config:
+        def handler(signum, frame):
+            logging.root.handlers = []
+            logging.basicConfig(**config)
+            logging.info('rotation')
+            if callable(action):
+                action()
+                pass
+            pass
+        signal.signal(signal.SIGHUP, handler)
+        pass
+    pass
+
+class ProcessIDFile:
+    def __init__(self, fn):
+        self.fn = fn
+        pass
+
+    def __enter__(self):
+        if self.fn is None:
+            return
+        with open(self.fn, "w") as f:
+            f.write('%d\n' % os.getpid())
+            pass
+        pass
+
+    def __exit__(self, typ, val, tb):
+        if self.fn is not None:
+            os.remove(self.fn)
+            return
+        pass
+
+    pass

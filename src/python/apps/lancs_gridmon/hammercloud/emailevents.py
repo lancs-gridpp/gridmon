@@ -39,7 +39,7 @@ from pprint import pformat
 from getopt import gnu_getopt
 import yaml
 
-import metrics
+import lancs_gridmon.metrics as metrics
 
 ## Parse command-line arguments.
 endpoint = None
@@ -50,6 +50,8 @@ panel = 0
 dashboard = None
 tags = set()
 token = None
+queueTagPrefix = 'queue'
+typeTagPrefix = 'type'
 
 opts, args = gnu_getopt(sys.argv[1:], 'D:q:t:xr')
 for opt, val in opts:
@@ -72,6 +74,12 @@ for opt, val in opts:
             dashboard = doc.get('dashboard', dashboard)
             panel = doc.get('panel', panel)
             token = doc.get('token', token)
+            queueTagPrefix = doc.get('hammercloud', dict()) \
+                                .get('prefixes', dict()) \
+                                .get('queue', queueTagPrefix)
+            typeTagPrefix = doc.get('hammercloud', dict()) \
+                               .get('prefixes', dict()) \
+                               .get('type', typeTagPrefix)
             tags.update(doc.get('tags', []))
             tags.update(doc.get('hammercloud', { }).get('tags', [ ]))
             pass
@@ -131,10 +139,12 @@ from urllib.error import URLError, HTTPError
 from urllib.parse import quote_plus
 import json
 
+queueTag = queueTagPrefix + ':' + queue
+typeTag = typeTagPrefix + ':' + queue_type
 required_tags = set()
 required_tags.add('HammerCloud')
-required_tags.add('site:' + queue)
-required_tags.add('queue:' + queue_type)
+required_tags.add(queueTag)
+required_tags.add(typeTag)
 
 if state:
     ## An exclusion has occurred.  Add an annotation.
@@ -169,8 +179,7 @@ else:
     endTime = int(evtime.timestamp() * 1000)
     startTime = endTime - 30 * 24 * 60 * 60 * 1000
     requri = endpoint + '?from=%d&to=%d&tags=%s&tags=%s' % \
-        (startTime, endTime, quote_plus('site:' + queue),
-         quote_plus('queue:' + queue_type))
+        (startTime, endTime, quote_plus(queueTag), quote_plus(typeTag))
     #sys.stderr.write('requri=%s\n' % requri)
     req = request.Request(endpoint)
     req.add_header('Accept', 'application/json')

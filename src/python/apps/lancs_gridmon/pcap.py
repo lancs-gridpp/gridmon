@@ -30,69 +30,64 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
-
-_esc_fmt = re.compile(r'\$(\$|[0-9]|\([0-9]+\))')
-
-def derive_domain(text, rules):
-    for test in rules:
-        expr = re.compile(test['match'])
-        mtc = expr.match(text)
-        if mtc is None:
-            continue
-        res = ''
-        last = 0
-        rpl = test['value']
-        for m in _esc_fmt.finditer(rpl):
-            res += rpl[last:m.start()]
-            foo = m.group(1)
-            if foo == '$':
-                res += foo
-            elif foo[0] == '(':
-                num = int(foo[1:-1])
-                res += mtc.group(num)
-            else:
-                num = int(foo)
-                res += mtc.group(num)
-                pass
-            last = m.end()
-            continue
-        res += rpl[last:]
-        return res
-    return None
-
+import subprocess
 import os
-import yaml
 
-class WatchingDomainDeriver:
-    def __init__(self, filename):
-        self.filename = filename
-        self.rules = None
-        self.mtime = None
+class PCAPSource:
+    def __init__(self, src, limit=None):
+        self._src = src
+        self._lim = limit
         pass
 
-    def _update(self):
-        new_mtime = os.path.getmtime(self.filename)
-        if self.rules is not None and new_mtime <= self.mtime:
-            return
-        with open(self.filename, 'r') as fh:
-            self.rules = yaml.load(fh, Loader=yaml.SafeLoader)['domains']
-            pass
-        self.mtime = new_mtime
-        return
+    def __open(self):
+        cmd = [ 'tshark', '-r', self._src, '-t', 'u', '-Tfields',
+                '-e', 'frame.time_epoch', '-e', 'ip.src',
+                '-e', 'udp.srcport', '-e', 'data' ]
+        return subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                universal_newlines=True).stdout
 
-    def derive(self, text):
-        self._update()
-        return derive_domain(text, self.rules)
+    def get_start(self):
+        with self.__open() as fin:
+            for line in fin:
+                words = line.split('\t')
+                return float(words[0])
+            pass
+        pass
+
+    def set_action(self, proc):
+        self._proc = proc
+        pass
+
+    def serve_forever(self):
+        with self.__open() as fin:
+            c = 0
+            for line in fin:
+                words = line.split('\t')
+                ts = float(words[0])
+                try:
+                    addr = (words[1], int(words[2]))
+                except ValueError:
+                    continue
+                buf = bytearray.fromhex(words[3])
+                self._proc(ts, addr, buf)
+                if self._lim is not None:
+                    c += 1
+                    if c >= self._lim:
+                        break
+                    pass
+                continue
+            pass
+        pass
 
     pass
 
 if __name__ == '__main__':
-    import sys, readline
-    wdd = WatchingDomainDeriver(sys.argv[1])
-    for line in sys.stdin:
-        host = line.rstrip()
-        dom = wdd.derive(host)
-        print('%s -> %s' % (host, dom))
-        continue
+    import sys
+    src = PCAPSource(sys.argv[1])
+    print('start: %d' % src.get_start())
+    def action(ts, addr, buf):
+        print('%d %s %s' % (ts, addr, buf))
+        pass
+    src.set_action(action)
+    src.serve_forever()
     pass

@@ -43,11 +43,11 @@ import json
 import signal
 import os
 from datetime import datetime
-from frozendict import frozendict
 from pprint import pprint
 from getopt import gnu_getopt
-from utils import merge
-from reseq import FixedSizeResequencer as Resequencer
+from lancs_gridmon.trees import merge_trees
+from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
+from lancs_gridmon.xrootd.detail import schema as xrootd_detail_schema
 
 _userid_fmt = re.compile(r'^([^/]+)/([^.]+)\.([^:]+):([^@]+)@(.*)')
 _uriarg_fmt = re.compile(r'&([^=]+)=([^&]*)')
@@ -116,6 +116,19 @@ def _decode_mapping(code, buf):
         'xfer-id' if code == 'x' else None
     assert status is not None
     return (status, { 'info': info, 'dictid': dictid })
+
+def _decode_gstream(buf):
+    tbeg = struct.unpack('>I', buf[0:4])[0] & 0xffffffff
+    tend = struct.unpack('>I', buf[4:8])[0] & 0xffffffff
+    sidw = struct.unpack('>Q', buf[8:16])[0] & 0xffffffffffffffff
+    prov = sidw >> 56
+    sid = sidw & 0xffffffffffff
+    text = buf[16:].decode('us-ascii')
+    return ('general', {
+        'provider': prov, 'sid': sid,
+        'begin': tbeg, 'end': tend,
+        'text': text,
+    })
 
 def _decode_trace(buf):
     assert len(buf) == 16
@@ -278,7 +291,7 @@ def _decode_file_ssq(buf):
     }
 
 def _decode_file_close(flags, dictid, buf):
-    from utils import merge
+    from utils import merge_trees
 
     brd = struct.unpack('>Q', buf[0:8])[0]
     brdv = struct.unpack('>Q', buf[8:16])[0]
@@ -294,13 +307,13 @@ def _decode_file_close(flags, dictid, buf):
 
     if flags & 0x02:
         ops = _decode_file_ops(buf)
-        merge(result, ops)
+        merge_trees(result, ops)
         buf = buf[48:]
         pass
 
     if flags & 0x04:
         ssq = _decode_file_ssq(buf)
-        merge(result, ssq)
+        merge_trees(result, ssq)
         pass
 
     return ('close', result)
@@ -373,6 +386,9 @@ def _decode_packet(buf):
 
     if code == 'f':
         return (stod, pseq) + _decode_file(buf[8:])
+
+    if code == 'g':
+        return (stod, pseq) + _decode_gstream(buf[8:])
 
     return (stod, pseq, 'unrecognized', {
         'unparsed': buf[8:],
@@ -515,7 +531,7 @@ class Peer:
                         }, ctxt=None)
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': usr['prot'],
                             'user': usr['user'],
                             'client_name': usr['host'],
@@ -566,7 +582,7 @@ class Peer:
                             pass
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': ufn['prot'],
                             'user': ufn['user'],
                             'client_name': ufn['host'],
@@ -602,7 +618,7 @@ class Peer:
                         }, ctxt=None)
                         pass
                     else:
-                        merge(msg, {
+                        merge_trees(msg, {
                             'prot': fil['prot'],
                             'user': fil['user'],
                             'client_name': fil['host'],
@@ -754,8 +770,8 @@ def _inc_counter(t0, t1, data, inc):
     data['last'] = t1
     pass
 
-import domains
-import logfmt
+import lancs_gridmon.domains as domains
+import lancs_gridmon.logfmt as logfmt
 
 class Detailer:
     def __init__(self, logname, rmw, domfile=None, id_timeout_min=120):
@@ -996,7 +1012,7 @@ class Detailer:
             self.release_events(now - self.horizon)
             if now - self.write_ts > self.write_interval:
                 now_key = self.event_limit / 1000
-                data = { now_key: self.stats }
+                data = { now_key: { 'detail': self.stats } }
                 # print('stats: %s' % self.stats)
                 self.rmw.install(data)
                 self.write_ts = now
@@ -1020,300 +1036,7 @@ class Detailer:
 
     pass
 
-schema = [
-    {
-        'base': 'xrootd_dictid_skip',
-        'type': 'counter',
-        'help': 'dictids skipped over',
-        'select': lambda e: [ (pgm, h, i) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'dicts' in e[pgm][h][i]
-                              if 'skip' in e[pgm][h][i]['dicts'] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['dicts']['skip']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['dicts']['skip']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-        },
-    },
-
-    {
-        'base': 'xrootd_dictid_unknown',
-        'type': 'counter',
-        'help': 'undefined referenced dictids',
-        'select': lambda e: [ (pgm, h, i, rec, f) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'dicts' in e[pgm][h][i]
-                              if 'unk' in e[pgm][h][i]['dicts']
-                              for rec in e[pgm][h][i]['dicts']['unk']
-                              for f in e[pgm][h][i]['dicts']['unk'][rec] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['dicts']['unk'][t[3]][t[4]]['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['dicts']['unk'][t[3]][t[4]]['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'record': ('%s', lambda t, d: t[3]),
-            'field': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_write',
-        'type': 'counter',
-        'unit': 'bytes',
-        'help': 'bytes received per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'write' in e[pgm][h][i]['prot'][pro][d] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['write']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['write']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_read',
-        'type': 'counter',
-        'unit': 'bytes',
-        'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'read' in e[pgm][h][i]['prot'][pro][d] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['read']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['read']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_readv',
-        'type': 'counter',
-        'unit': 'bytes',
-        'help': 'bytes sent per protocol, instance, domain',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'readv' in e[pgm][h][i]['prot'][pro][d] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['readv']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['readv']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_closes',
-        'type': 'counter',
-        'help': 'number of closes',
-        'select': lambda e: [ (pgm, h, i, pro, d) for pgm in e
-                              for h in e[pgm]
-                              for i in e[pgm][h]
-                              if 'prot' in e[pgm][h][i]
-                              for pro in e[pgm][h][i]['prot']
-                              for d in e[pgm][h][i]['prot'][pro]
-                              if 'closes' in e[pgm][h][i]['prot'][pro][d] ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['closes']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['closes']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_closes_forced',
-        'type': 'counter',
-        'help': 'number of forced closes',
-        'select': lambda e: [
-            (pgm, h, i, pro, d) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'forced-closes' in e[pgm][h][i]['prot'][pro][d] and \
-            'value' in e[pgm][h][i]['prot'][pro][d]['forced-closes']
-        ],
-        'samples': {
-            '_total': ('%d', lambda t, d: d[t[0]][t[1]][t[2]] \
-                       ['prot'][t[3]][t[4]]['forced-closes']['value']),
-            '_created': ('%.3f', lambda t, d: d[t[0]][t[1]][t[2]] \
-                         ['prot'][t[3]][t[4]]['forced-closes']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_disconnects',
-        'type': 'counter',
-        'help': 'number of disconnnects',
-        'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'disconnects' in e[pgm][h][i]['prot'][pro][d] \
-            ['ip_version'][ipv]['auth'][aut]
-        ],
-        'samples': {
-            '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
-                       ['disconnects']['value']),
-            '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
-                         ['disconnects']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_opens',
-        'type': 'counter',
-        'help': 'number of opens',
-        'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'opens' in e[pgm][h][i]['prot'][pro][d] \
-            ['ip_version'][ipv]['auth'][aut]
-        ],
-        'samples': {
-            '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
-                       ['opens']['value']),
-            '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
-                         ['opens']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
-        },
-    },
-
-    {
-        'base': 'xrootd_data_opens_rw',
-        'type': 'counter',
-        'help': 'number of opens for read-write',
-        'select': lambda e: [
-            (pgm, h, i, pro, d, ipv, aut) for pgm in e
-            for h in e[pgm]
-            for i in e[pgm][h]
-            if 'prot' in e[pgm][h][i]
-            for pro in e[pgm][h][i]['prot']
-            for d in e[pgm][h][i]['prot'][pro]
-            if 'ip_version' in e[pgm][h][i]['prot'][pro][d]
-            for ipv in e[pgm][h][i]['prot'][pro][d]['ip_version']
-            if 'auth' in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]
-            for aut in e[pgm][h][i]['prot'][pro][d]['ip_version'][ipv]['auth']
-            if 'rw-opens' in e[pgm][h][i]['prot'][pro][d] \
-            ['ip_version'][ipv]['auth'][aut]
-        ],
-        'samples': {
-            '_total': ('%d',
-                       lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                       ['ip_version'][t[5]]['auth'][t[6]] \
-                       ['rw-opens']['value']),
-            '_created': ('%.3f',
-                         lambda t, d: d[t[0]][t[1]][t[2]]['prot'][t[3]][t[4]] \
-                         ['ip_version'][t[5]]['auth'][t[6]] \
-                         ['rw-opens']['zero']),
-        },
-        'attrs': {
-            'pgm': ('%s', lambda t, d: t[0]),
-            'xrdid': ('%s@%s', lambda t, d: t[2], lambda t, d: t[1]),
-            'protocol': ('%s', lambda t, d: t[3]),
-            'client_domain': ('%s', lambda t, d: t[4]),
-            'ip_version': ('%s', lambda t, d: t[5]),
-            'auth': ('%s', lambda t, d: t[6]),
-        },
-    },
-]
-
-import metrics
+import lancs_gridmon.metrics as metrics
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 
@@ -1382,10 +1105,10 @@ if __name__ == '__main__':
     logging.basicConfig(**log_params)
 
     ## This serves no metrics, only the documentation.
-    history = metrics.MetricHistory(schema, horizon=30)
+    history = metrics.MetricHistory(xrootd_detail_schema, horizon=30)
 
     rmw = metrics.RemoteMetricsWriter(endpoint=endpoint,
-                                      schema=schema,
+                                      schema=xrootd_detail_schema,
                                       job='xrootd_detail',
                                       expiry=10*60)
 
