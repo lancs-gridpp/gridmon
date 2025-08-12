@@ -126,9 +126,15 @@ class PeerManager:
     def __process(self, dgram):
         try:
             now = dgram['ts']
+            addr = (dgram['peer']['host'], dgram['peer']['port'])
+            if 'error' in dgram:
+                logging.error('from %s:%d at %.3f %s remnant %s' % \
+                              (addr[0], addr[1], now, dgram['error'],
+                               dgram['remn_octets']))
+                return True
+
             msg = dgram['message']
             stod = msg['stod']
-            addr = (dgram['peer']['host'], dgram['peer']['port'])
             pseq = msg['pseq']
             data = msg['data']
             typ = msg['type']
