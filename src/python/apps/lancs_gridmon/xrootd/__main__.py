@@ -286,9 +286,9 @@ def update_live_metrics(start_time, pmgr, hist):
     data[now] = {
         'meta': {
             'start': start_time,
-            'sequencing': pmgr.aggregate(),
         },
     }
+    pmgr.aggregate(data[now]['meta'])
     hist.install(data)
     pass
 
@@ -303,6 +303,17 @@ meta_schema = [
         'select': lambda e: [ tuple() ],
         'samples': {
             '_total': ('%.3f', metric_walk('meta', 'start')),
+        },
+        'attrs': { },
+    },
+
+    {
+        'base': 'xrootd_collector_fake_port_overrides',
+        'type': 'counter',
+        'help': 'number of times redirection port was distinctly overridden',
+        'select': lambda e: [ tuple() ],
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'fake_port_overrides')),
         },
         'attrs': { },
     },

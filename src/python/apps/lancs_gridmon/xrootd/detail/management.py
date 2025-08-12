@@ -68,17 +68,21 @@ class PeerManager:
             "file": PeerStats(),
             "gstream": PeerStats(),
         }
+        self._fake_port_count = 0
 
         self._lock = threading.Lock()
         pass
 
-    def aggregate(self):
+    def aggregate(self, dest):
         with self._lock:
             for k, v in self._peers.items():
                 v.aggregate(self._stats)
+                self._fake_port_count += v.get_fake_port_count()
                 continue
             pass
-        return { k: v.as_dict() for k, v in self._stats.items() }
+        dest['sequencing'] = { k: v.as_dict() for k, v in self._stats.items() }
+        dest['fake_port_overrides'] = self._fake_port_count
+        pass
 
     def _identify(self, pgm, host, inst, peer):
         ## Check to see if anything has changed.

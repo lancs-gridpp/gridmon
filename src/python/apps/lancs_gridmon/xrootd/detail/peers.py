@@ -96,6 +96,7 @@ class Peer:
 
         self._seq_win = seq_window
         self._fake_port = fake_port
+        self._fake_port_count = 0
         self._epoch = epoch
         self._mgr = mgr
         self._evrec = evrec
@@ -126,6 +127,11 @@ class Peer:
         self.__info('ev=new-entry')
         self._last_id = None
         pass
+
+    def get_fake_port_count(self):
+        r = self._fake_port_count
+        self._fake_port_count = 0
+        return r
 
     def aggregate(self, stats):
         self._map_stats.aggregate_to_map(stats, "mapping")
@@ -616,6 +622,9 @@ class Peer:
                     'op': ent['op'],
                 }
                 if self._fake_port is not None:
+                    if rec['redport'] != self._fake_port:
+                        self._fake_port_count += 1
+                        pass
                     rec['redport'] = self._fake_port
                     pass
                 usr = self.__replace_dictid(now, ent, 'user', 'redirect')
