@@ -43,6 +43,7 @@ from http.server import HTTPServer
 
 import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
+from lancs_gridmon.xrootd.udpqueue import UDPQueuer
 from lancs_gridmon.xrootd.summary.conversion \
     import MetricConverter as XRootDSummaryConverter
 from lancs_gridmon.xrootd.detail.management \
@@ -265,9 +266,10 @@ apputils.prepare_log_rotation(config['process']['log'], action=det_rec.relog)
 msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 
 if pcapsrc is None:
+    udp_q = UDPQueuer(dest=msg_fltr.process)
     udp_srv = UDPServer((config['source']['xrootd']['host'],
                          config['source']['xrootd']['port']),
-                        msg_fltr.datagram_handler())
+                        udp_q.handler())
     udp_srv.max_packet_size = 65536
     if 'rcvbuf' in config['source']['xrootd']:
         rcvbuf = int(config['source']['xrootd']['rcvbuf'])
@@ -276,6 +278,7 @@ if pcapsrc is None:
         logging.info('rcvbuf set to %d' % rcvbuf)
         pass
 else:
+    udp_q = UDPQueuer()
     pcapsrc.set_action(msg_fltr.process)
     udp_srv = pcapsrc
     pass
@@ -349,6 +352,7 @@ www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 
 with apputils.ProcessIDFile(config['process']['id_filename']):
     www_thrd.start()
+    udp_q.start()
     logging.info('starting')
     det_rec.start()
     try:
@@ -357,6 +361,7 @@ with apputils.ProcessIDFile(config['process']['id_filename']):
     except KeyboardInterrupt:
         pass
     logging.info('stopping')
+    udp_q.halt()
     www_hist.halt()
     www_srv.shutdown()
     www_srv.server_close()
