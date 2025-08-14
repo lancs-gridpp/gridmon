@@ -87,6 +87,9 @@ def get_config(raw_args):
             'xrootd': {
                 'host': '',
                 'port': 9484,
+                'queue': {
+                    'path': '~/.local/var/spool/xrootd-monitor/queue',
+                },
             },
             'pcap': {
                 'filename': None,
@@ -265,8 +268,10 @@ apputils.prepare_log_rotation(config['process']['log'], action=det_rec.relog)
 ## them to the right processor.
 msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 
+
 if pcapsrc is None:
-    udp_q = UDPQueuer(dest=msg_fltr.process)
+    udp_q = UDPQueuer(os.path.expanduser(config['source']['xrootd']['queue']['path']),
+                      dest=msg_fltr.process)
     udp_srv = UDPServer((config['source']['xrootd']['host'],
                          config['source']['xrootd']['port']),
                         udp_q.handler())
