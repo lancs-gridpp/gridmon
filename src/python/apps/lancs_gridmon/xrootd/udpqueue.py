@@ -182,6 +182,10 @@ class FileQueue:
                 self._up = False
                 if len(self._mem) == 0:
                     return
+                if self._file is not None:
+                    self._file.close()
+                    self._file = None
+                    pass
 
                 ## Determine the name of the chunk to write by
                 ## choosing a name that appears before other chunks.
