@@ -81,6 +81,21 @@ def convert_duration(obj, key, *keys):
     obj[tail] = parse_duration(obj[tail])
     return True
 
+def convert_memory(obj, key, *keys):
+    from lancs_gridmon.memory import parse_memory
+    pfx = [ key ] + list(keys)
+    tail = pfx[-1]
+    pfx = pfx[:-1]
+    for p in pfx:
+        if p not in obj:
+            return False
+        obj = obj[p]
+        continue
+    if tail not in obj:
+        return False
+    obj[tail] = parse_memory(obj[tail])
+    return True
+
 def get_config(raw_args):
     config = {
         'source': {
@@ -186,6 +201,7 @@ def get_config(raw_args):
             raise AssertionError('unreachable')
         continue
 
+    convert_memory(config, 'source', 'xrootd', 'rcvbuf')
     convert_duration(config, 'data', 'dictids', 'timeout')
     convert_duration(config, 'data', 'sequencing', 'timeout')
     convert_duration(config, 'data', 'horizon')
@@ -277,7 +293,7 @@ if pcapsrc is None:
                         udp_q.handler())
     udp_srv.max_packet_size = 65536
     if 'rcvbuf' in config['source']['xrootd']:
-        rcvbuf = int(config['source']['xrootd']['rcvbuf'])
+        rcvbuf = config['source']['xrootd']['rcvbuf']
         udp_srv.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
         rcvbuf = udp_srv.socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
         logging.info('rcvbuf set to %d' % rcvbuf)
