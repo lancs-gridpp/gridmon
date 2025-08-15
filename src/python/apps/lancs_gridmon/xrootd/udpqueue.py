@@ -201,7 +201,7 @@ class FileQueue:
                         if 'dat' in memb:
                             fh.write(memb['dat'])
                         else:
-                            pickle.dump(fh, memb['ent'])
+                            pickle.dump(memb['ent'], fh)
                             pass
                         continue
                     pass
