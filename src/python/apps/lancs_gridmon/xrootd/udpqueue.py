@@ -149,7 +149,9 @@ class FileQueue:
                     dat = pickle.load(fh)
                     np = fh.tell()
                     self._mem.append({ 'ent': dat })
-                    self._mem_size += np - pos
+                    z = np - pos
+                    self._mem_size += z
+                    expect -= z
                     pos = np
                     notify = True
                     continue
