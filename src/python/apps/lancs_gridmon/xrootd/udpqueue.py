@@ -154,7 +154,7 @@ class FileQueue:
                     notify = True
                     continue
                 pass
-            best.unlink()
+            seq[0][1].unlink()
             seq = seq[1:]
             continue
 
