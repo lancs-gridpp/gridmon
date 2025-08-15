@@ -38,6 +38,7 @@ import pickle
 import os
 import re
 import filelock
+import logging
 from pathlib import Path
 
 _fnfmt = re.compile('^queue-([0-9a-fA-F]+).chunk$')
@@ -81,6 +82,7 @@ class FileQueue:
         fn = self._dir / ('queue-%016x.chunk' % ts)
         self._file = open(fn, "wb")
         self._file_size = 0
+        logging.debug('new chunk %s' % fn)
         return
 
     def put(self, ent):
@@ -100,7 +102,11 @@ class FileQueue:
             if self._file is not None:
                 self._file.write(dat)
                 self._file_size += len(dat)
+                logging.debug('to chunk: %d/%d' % \
+                              (self._mem_size, self._file_size))
                 if self._file_size >= self._chunk_size:
+                    ## The chunk has exceeded its limit, so close it
+                    ## and start a new one.
                     self._file.close()
                     self.__new_chunk()
                     pass
@@ -110,6 +116,8 @@ class FileQueue:
             try:
                 self._mem.append({ 'pkl': dat, 'ent': ent})
                 self._mem_size += len(dat)
+                logging.debug('to mem: %d/%d' % \
+                              (self._mem_size, self._file_size))
                 note = note or len(self._mem) == 1
 
                 if self._mem_size >= self._ram_size:
@@ -157,6 +165,7 @@ class FileQueue:
         notify = False
         while not notify and len(seq) > 0:
             expect = seq[0][1].stat().st_size
+            logging.debug('loading %d from %s' % (expect, seq[0][1]))
             with open(seq[0][1], 'rb') as fh:
                 pos = 0
                 while expect > 0:
@@ -186,6 +195,8 @@ class FileQueue:
                 pass
             pass
 
+        logging.debug('repop: %d/%d' % \
+                      (self._mem_size, self._file_size))
         return notify
 
     def shutdown(self):
