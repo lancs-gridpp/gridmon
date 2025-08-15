@@ -76,6 +76,7 @@ class FileQueue:
     def __new_chunk(self):
         ## Open a new chunk, using the time in milliseconds to
         ## identify and sequence it.
+        assert self._file is None or self._file.closed
         ts = int(time.time() * 1000)
         fn = self._dir / ('queue-%016x.chunk' % ts)
         self._file = open(fn, "wb")
