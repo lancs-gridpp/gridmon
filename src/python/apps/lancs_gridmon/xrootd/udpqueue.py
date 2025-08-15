@@ -53,12 +53,13 @@ class Shutdown(Exception):
     pass
 
 class FileQueue:
-    def __init__(self, path, chunk_size=1024*1024):
+    def __init__(self, path, chunk_size=1024*1024, ram_size=1024*1024):
         self._dir = Path(path)
         self._dir.mkdir(parents=False, exist_ok=True, mode=0o700)
         self._file_lock = filelock.FileLock(self._dir / "queue.lock")
         self._file_lock.acquire(blocking=False)
 
+        self._ram_size = ram_size
         self._chunk_size = chunk_size
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
@@ -105,7 +106,7 @@ class FileQueue:
                 self._mem_size += len(dat)
                 note = len(self._mem) == 1
 
-                if self._mem_size >= self._chunk_size:
+                if self._mem_size >= self._ram_size:
                     self.__new_chunk()
                     pass
             finally:
@@ -231,10 +232,13 @@ class FileQueue:
     pass
 
 class UDPQueuer:
-    def __init__(self, dirpath, dest=None):
+    def __init__(self, dirpath, dest=None,
+                 ram_size=1024*1024, chunk_size=1024*1024):
         self._dest = dest
         if self._dest is not None:
-            self._q = FileQueue(dirpath)
+            self._q = FileQueue(dirpath,
+                                ram_size=ram_size,
+                                chunk_size=chunk_size)
             self._hdlr = functools.partial(self.Handler, self)
             self._thrd = threading.Thread(target=self._serve_forever)
             pass
