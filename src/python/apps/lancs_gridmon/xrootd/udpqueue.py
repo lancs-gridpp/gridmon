@@ -225,6 +225,10 @@ class FileQueue:
             if not self._up:
                 raise Shutdown()
             r = self._mem.pop(0)
+            if 'pkl' not in r:
+                r['pkl'] = pickle.dumps(r['ent'])
+                pass
+            self._mem_size -= len(r['pkl'])
             self.__repop()
             return r['ent']
         pass
