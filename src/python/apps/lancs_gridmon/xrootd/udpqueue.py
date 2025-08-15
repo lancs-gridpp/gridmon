@@ -89,6 +89,11 @@ class FileQueue:
 
             dat = pickle.dumps(ent)
 
+            ## Make sure we're not writing to a chunk file
+            ## unnecessarily.  This does nothing if we already have
+            ## something in memory.
+            note = self.__repop()
+
             ## Append to any existing chunk file.  Close the file and
             ## open a new one if the limit is reached.
             if self._file is not None:
@@ -104,7 +109,7 @@ class FileQueue:
             try:
                 self._mem.append({ 'pkl': dat, 'ent': ent})
                 self._mem_size += len(dat)
-                note = len(self._mem) == 1
+                note = note or len(self._mem) == 1
 
                 if self._mem_size >= self._ram_size:
                     self.__new_chunk()
