@@ -253,11 +253,7 @@ class UDPQueuer:
         try:
             while True:
                 rec = self._q.get()
-                try:
-                    self._dest(rec['ts'], rec['peer'], rec['payload'])
-                finally:
-                    self._q.task_done()
-                    pass
+                self._dest(rec['ts'], rec['peer'], rec['payload'])
                 continue
         except Shutdown:
             pass
