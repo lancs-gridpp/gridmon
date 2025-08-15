@@ -137,10 +137,17 @@ class FileQueue:
         ## Do nothing if we already have a chunk in memory.
         if len(self._mem) > 0:
             return False
+        assert self._mem_size == 0
 
         ## Load in the earliest chunk, then delete it.  If it's empty,
         ## delete it anyway, and try the next one.
         seq = self.__get_chunks()
+        if len(seq) == 1 and self._file is not None:
+            ## There's only one chunk, and we seem to be open on it.
+            ## Close it before loading in.
+            self._file.close()
+            self._file = None
+            pass
         notify = False
         while not notify and len(seq) > 0:
             expect = seq[0][1].stat().st_size
