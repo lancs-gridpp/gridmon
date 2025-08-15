@@ -58,7 +58,7 @@ class FileQueue:
         self._dir = Path(path)
         self._dir.mkdir(parents=False, exist_ok=True, mode=0o700)
         self._file_lock = filelock.FileLock(self._dir / "queue.lock")
-        self._file_lock.acquire(blocking=False)
+        self._file_lock.acquire(timeout=0)
 
         self._ram_size = ram_size
         self._chunk_size = chunk_size
