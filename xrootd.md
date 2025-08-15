@@ -14,11 +14,11 @@ The events are also logged (separately from the script's own log), and can be in
 `xrootd-monitor` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, and `defusedxml` for parsing XRootD summary reports, so try one of these:
 
 ```
-sudo dnf install python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+sudo dnf install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock
 ```
 
 ```
-sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-defusedxml
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock
 ```
 
 
@@ -34,6 +34,10 @@ source:
     host: ""
     port: 9484
     rcvbuf: null
+    queue:
+      path: '~/.local/var/spool/xrootd-monitor/queue'
+	  chunk_size: "1M"
+	  ram_size: "1M"
   pcap:
     filename: null
     limit: null
@@ -73,8 +77,13 @@ By default, all interfaces are bound to, using port 9484.
 `-U` overrides the hostname, and `-u` overrides the port.
 
 `source.xrootd.rcvbuf` causes `SO_RCVBUF` to be set on the socket.
-Doing so might help prevent losses of UDP packets in the kernel as they queue up, which might occur while the process is busy setting up a remote-write message or delivering it.
-You might also need to change kernel parameter `net.core.rmem_max` to allow for higher values.
+This feature was provided to help prevent losses of UDP packets in the kernel as they queue up, which might have occurred while the process is busy setting up a remote-write message or delivering it.
+However, it should be redundant as a separate thread now reads all packets into user space.
+Under high load, even this isn't enough, so excess datagrams are queued in `source.xrootd.queue.path`, which is also used to persist messages over a restart.
+Note that, if there's a long delay between stopping and starting, such messages are likely to be deemed too old.
+Queued messages start to go to disc after the `ram_size` limit is reached in bytes.
+A new chunk is started when the current chunk reaches `chunk_size`.
+(Both fields accept `kmgKMG` as suffixes.)
 
 If `source.pcap.filename: file` is specified (also set with `-P file` or `--pcap=file`), no UDP socket is created.
 Instead, the file is treated as a PCAP recording, and read using:
