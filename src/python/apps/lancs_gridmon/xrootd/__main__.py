@@ -104,6 +104,8 @@ def get_config(raw_args):
                 'port': 9484,
                 'queue': {
                     'path': '~/.local/var/spool/xrootd-monitor/queue',
+                    'chunk_size': '1M',
+                    'ram_size': '1M',
                 },
             },
             'pcap': {
@@ -201,6 +203,8 @@ def get_config(raw_args):
             raise AssertionError('unreachable')
         continue
 
+    convert_memory(config, 'source', 'xrootd', 'queue', 'chunk_size')
+    convert_memory(config, 'source', 'xrootd', 'queue', 'ram_size')
     convert_memory(config, 'source', 'xrootd', 'rcvbuf')
     convert_duration(config, 'data', 'dictids', 'timeout')
     convert_duration(config, 'data', 'sequencing', 'timeout')
@@ -286,8 +290,12 @@ msg_fltr = XRootDFilter(sum_proc.convert, det_proc.process)
 
 
 if pcapsrc is None:
-    udp_q = UDPQueuer(os.path.expanduser(config['source']['xrootd']['queue']['path']),
-                      dest=msg_fltr.process)
+    udp_qdir = os.path.expanduser(config['source']['xrootd']['queue']['path'])
+    udp_q = \
+        UDPQueuer(udp_qdir,
+                  chunk_size=config['source']['xrootd']['queue']['chunk_size'],
+                  ram_size=config['source']['xrootd']['queue']['ram_size'],
+                  dest=msg_fltr.process)
     udp_srv = UDPServer((config['source']['xrootd']['host'],
                          config['source']['xrootd']['port']),
                         udp_q.handler())
