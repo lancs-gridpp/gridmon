@@ -30,6 +30,18 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+def expand_vars(tree, *args, **kwargs):
+    for k, v in tree.items() if isinstance(tree, dict) else \
+            enumerate(tree) if isinstance(tree, list) else \
+            dict().items():
+        if isinstance(v, str):
+            tree[k] = v.format(*args, **kwargs)
+        elif isinstance(v, dict) or isinstance(v, list):
+            expand_vars(v, *args, **kwargs)
+            pass
+        continue
+    pass
+
 def merge_trees(a, b, pfx=(), mismatch=0):
     for key, nv in b.items():
         ## Add a value if not already present.
