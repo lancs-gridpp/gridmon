@@ -24,8 +24,11 @@ sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-
 
 ## Configuration
 
-`xrootd-monitor` treats non-switch arguments as names of YAML files, which are loaded and merged, overriding some defaults.
-Switches then override files' contents.
+`xrootd-monitor` treats non-switch arguments as names of YAML files, which are loaded in first and merged, overriding some defaults.
+`-c file` attempts to load and merge optional configuration from `file`, but without error if the file does not exist.
+All such files are loaded in after non-switch arguments.
+Finallly, the other switches then override files' contents.
+
 The following configuration is recognized:
 
 ```yaml
@@ -72,7 +75,7 @@ process:
 ```
 
 The value of `instance` can be set with `-n newinst`.
-All strings in the configuration are processed using Python's `str.format`, with `instance` set to this value.
+Having merged all configurations, and applied switch overrides, all strings in the configuration are processed using Python's `str.format`, with `instance` set to this value.
 
 
 ### Source configuration

@@ -151,7 +151,7 @@ def get_config(raw_args):
     import yaml
     from lancs_gridmon.trees import merge_trees, expand_vars
     from getopt import gnu_getopt
-    opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:n:",
+    opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:n:c:",
                             [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
                               'pcap-limit=', 'fake-port=' ])
 
@@ -162,6 +162,20 @@ def get_config(raw_args):
             loaded = yaml.load(fh, Loader=yaml.SafeLoader)
             pass
         merge_trees(config, loaded, mismatch=+1)
+        continue
+
+    ## Load in optional configuration files before overriding with
+    ## other command-line arguments.
+    for opt, val in opts:
+        if opt == '-c':
+            try:
+                with open(val, 'r') as fh:
+                    loaded = yaml.load(fh, Loader=yaml.SafeLoader)
+                    pass
+                merge_trees(config, loaded, mismatch=+1)
+            except FileNotFoundException:
+                pass
+            pass
         continue
 
     ## Override with in-line options.
