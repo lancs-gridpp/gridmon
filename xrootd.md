@@ -29,13 +29,14 @@ Switches then override files' contents.
 The following configuration is recognized:
 
 ```yaml
+instance: default
 source:
   xrootd:
     host: ""
     port: 9484
     rcvbuf: null
     queue:
-      path: '~/.local/var/spool/xrootd-monitor/queue'
+      path: '~/.local/var/spool/xrootd-monitor/{instance}/queue'
 	  chunk_size: "1M"
 	  ram_size: "1M"
   pcap:
@@ -49,7 +50,7 @@ destination:
   scrape:
     host: localhost
     port: 8743
-  log: "/tmp/xrootd-detail.log"
+  log: "/tmp/xrootd-detail-{instance}.log"
 data:
   horizon: "5m"
   fake_port: null
@@ -69,6 +70,10 @@ process:
     datefmt: "%Y-%m-%dT%H:%M:%SZ"
     level: null
 ```
+
+The value of `instance` can be set with `-n newinst`.
+All strings in the configuration are processed using Python's `str.format`, with `instance` set to this value.
+
 
 ### Source configuration
 

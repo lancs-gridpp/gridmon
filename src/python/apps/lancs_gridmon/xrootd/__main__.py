@@ -98,12 +98,13 @@ def convert_memory(obj, key, *keys):
 
 def get_config(raw_args):
     config = {
+        'instance': 'default',
         'source': {
             'xrootd': {
                 'host': '',
                 'port': 9484,
                 'queue': {
-                    'path': '~/.local/var/spool/xrootd-monitor/queue',
+                    'path': '~/.local/var/spool/xrootd-monitor/{instance}/queue',
                     'chunk_size': '1M',
                     'ram_size': '1M',
                 },
@@ -123,7 +124,7 @@ def get_config(raw_args):
                 'summary_job': 'xrootd',
                 'detail_job': 'xrootd_detail',
             },
-            'log': '/tmp/xrootd-detail.log',
+            'log': '/tmp/xrootd-detail-{instance}.log',
         },
         'process': {
             'silent': False,
@@ -148,9 +149,9 @@ def get_config(raw_args):
 
     ## Parse command-line arguments and load configuration.
     import yaml
-    from lancs_gridmon.trees import merge_trees
+    from lancs_gridmon.trees import merge_trees, expand_vars
     from getopt import gnu_getopt
-    opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:",
+    opts, args = gnu_getopt(raw_args, "zh:u:U:t:T:E:i:o:d:P:n:",
                             [ 'log=', 'log-file=', 'pid-file=', 'pcap=',
                               'pcap-limit=', 'fake-port=' ])
 
@@ -171,6 +172,8 @@ def get_config(raw_args):
             config['process']['silent'] = True
         elif opt == '-i':
             config['data']['dictids']['timeout'] = val
+        elif opt == '-n':
+            config['instance'] = val
         elif opt == '-o':
             config['destination']['log'] = val
         elif opt == '-d':
@@ -202,6 +205,8 @@ def get_config(raw_args):
         else:
             raise AssertionError('unreachable')
         continue
+
+    expand_vars(config, instance=config['instance'])
 
     convert_memory(config, 'source', 'xrootd', 'queue', 'chunk_size')
     convert_memory(config, 'source', 'xrootd', 'queue', 'ram_size')
