@@ -188,6 +188,9 @@ def get_config(raw_args):
             config['data']['dictids']['timeout'] = val
         elif opt == '-n':
             config['instance'] = val
+        elif opt == '-c':
+            ## already handled
+            pass
         elif opt == '-o':
             config['destination']['log'] = val
         elif opt == '-d':
