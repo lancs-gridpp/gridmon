@@ -173,7 +173,7 @@ def get_config(raw_args):
                     loaded = yaml.load(fh, Loader=yaml.SafeLoader)
                     pass
                 merge_trees(config, loaded, mismatch=+1)
-            except FileNotFoundException:
+            except FileNotFoundError:
                 pass
             pass
         continue
