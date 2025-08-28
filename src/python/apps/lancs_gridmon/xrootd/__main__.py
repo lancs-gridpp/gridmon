@@ -123,6 +123,7 @@ def get_config(raw_args):
                 'endpoint': None,
                 'summary_job': 'xrootd',
                 'detail_job': 'xrootd_detail',
+                'labels': dict(),
             },
             'log': '/tmp/xrootd-detail-{instance}.log',
         },
@@ -280,6 +281,7 @@ sum_wtr = metrics.RemoteMetricsWriter(
     endpoint=config['destination']['push']['endpoint'],
     schema=xrootd_summary_schema,
     job=config['destination']['push']['summary_job'],
+    labels=config['destination']['push']['labels'],
     expiry=10*60)
 sum_proc = XRootDSummaryConverter(sum_wtr)
 
