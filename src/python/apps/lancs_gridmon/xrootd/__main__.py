@@ -290,6 +290,7 @@ det_wtr = metrics.RemoteMetricsWriter(
     endpoint=config['destination']['push']['endpoint'],
     schema=xrootd_detail_schema,
     job=config['destination']['push']['detail_job'],
+    labels=config['destination']['push']['labels'],
     expiry=10*60)
 det_rec = XRootDDetailRecorder(now, config['destination']['log'], det_wtr,
                                epoch=epoch,
