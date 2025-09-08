@@ -32,5 +32,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export PYTHONPATH="${0%/*}/python3/apps.zip"
+GRIDMON_HOME="$(realpath -eP "${0}")"
+GRIDMON_HOME="${GRIDMON_HOME%/share/gridmon/*}"
+export PYTHONPATH="${GRIDMON_HOME}/share/gridmon/python3/apps.zip"
 exec python3 -m lancs_gridmon.ggus.jiggers "$@"
