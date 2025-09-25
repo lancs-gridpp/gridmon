@@ -47,6 +47,7 @@ The following keys are recognized:
   - `device` &ndash; the internal device name, such as `eth0`
   - `network` &ndash; any form of network identifier, e.g., `public`, which can be cross-referenced with other interfaces to infer connectivity
   - `roles` &ndash; an arbitrary set of roles that the interface fulfils
+  - `slaves` &ndash; a list of internal names of devices that are bonded to form this device
   `network` and `device` appear in the metric `ip_metadata`.
   The interface name appears as the label `iface` on almost all `ip_` metrics.
   Each role generates an `ip_role` metric.
