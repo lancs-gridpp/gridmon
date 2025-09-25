@@ -739,6 +739,7 @@ def keys_now(e, *args):
             # print('for %s in %s completes' % (args, e))
             return keys_now(e, *args[1:])
         # print('for %s in %s yields sub' % (args, e))
+        ## TODO: Cope with e being a set, rather than a dict.
         return [
             i for j in [
                 [ (k, *n) for n in keys_now(v, *(args[0] - 1, *args[1:])) ]

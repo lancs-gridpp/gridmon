@@ -30,6 +30,8 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from lancs_gridmon.metrics import keys as metric_keys, walk as metric_walk
+
 schema = [
     {
         'base': 'xrootd_expect',
@@ -191,6 +193,21 @@ schema = [
         'attrs': {
             'iface': ('%s', lambda t, d: t[1]),
             'role': ('%s', lambda t, d: t[2]),
+        },
+    },
+
+    {
+        'base': 'ip_bonding',
+        'help': 'relationship between master and slave in bonding',
+        'type': 'gauge',
+        'select': metric_keys('node', 1, 'iface', 1, 'slaves', 1),
+        'samples': {
+            '': 1,
+        },
+        'attrs': {
+            'node': ('%s', lambda t, d: t[0]),
+            'device': ('%s', lambda t, d: t[2]),
+            'master': ('%s', metric_walk('node', 1, 'iface', 1, 'device')),
         },
     },
 

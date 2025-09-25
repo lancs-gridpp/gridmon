@@ -469,6 +469,14 @@ try:
                         if k in sub:
                             ient[k] = sub[k]
                             pass
+                        if k == 'device':
+                            for slave in sub.get('slaves', list()):
+                                ## TODO: Just use a set, and make
+                                ## lancs_gridmon.metrics.walk/keys
+                                ## cope with sets.
+                                ient.setdefault('slaves', dict())[slave] = 1
+                                continue
+                            pass
                         continue
                     ient['roles'] = set(sub.get('roles', [ ]))
                     continue
