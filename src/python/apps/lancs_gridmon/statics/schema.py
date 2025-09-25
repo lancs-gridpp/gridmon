@@ -32,6 +32,13 @@
 
 from lancs_gridmon.metrics import keys as metric_keys, walk as metric_walk
 
+def _extract_user_labels(keys, data):
+    res = { }
+    for k, v in data['drives'][keys[0]][keys[1]].items():
+        res[k] = v['fmt'] % v['value']
+        continue
+    return res
+
 schema = [
     {
         'base': 'xrootd_expect',

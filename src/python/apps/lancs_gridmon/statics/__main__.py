@@ -57,13 +57,6 @@ def _walk(root, path):
         return root
     return _walk(root[path[0]], path[1:])
 
-def _extract_user_labels(keys, data):
-    res = { }
-    for k, v in data['drives'][keys[0]][keys[1]].items():
-        res[k] = v['fmt'] % v['value']
-        continue
-    return res
-
 def _update_live_metrics(hist, confs):
     import lancs_gridmon.statics.drives as drives
 
