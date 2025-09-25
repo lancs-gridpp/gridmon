@@ -40,8 +40,8 @@ source:
     rcvbuf: null
     queue:
       path: '~/.local/var/spool/xrootd-monitor/{instance}/queue'
-	  chunk_size: "1M"
-	  ram_size: "1M"
+      chunk_size: "1M"
+      ram_size: "1M"
   pcap:
     filename: null
     limit: null
