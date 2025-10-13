@@ -317,6 +317,19 @@ def get_osd_disk_metrics(osd, args=[], done=set()):
 
             out = { }
 
+            potent = ent.get('power_on_time')
+            if potent is not None:
+                pot = 0
+                pot += potent.get('days', 0)
+                pot *= 24
+                pot += potent.get('hours', 0)
+                pot *= 60
+                pot += potent.get('minutes', 0)
+                pot *= 60
+                pot += potent.get('seconds', 0)
+                out['power_on_time'] = pot
+                pass
+
             ## Get the NVME fields.
             blksz = ent.get('logical_block_size')
             if blksz is not None:
@@ -639,6 +652,22 @@ schema = [
         'attrs': {
             'devid': ('%s', lambda t, d: t[0]),
             'path': ('%s', lambda t, d: d['disks'][t[0]]['path']),
+        },
+    },
+
+    {
+        'base': 'cephhealth_power_on_time',
+        'help': 'time device has spent running',
+        'type': 'counter',
+        'select': lambda e: [ (t,) for t in e['disks']
+                              if 'power_on_time' in e['disks'][t] ],
+        'samples': {
+            '_total': ('%d', lambda t, d: d['disks'][t[0]] \
+                       ['power_on_time']),
+            '_created': ('%d', lambda t, d: 0),
+        },
+        'attrs': {
+            'devid': ('%s', lambda t, d: t[0]),
         },
     },
 
