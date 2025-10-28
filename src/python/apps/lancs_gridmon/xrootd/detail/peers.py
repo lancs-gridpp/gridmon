@@ -575,6 +575,7 @@ class Peer:
             'peer': ent['Peer'],
             'prot': ent['proto'],
             'cmdr_host': ent['Client']['host'],
+            'cmdr_prot': ent['TPC'],
             'streams': xeq['Strm'],
             'rc': xeq['RC'],
             'size': ent['Size'],
