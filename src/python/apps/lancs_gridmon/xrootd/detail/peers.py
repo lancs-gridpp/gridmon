@@ -478,12 +478,18 @@ class Peer:
                 fil = self.__replace_dictid(ts, ent['open'], 'file', 'file-open')
                 ufn_p = ent['open'].get('lfn')
                 ufn = self.__replace_dictid(ts, ent['open'], 'user', 'file-open')
+                ## TODO: Is ufn_id used?
                 ufn_id = ent['open'].get('user_dictid')
                 msg = { 'rw': ent['open']['rw'] }
                 if ufn_p is not None:
+                    ## TODO: Is fil['path'] distinct?  It's from a 'd'
+                    ## mapping.
                     msg['path'] = ufn_p
                     pass
                 if ufn is not None:
+                    ## TODO: Can we make use of
+                    ## ent['open']['file_size']?  Is it the size of
+                    ## the file at opening?
                     merge_trees(msg, {
                         'prot': ufn['prot'],
                         'user': ufn['user'],
