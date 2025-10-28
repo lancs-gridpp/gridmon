@@ -62,6 +62,12 @@ _xfr_ops = {
     6: 'stg_cp_in',
 }
 
+_map_types = {
+    'T': {
+        'Uc': int,
+    },
+}
+
 _map_keys = {
     '=': dict(),
     'd': dict(),
@@ -188,13 +194,19 @@ def _integrate_field(d, k):
 def _reify_field(d, k):
     return _parse_field(d, k, float)
 
-def _expand_keys(d, spec):
+def _expand_keys(d, spec, types=dict()):
     if spec is None:
         return
     for oldk, newk in spec.items():
         v = d.get(oldk)
         if v is None:
             continue
+        if types is not None:
+            t = types.get(oldk)
+            if t is not None:
+                v = t(v)
+                pass
+            pass
         d[newk] = v
         del d[oldk]
         continue
@@ -624,7 +636,7 @@ def decode_message(ts, addr, buf):
                             else 'lfn')] = mpgdat['xfn']
                     del mpgdat['xfn']
                     pass
-                _expand_keys(mpgdat, _map_keys[code])
+                _expand_keys(mpgdat, _map_keys[code], _map_types.get(code))
                 pass
             if len(lines) > 0:
                 mpg['lines'] = lines
