@@ -460,6 +460,7 @@ class Peer:
                     merge_trees(msg, {
                         'prot': usr['prot'],
                         'user': usr['user'],
+                        'session': usr['sess'],
                         'client_name': usr['host'],
                         'client_addr': usr['args']['host_addr'],
                         'ipv': usr['args']['ip_vers'],
@@ -486,6 +487,7 @@ class Peer:
                     merge_trees(msg, {
                         'prot': ufn['prot'],
                         'user': ufn['user'],
+                        'session': ufn.get('sess') or fil.get('sess'),
                         'client_name': ufn['host'],
                         'client_addr': ufn['args']['host_addr'],
                         'ipv': ufn['args']['ip_vers'],
@@ -511,6 +513,7 @@ class Peer:
                     merge_trees(msg, {
                         'prot': fil['prot'],
                         'user': fil['user'],
+                        'session': fil['sess'],
                         'client_name': fil['host'],
                         'path': fil['path'],
                     })
@@ -632,6 +635,7 @@ class Peer:
                     merge_trees(rec, {
                         'prot': usr['prot'],
                         'user': usr['user'],
+                        'session': usr['sess'],
                         'client_name': usr['host'],
                         'client_addr': usr['args']['host_addr'],
                         'ipv': usr['args']['ip_vers'],
