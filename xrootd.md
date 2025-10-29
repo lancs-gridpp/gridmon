@@ -55,6 +55,7 @@ destination:
     port: 8743
   log: "/tmp/xrootd-detail-{instance}.log"
 data:
+  organizations: { }
   horizon: "5m"
   fake_port: null
   dictids:
@@ -133,6 +134,12 @@ Not that higher values cause delays in pushing detailed metrics, as anything wit
 - `window` is an integer less than 257, and indicates how far ahead of the earliest awaited sequence number another sequence number is to be considered ahead of it, rather than behind.
 
 `data.domains.filename` specifies a [host-to-domain mapping](README.md#domain-information).
+
+`data.organizations` is a dictionary indexed by VO identifier.
+Each entry is a dictionary, which can include the following:
+
+- `token_issuers` is an array of URIs identifying token issuers for the VO.
+  When tokens are used, such a URI is specified as the organization in the detailed monitoring, and these entries map such URIs to VO identifiers, to be consistent with non-token authorization.
 
 ### Process configuration
 
