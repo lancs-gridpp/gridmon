@@ -332,7 +332,7 @@ if pcapsrc is None:
         logging.info('rcvbuf set to %d' % rcvbuf)
         pass
 else:
-    udp_q = UDPQueuer()
+    udp_q = None
     pcapsrc.set_action(msg_fltr.process)
     udp_srv = pcapsrc
     pass
@@ -406,7 +406,9 @@ www_thrd = threading.Thread(target=HTTPServer.serve_forever, args=(www_srv,))
 
 with apputils.ProcessIDFile(config['process']['id_filename']):
     www_thrd.start()
-    udp_q.start()
+    if udp_q is not None:
+        udp_q.start()
+        pass
     logging.info('starting')
     det_rec.start()
     try:
@@ -415,7 +417,9 @@ with apputils.ProcessIDFile(config['process']['id_filename']):
     except KeyboardInterrupt:
         pass
     logging.info('stopping')
-    udp_q.halt()
+    if udp_q is not None:
+        udp_q.halt()
+        pass
     www_hist.halt()
     www_srv.shutdown()
     www_srv.server_close()
