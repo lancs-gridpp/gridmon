@@ -133,6 +133,7 @@ def get_config(raw_args):
             'log': apputils.default_log_config(),
         },
         'data': {
+            'organizations': dict(),
             'horizon': '5m',
             'fake_port': None,
             'dictids': {
@@ -276,6 +277,14 @@ else:
         config['data']['domains']['filename'])
     pass
 
+## Map URIs of token issuers to VO names.
+vo_issuers = dict()
+for k, v in config['data']['organizations'].items():
+    for uri in v.get('token_issuers', list()):
+        vo_issuers[uri] = k
+        continue
+    continue
+
 ## Prepare to process summary messages.
 sum_wtr = metrics.RemoteMetricsWriter(
     endpoint=config['destination']['push']['endpoint'],
@@ -295,11 +304,13 @@ det_wtr = metrics.RemoteMetricsWriter(
 det_rec = XRootDDetailRecorder(now, config['destination']['log'], det_wtr,
                                epoch=epoch,
                                horizon=config['data']['horizon'])
+
 det_proc = XRootDPeerManager(now,
                              det_rec.store_event,
                              det_rec.advance,
                              domains=domcfg,
                              epoch=epoch,
+                             vo_issuers=vo_issuers,
                              fake_port=config['data']['fake_port'],
                              id_to=config['data']['dictids']['timeout'],
                              seq_to=config['data']['sequencing']['timeout'],
