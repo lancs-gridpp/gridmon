@@ -401,16 +401,6 @@ class Peer:
             self.__purge_sequenced(sid, ts, pseq, info)
             return
 
-        ## Although there are several types of mapping, they all seem
-        ## to use the same dictionary space, so one dict is enough for
-        ## all types.  We record the mapping kind, but only for
-        ## diagnostics; we assume references are correctly used.
-        self._ids[dictid] = {
-            "expiry": ts + self._id_to,
-            "type": kind,
-            "info": info,
-        }
-
         ## Keep track of dictids that don't get reported.  It could be
         ## down to network loss, but it might also be that some
         ## dictids are not reported because they're only referenced in
@@ -430,6 +420,35 @@ class Peer:
                 pass
             pass
         self._last_id = dictid
+
+        ## A token mapping augments an existing 'u' mapping, rather
+        ## than being referenced from elsewhere.  For now, we're just
+        ## assuming that the last augmentation overrides any previous.
+        ## It might be more appropriate to index by (say) subject, but
+        ## that will be less useful if the referrer later provides no
+        ## indication of which token applies.
+        if kind == 'token':
+            subj = info['args'].get('subj')
+            iss = info['args'].get('auth', [ dict() ])[0].get('org')
+            uid = info['args'].get('user_dictid')
+            usr = self.__id_get(ts, uid)
+            if usr is not None:
+                logging.debug('got user %s for %s' % (uid, iss))
+                usr['token'] = info
+            else:
+                logging.debug('no user %d for %s' % (uid, iss))
+                pass
+            return
+
+        ## Although there are several types of mapping, they all seem
+        ## to use the same dictionary space, so one dict is enough for
+        ## all types.  We record the mapping kind, but only for
+        ## diagnostics; we assume references are correctly used.
+        self._ids[dictid] = {
+            "expiry": ts + self._id_to,
+            "type": kind,
+            "info": info,
+        }
         return
 
     ## Calls to this are set up in self.process (the 'file' branch).
