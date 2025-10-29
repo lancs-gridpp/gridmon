@@ -128,9 +128,9 @@ class PeerManager:
             now = dgram['ts']
             addr = (dgram['peer']['host'], dgram['peer']['port'])
             if 'error' in dgram:
-                logging.error('from %s:%d at %.3f %s remnant %s' % \
+                logging.error('from %s:%d at %.3f %s remnant[%d] %s' % \
                               (addr[0], addr[1], now, dgram['error'],
-                               dgram['remn_octets']))
+                               dgram['remn_len'], dgram['remn_octets']))
                 return True
 
             msg = dgram['message']

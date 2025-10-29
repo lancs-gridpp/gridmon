@@ -298,6 +298,7 @@ def _humanize_buffer(d, k):
     for c in v:
         s1 += ' %02X' % int(c)
         continue
+    d[k + '_len'] = len(v)
     d[k + '_octets'] = s1[1:]
     d[k + '_escaped'] = v.decode('ascii', errors='replace')
     del d[k]
@@ -646,7 +647,7 @@ def decode_message(ts, addr, buf):
             pass
         pass
 
-    if len(buf) > 0:
+    if len(buf) > 0 or 'error' in result:
         result['remn'] = buf
         _humanize_buffer(result, 'remn')
         pass
