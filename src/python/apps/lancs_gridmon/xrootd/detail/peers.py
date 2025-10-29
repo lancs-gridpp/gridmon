@@ -36,6 +36,41 @@ import logging
 from lancs_gridmon.trees import merge_trees
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
+## Extract the VO name and subject from user info.  First, user_info
+## is checked for token/args/auth[0]/org, and mapped from an issue URI
+## to a VO name.  The subject is also recorded if present
+## (token/args/subj).  If no issuer is found, args/auth[0]/org is used
+## if present (with no issuer transformation).  iss_map maps from URI
+## to VO name.
+def _set_org(msg, org_name, subj_name, user_info, iss_map):
+    if 'token' in user_info:
+        if 'args' in user_info['token']:
+            if 'auth' in user_info['token']['args']:
+                if len(user_info['token']['args']['auth']) > 0:
+                    if 'org' in user_info['token']['args']['auth'][0]:
+                        raw = user_info['token']['args']['auth'][0]['org']
+                        msg[org_name] = iss_map.get(raw, raw)
+                        if 'subj' in user_info['token']['args']:
+                            msg[subj_name] = user_info['token']['args']['subj']
+                            pass
+                        return True
+                    pass
+                pass
+            pass
+        pass
+
+    if 'args' in user_info:
+        if 'auth' in user_info['args']:
+            if len(user_info['args']['auth']) > 0:
+                if 'org' in user_info['args']['auth'][0]:
+                    msg[org_name] = user_info['args']['auth'][0]['org']
+                    return True
+                pass
+            pass
+        pass
+
+    return False
+
 class Stats:
     def __init__(self):
         self._lost = 0
@@ -306,6 +341,9 @@ class Peer:
                     (pseq, base, lim, data))
         pass
 
+    def __set_vo(self, msg, usr, org_name='org', subj_name='subj'):
+        return _set_org(msg, org_name, subj_name, usr, self._vo_issuers)
+
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
     ## resequencing.  Return true if the supplied data was neither
@@ -487,6 +525,7 @@ class Peer:
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
+                    self.__set_vo(msg, usr)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -520,6 +559,7 @@ class Peer:
                         'dn': ufn['args']['dn'],
                         'auth': ufn['args']['proto'],
                     })
+                    self.__set_vo(msg, ufn)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -543,6 +583,7 @@ class Peer:
                         'client_name': fil['host'],
                         'path': fil['path'],
                     })
+                    self.__set_vo(msg, fil)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -669,6 +710,7 @@ class Peer:
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
+                    self.__set_vo(rec, usr)
                     pass
                 self.__add_domain(rec, 'client_name', 'client_domain')
                 self.__schedule_record(now, 'redirect', rec)
