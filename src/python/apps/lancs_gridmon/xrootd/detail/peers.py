@@ -546,13 +546,14 @@ class Peer:
                     msg['path'] = ufn_p
                     pass
                 if ufn is not None:
+                    sess = ufn.get('sess') or fil.get('sess')
                     ## TODO: Can we make use of
                     ## ent['open']['file_size']?  Is it the size of
                     ## the file at opening?
                     merge_trees(msg, {
                         'prot': ufn['prot'],
                         'user': ufn['user'],
-                        'session': ufn.get('sess') or fil.get('sess'),
+                        'session': sess,
                         'client_name': ufn['host'],
                         'client_addr': ufn['args']['host_addr'],
                         'ipv': ufn['args']['ip_vers'],
