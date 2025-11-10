@@ -34,15 +34,16 @@ import subprocess
 import os
 
 class PCAPSource:
-    def __init__(self, src, limit=None):
+    def __init__(self, src, limit=None, args=list()):
         self._src = src
         self._lim = limit
+        self._args = args
         pass
 
     def __open(self):
         cmd = [ 'tshark', '-r', self._src, '-t', 'u', '-Tfields',
                 '-e', 'frame.time_epoch', '-e', 'ip.src',
-                '-e', 'udp.srcport', '-e', 'data' ]
+                '-e', 'udp.srcport', '-e', 'data' ] + self._args
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 universal_newlines=True).stdout
 
