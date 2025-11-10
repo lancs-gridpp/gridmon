@@ -112,6 +112,7 @@ def get_config(raw_args):
             'pcap': {
                 'filename': None,
                 'limit': None,
+                'args': list(),
             },
         },
         'destination': {
@@ -264,7 +265,8 @@ if config['source']['pcap']['filename'] is None:
 else:
     from lancs_gridmon.pcap import PCAPSource
     pcapsrc = PCAPSource(config['source']['pcap']['filename'],
-                         config['source']['pcap']['limit'])
+                         config['source']['pcap']['limit'],
+                         config['source']['pcap']['args'])
     epoch = now = pcapsrc.get_start() - 60 * 20
     pass
 

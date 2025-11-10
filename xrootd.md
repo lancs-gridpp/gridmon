@@ -45,6 +45,7 @@ source:
   pcap:
     filename: null
     limit: null
+    args: []
 destination:
   push:
     endpoint: null
@@ -100,6 +101,8 @@ Instead, the file is treated as a PCAP recording, and read using:
 ```
 tshark -r file -t u -Tfields -e frame.time.epoch -e ip.src -e udp.srcport -e data
 ```
+
+Arguments listed in `source.pcap.args` are appended to the command.
 
 The output is parsed as tab-separated data, and processed as if it were live data.
 `source.pcap.limit: 10` or `--pcap-limit=10` can be set to limit processing to the first (say) 10 packets.
