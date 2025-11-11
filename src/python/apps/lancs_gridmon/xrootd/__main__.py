@@ -43,6 +43,7 @@ from http.server import HTTPServer
 
 import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
+from lancs_gridmon.paths import LongestPathMapping as VOPathMapping
 from lancs_gridmon.xrootd.udpqueue import UDPQueuer
 from lancs_gridmon.xrootd.summary.conversion \
     import MetricConverter as XRootDSummaryConverter
@@ -279,6 +280,10 @@ else:
         config['data']['domains']['filename'])
     pass
 
+## Map LFN path prefixes to VO names.
+vo_paths = VOPathMapping(config['data']['organizations'],
+                         lambda x: x.get('paths', list()))
+
 ## Map URIs of token issuers to VO names.
 vo_issuers = dict()
 for k, v in config['data']['organizations'].items():
@@ -313,6 +318,7 @@ det_proc = XRootDPeerManager(now,
                              domains=domcfg,
                              epoch=epoch,
                              vo_issuers=vo_issuers,
+                             vo_paths=vo_paths,
                              fake_port=config['data']['fake_port'],
                              id_to=config['data']['dictids']['timeout'],
                              seq_to=config['data']['sequencing']['timeout'],

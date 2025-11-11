@@ -33,6 +33,7 @@
 from urllib.parse import urlparse
 import functools
 import logging
+from lancs_gridmon.paths import LongestPathMapping as VOPathMapping
 from lancs_gridmon.trees import merge_trees
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
@@ -42,7 +43,10 @@ from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 ## (token/args/subj).  If no issuer is found, args/auth[0]/org is used
 ## if present (with no issuer transformation).  iss_map maps from URI
 ## to VO name.
-def _set_org(msg, org_name, subj_name, user_info, iss_map):
+def _set_org_from_user(msg, org_name, subj_name, user_info, iss_map):
+    if user_info is None:
+        return False
+
     if 'token' in user_info:
         if 'args' in user_info['token']:
             if 'auth' in user_info['token']['args']:
@@ -70,6 +74,15 @@ def _set_org(msg, org_name, subj_name, user_info, iss_map):
         pass
 
     return False
+
+def _set_org_from_path(msg, org_name, path, path2vo):
+    if path2vo is None or path is None:
+        return False
+    org = path2vo[path]
+    if org is None:
+        return False
+    msg[org_name] = org
+    return True
 
 class Stats:
     def __init__(self):
@@ -121,7 +134,8 @@ class Stats:
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
-                 fake_port=None, seq_window=128, vo_issuers=dict()):
+                 fake_port=None, seq_window=128, vo_issuers=dict(),
+                 vo_paths=None):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -144,6 +158,7 @@ class Peer:
         self._inst = None
         self._pgm = None
         self._vo_issuers = vo_issuers
+        self._vo_paths = vo_paths
         self._map_reseqs = dict() ## indexed by sid
         self._file_reseqs = dict() ## indexed by sid
         self._gstream_reseqs = dict() ## indexed by sid
@@ -341,8 +356,13 @@ class Peer:
                     (pseq, base, lim, data))
         pass
 
-    def __set_vo(self, msg, usr, org_name='org', subj_name='subj'):
-        return _set_org(msg, org_name, subj_name, usr, self._vo_issuers)
+    def __set_vo(self, msg, usr=None, path=None,
+                 org_name='org', subj_name='subj'):
+        if _set_org_from_user(msg, org_name, subj_name, usr, self._vo_issuers):
+            return True
+        if _set_org_from_path(msg, org_name, path, self._vo_paths):
+            return True
+        return False
 
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
@@ -525,7 +545,7 @@ class Peer:
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
-                    self.__set_vo(msg, usr)
+                    self.__set_vo(msg, usr=usr)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -544,8 +564,15 @@ class Peer:
                     ## TODO: Is fil['path'] distinct?  It's from a 'd'
                     ## mapping.
                     msg['path'] = ufn_p
+
+                    ## Augment the file dictid with the LFN.  This can
+                    ## be accessed by the 'close' event.
+                    if fil is not None:
+                        fil['lfn'] = ufn_p
+                        pass
                     pass
                 if ufn is not None:
+                    fil['usr'] = ufn
                     sess = ufn.get('sess') or fil.get('sess')
                     ## TODO: Can we make use of
                     ## ent['open']['file_size']?  Is it the size of
@@ -560,7 +587,7 @@ class Peer:
                         'dn': ufn['args']['dn'],
                         'auth': ufn['args']['proto'],
                     })
-                    self.__set_vo(msg, ufn)
+                    self.__set_vo(msg, usr=ufn, path=ufn_p)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -582,9 +609,11 @@ class Peer:
                         'user': fil['user'],
                         'session': fil['sess'],
                         'client_name': fil['host'],
-                        'path': fil['path'],
+                        'path': fil.get('lfn') or fil['path'],
                     })
-                    self.__set_vo(msg, fil)
+                    self.__set_vo(msg,
+                                  usr=fil.get('usr') or fil,
+                                  path=fil.get('lfn'))
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -624,10 +653,13 @@ class Peer:
         self.__add_domain(ent['Client'], 'host', 'domain')
         if xeq['Type'] == 'pull':
             ent['Peer'] = ent['Src']
+            selfpt = ent['Dst']
         elif xeq['Type'] == 'push':
             ent['Peer'] = ent['Dst']
+            selfpt = ent['Src']
             pass
         bits = urlparse(ent['Peer'])
+        selfbits = urlparse(selfpt)
         ent['Peer_host'] = bits.hostname
         ent['proto'] = bits.scheme
         self.__add_domain(ent, 'Peer_host', 'Peer_domain')
@@ -643,6 +675,7 @@ class Peer:
             'size': ent['Size'],
             'duration': xeq['End_unix'] - xeq['Beg_unix'],
         }
+        self.__set_vo(params, path=selfbits[2])
         if 'Peer_domain' in ent:
             params['peer_domain'] = ent['Peer_domain']
             pass
@@ -711,8 +744,8 @@ class Peer:
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
-                    self.__set_vo(rec, usr)
                     pass
+                self.__set_vo(rec, usr=usr, path=rec['redpath'])
                 self.__add_domain(rec, 'client_name', 'client_domain')
                 self.__schedule_record(now, 'redirect', rec)
                 pass
