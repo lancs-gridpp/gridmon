@@ -43,7 +43,7 @@ from http.server import HTTPServer
 
 import lancs_gridmon.metrics as metrics
 import lancs_gridmon.apps as apputils
-from lancs_gridmon.paths import LongestPathMapping as VOPathMapping
+from lancs_gridmon.vos import WatchingVODatabase
 from lancs_gridmon.xrootd.udpqueue import UDPQueuer
 from lancs_gridmon.xrootd.summary.conversion \
     import MetricConverter as XRootDSummaryConverter
@@ -135,7 +135,10 @@ def get_config(raw_args):
             'log': apputils.default_log_config(),
         },
         'data': {
-            'organizations': dict(),
+            'organizations': {
+                'filename': None,
+                'counter_limit': 1000,
+            },
             'horizon': '5m',
             'fake_port': None,
             'dictids': {
@@ -280,17 +283,8 @@ else:
         config['data']['domains']['filename'])
     pass
 
-## Map LFN path prefixes to VO names.
-vo_paths = VOPathMapping(config['data']['organizations'],
-                         lambda x: x.get('paths', list()))
-
-## Map URIs of token issuers to VO names.
-vo_issuers = dict()
-for k, v in config['data']['organizations'].items():
-    for uri in v.get('token_issuers', list()):
-        vo_issuers[uri] = k
-        continue
-    continue
+## Map XRootD dictids, LFN path prefixes and usernames to VO names.
+vo_db = WatchingVODatabase(**config['data']['organizations'])
 
 ## Prepare to process summary messages.
 sum_wtr = metrics.RemoteMetricsWriter(
@@ -317,8 +311,7 @@ det_proc = XRootDPeerManager(now,
                              det_rec.advance,
                              domains=domcfg,
                              epoch=epoch,
-                             vo_issuers=vo_issuers,
-                             vo_paths=vo_paths,
+                             vo_db=vo_db,
                              fake_port=config['data']['fake_port'],
                              id_to=config['data']['dictids']['timeout'],
                              seq_to=config['data']['sequencing']['timeout'],

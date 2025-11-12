@@ -134,8 +134,7 @@ class Stats:
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
-                 fake_port=None, seq_window=128, vo_issuers=dict(),
-                 vo_paths=None):
+                 fake_port=None, seq_window=128, vo_db=None):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -157,8 +156,7 @@ class Peer:
         self._host = None
         self._inst = None
         self._pgm = None
-        self._vo_issuers = vo_issuers
-        self._vo_paths = vo_paths
+        self._vo_db = vo_db
         self._map_reseqs = dict() ## indexed by sid
         self._file_reseqs = dict() ## indexed by sid
         self._gstream_reseqs = dict() ## indexed by sid
@@ -356,13 +354,10 @@ class Peer:
                     (pseq, base, lim, data))
         pass
 
-    def __set_vo(self, msg, usr=None, path=None,
+    def __set_vo(self, msg, auth=None, path=None, user=None,
                  org_name='org', subj_name='subj'):
-        if _set_org_from_user(msg, org_name, subj_name, usr, self._vo_issuers):
-            return True
-        if _set_org_from_path(msg, org_name, path, self._vo_paths):
-            return True
-        return False
+        return self._vo_db.set_vo(msg, org_key=org_name, subj_key=subj_name,
+                                  xrootd=auth, path=path, xfer_user=user)
 
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
@@ -545,7 +540,7 @@ class Peer:
                         'dn': usr['args']['dn'],
                         'auth': usr['args']['proto'],
                     })
-                    self.__set_vo(msg, usr=usr)
+                    self.__set_vo(msg, auth=usr)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -587,7 +582,7 @@ class Peer:
                         'dn': ufn['args']['dn'],
                         'auth': ufn['args']['proto'],
                     })
-                    self.__set_vo(msg, usr=ufn, path=ufn_p)
+                    self.__set_vo(msg, auth=ufn, path=ufn_p)
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
                 scheduled += 1
@@ -612,7 +607,7 @@ class Peer:
                         'path': fil.get('lfn') or fil['path'],
                     })
                     self.__set_vo(msg,
-                                  usr=fil.get('usr') or fil,
+                                  auth=fil.get('usr') or fil,
                                   path=fil.get('lfn'))
                     pass
                 self.__add_domain(msg, 'client_name', 'client_domain')
@@ -745,7 +740,7 @@ class Peer:
                         'auth': usr['args']['proto'],
                     })
                     pass
-                self.__set_vo(rec, usr=usr, path=rec['redpath'])
+                self.__set_vo(rec, auth=usr, path=rec['redpath'])
                 self.__add_domain(rec, 'client_name', 'client_domain')
                 self.__schedule_record(now, 'redirect', rec)
                 pass
