@@ -117,3 +117,24 @@ domains:
     match: ^.*$
 ```
 
+
+## VO mapping
+
+Some applications take a VO mapping, which specifies various ways to map information to VO identifier.
+The mapping is defined as a YAML file containing a dictionary, whose keys are VO identifiers.
+Each entry itself is a dictionary, and may contain the following:
+
+- `token_issuers` is an array of URIs identifying token issuers for the VO.
+  When tokens are used, such a URI is specified as the organization in the detailed monitoring, and these entries map such URIs to VO identifiers, to be consistent with non-token authorization.
+- `transfers` is a dictionary with the following optional entries:
+  - `paths` is a list of path prefixes to match the virtual path of a local URL to infer VO.
+  - `users` is a list of transfer usernames to map to the VO.
+- `jobs` is a dictionary with the following optional entries:
+  - `users` is a list of job usernames to map to the VO.
+  - `accounts` is a list of job accounts to map to the VO.
+- `dns` is a list of distinguished names (DNs) to map to the VO.
+- `name` is a human-readable name for the VO.
+
+An application need not use all components:
+
+- The XRootD monitor uses only the token issuers and transfer paths.

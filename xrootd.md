@@ -140,14 +140,9 @@ Not that higher values cause delays in pushing detailed metrics, as anything wit
 
 `data.domains.filename` specifies a [host-to-domain mapping](README.md#domain-information).
 
-`data.organizations` configures a mapping from various entities to VO identifier.
-`filename` may point to a YAML file containing a dictionary indexed by VO name, whose timestamp is periodically tested to determine whether to reload.
-Each entry itself is a dictionary, which can include the following:
+`data.organizations` configures a mapping from various entities to VO identifier:
 
-- `token_issuers` is an array of URIs identifying token issuers for the VO.
-  When tokens are used, such a URI is specified as the organization in the detailed monitoring, and these entries map such URIs to VO identifiers, to be consistent with non-token authorization.
-- `transfers` is a dictionary with the following optional entries:
-  - `paths` is a list of path prefixes to match the virtual path of a local URL to infer VO.
+- `filename` may point to a YAML file defining a [VO mapping](README.md#vo-mapping), whose timestamp is periodically tested to determine whether to reload.
 
 ### Process configuration
 
