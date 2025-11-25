@@ -248,6 +248,7 @@ class Recorder:
                     substats = stats.setdefault('redir', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault(params['prot'], { }) \
+                                    .setdefault(params.get('org', ''), { }) \
                                     .setdefault(params['redhost'], { }) \
                                     .setdefault(params['redport'], { })
                     self.__inc(t1, substats, 1)
