@@ -283,6 +283,7 @@ class Recorder:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params.get('org', ''), { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -299,6 +300,7 @@ class Recorder:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params.get('org', ''), { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -313,7 +315,8 @@ class Recorder:
                    'client_domain' in params:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
-                                    .setdefault(params['client_domain'], { })
+                                    .setdefault(params['client_domain'], { }) \
+                                    .setdefault(params.get('org', ''), { })
                     cr = substats.setdefault('read', { })
                     crv = substats.setdefault('readv', { })
                     cw = substats.setdefault('write', { })
