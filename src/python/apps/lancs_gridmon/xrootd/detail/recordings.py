@@ -258,6 +258,7 @@ class Recorder:
                                     .setdefault(params['dir'], { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault(params['prot'], { }) \
+                                    .setdefault(params.get('org', ''), { }) \
                                     .setdefault(params['streams'], { }) \
                                     .setdefault(params['cmdr_domain'], { }) \
                                     .setdefault(params['peer_domain'], {
