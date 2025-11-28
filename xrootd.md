@@ -273,22 +273,23 @@ The following metrics are defined:
 - `xrootd_dictid_unknown_total` and `xrootd_dictid_unknown_created` &ndash; When a dictid is looked up, but is not found, this counter is incremented.
   Labels are `pgm`, `xrdid`, `record` and `field`.
 - `xrootd_data_opens_total` and `xrootd_data_opens_created` &ndash; When an [Open event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119288) is received in an `f`-stream, this counter is incremented.
-  Labels are `pgm`, `xrdid`, `protocol`, `client_domain`, `ip_version` and `auth`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id`, `client_domain`, `ip_version` and `auth`.
 - `xrootd_data_opens_rw_total` and `xrootd_data_opens_rw_created` &ndash; When an [Open event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119288) for read/write is received in an `f`-stream, this counter is incremented.
   Note that this counter is incorporated into `xrootd_data_opens_total`.
-  Labels are `pgm`, `xrdid`, `protocol`, `client_domain`, `ip_version` and `auth`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id`, `client_domain`, `ip_version` and `auth`.
 - `xrootd_data_closes_total` and `xrootd_data_closes_created` &ndash; When a [Close event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119289) is received in an `f`-stream, this counter is incremented.
-  Labels are `pgm`, `xrdid`, `protocol` and `client_domain`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id` and `client_domain`.
 - `xrootd_data_closes_forced_total` and `xrootd_data_closes_forced_created` &ndash; When a [Close event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119289) is received in an `f`-stream, and it is forced, this counter is incremented.
-  Labels are `pgm`, `xrdid`, `protocol` and `client_domain`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id` and `client_domain`.
 - `xrootd_data_read_bytes_total` and `xrootd_data_read_bytes_created`; `xrootd_data_readv_bytes_total` and `xrootd_data_readv_bytes_created`; `xrootd_data_write_bytes_total` and `xrootd_data_write_bytes_created` &ndash; When a [Close event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119289) is received in an `f`-stream, this counter is incremented by the number of bytes indicated in the `read`, `readv` and `writev` fields.
-  Labels are `pgm`, `xrdid`, `protocol` and `client_domain`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id` and `client_domain`.
 - `xrootd_data_disconnects_total` and `xrootd_data_disconnects_created` &ndash; When a [Disc event](https://xrootd.slac.stanford.edu/doc/dev51/xrd_monitoring.htm#_Toc49119287) is received in an `f`-stream, this counter is incremented.
-  Labels are `pgm`, `xrdid`, `protocol`, `client_domain`, `ip_version` and `auth`.
+  Labels are `pgm`, `xrdid`, `protocol`, `vo_id`, `client_domain`, `ip_version` and `auth`.
 - `xrootd_tpc_*` &ndash; These accumulate TPCs, indexed by:
   - `direction`: `pull` or `push`;
   - `ip_version`: `4` or `6`;
   - `protocol`: such as `https` or `root`;
+  - `vo_id`: the VO identifier (usually derived from the local path);
   - `streams`: the number of streams used;
   - `commander_domain`: the domain of the client instigating the copy;
   - `peer_domain`: the domain of the source for a pull, or of the destination for a push.
@@ -328,3 +329,5 @@ prot=https user=bar client_name=foo.example.com \
 client_addr=[::ffff:321.123.92.48] ipv=4 dn=##### auth=gsi \
 client_domain=###.example.com
 ```
+
+`vo_id` might be present if it could be determined.

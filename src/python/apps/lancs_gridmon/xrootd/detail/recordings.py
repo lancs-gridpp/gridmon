@@ -248,7 +248,7 @@ class Recorder:
                     substats = stats.setdefault('redir', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault(params['prot'], { }) \
-                                    .setdefault(params.get('org', ''), { }) \
+                                    .setdefault(params.get('vo_id', ''), { }) \
                                     .setdefault(params['redhost'], { }) \
                                     .setdefault(params['redport'], { })
                     self.__inc(t1, substats, 1)
@@ -259,7 +259,7 @@ class Recorder:
                                     .setdefault(params['dir'], { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault(params['prot'], { }) \
-                                    .setdefault(params.get('org', ''), { }) \
+                                    .setdefault(params.get('vo_id', ''), { }) \
                                     .setdefault(params['streams'], { }) \
                                     .setdefault(params['cmdr_domain'], { }) \
                                     .setdefault(params['peer_domain'], {
@@ -284,7 +284,7 @@ class Recorder:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
-                                    .setdefault(params.get('org', ''), { }) \
+                                    .setdefault(params.get('vo_id', ''), { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -301,7 +301,7 @@ class Recorder:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
-                                    .setdefault(params.get('org', ''), { }) \
+                                    .setdefault(params.get('vo_id', ''), { }) \
                                     .setdefault('ip_version', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault('auth', { }) \
@@ -317,7 +317,7 @@ class Recorder:
                     substats = stats.setdefault('prot', { }) \
                                     .setdefault(params['prot'], { }) \
                                     .setdefault(params['client_domain'], { }) \
-                                    .setdefault(params.get('org', ''), { })
+                                    .setdefault(params.get('vo_id', ''), { })
                     cr = substats.setdefault('read', { })
                     crv = substats.setdefault('readv', { })
                     cw = substats.setdefault('write', { })

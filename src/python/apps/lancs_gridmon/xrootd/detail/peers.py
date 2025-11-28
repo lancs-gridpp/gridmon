@@ -37,9 +37,9 @@ from lancs_gridmon.paths import LongestPathMapping as VOPathMapping
 from lancs_gridmon.trees import merge_trees
 from lancs_gridmon.sequencing import FixedSizeResequencer as Resequencer
 
-## Extract the VO name and subject from user info.  First, user_info
-## is checked for token/args/auth[0]/org, and mapped from an issue URI
-## to a VO name.  The subject is also recorded if present
+## DISUSED: Extract the VO name and subject from user info.  First,
+## user_info is checked for token/args/auth[0]/org, and mapped from an
+## issue URI to a VO name.  The subject is also recorded if present
 ## (token/args/subj).  If no issuer is found, args/auth[0]/org is used
 ## if present (with no issuer transformation).  iss_map maps from URI
 ## to VO name.
@@ -75,6 +75,7 @@ def _set_org_from_user(msg, org_name, subj_name, user_info, iss_map):
 
     return False
 
+## DISUSED
 def _set_org_from_path(msg, org_name, path, path2vo):
     if path2vo is None or path is None:
         return False
@@ -355,7 +356,7 @@ class Peer:
         pass
 
     def __set_vo(self, msg, auth=None, path=None, user=None,
-                 org_name='org', subj_name='subj'):
+                 org_name='vo_id', subj_name='subj'):
         return self._vo_db.set_vo(msg, org_key=org_name, subj_key=subj_name,
                                   xrootd=auth, path=path, xfer_user=user)
 
