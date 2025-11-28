@@ -63,7 +63,7 @@ The following keys are recognized:
     Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `INSTANCE-NAME@INTERFACE-NAME`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `xrootd`.
   - `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
     Exactly one interface must be assigned the role `xroot`, as described for `xroots`.
-	The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
+    The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
 
 All node names must be unique.
 All interface names must be unique.
@@ -93,7 +93,7 @@ A `clusters` top-level map entry may exist, whose keys are cluster identifiers, 
   - `dns` &ndash; a list of certificate DNs known to identify the VO;
   - `jobs` &ndash; a map of:
     - `users` &ndash; a list of compute usernames used by the VO;
-	- `accounts` &ndash; a list of accounts used by the VO;
+    - `accounts` &ndash; a list of accounts used by the VO;
   - `transfers` &ndash; a map of:
     - `users` &ndash; a list of file-transfer usernames used by the VO.
   The display name is used to generate a metric `vo_meta` with `cluster` as the cluster id, `vo_id` as the VO identifier and `vo_name` as the display name.
@@ -154,10 +154,10 @@ Together, they generate metrics such as:
 ```
 dlo_meta{dloid="gen1",
          path="pci-0000:18:00.0-scsi-0:0:14:0",
-		 drive_bank="hotplug",
-		 drive_slot="14",
-		 drive_row="2",
-		 drive_column="2"} 1
+         drive_bank="hotplug",
+         drive_slot="14",
+         drive_row="2",
+         drive_column="2"} 1
 ```
 
 The `dloid` label matches that of `machine_drive_layout`, and `path` matches that of `cephhealth_disk_fitting`, so a metric with `node` and `path` can first be augmented with `dloid` using `machine_drive_layout` on `node`, and then with these additional metrics using `dlo_meta` on `dloid` and `path`:
