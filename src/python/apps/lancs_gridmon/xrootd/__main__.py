@@ -358,12 +358,126 @@ def update_live_metrics(start_time, pmgr, hist):
         },
     }
     pmgr.aggregate(data[now]['meta'])
+
+    import resource
+    ru = resource.getrusage(resource.RUSAGE_SELF)
+    data[now]['meta']['rusage'] = dict()
+    for k in [ 'utime', 'maxrss', 'ixrss', 'idrss', 'isrss', 'minflt',
+               'majflt', 'nswap', 'inblock', 'oublock', 'msgsnd',
+               'msgrcv', 'nsignals', 'nvcsw', 'nivcsw' ]:
+        v = getattr(ru, 'ru_' + k, None)
+        if v is not None:
+            data[now]['meta']['rusage'][k] = v
+            pass
+        continue
     hist.install(data)
     pass
 
 from lancs_gridmon.metrics import keys as metric_keys, walk as metric_walk
 
 meta_schema = [
+    {
+        'base': 'xrootd_collector_rusage_utime',
+        'type': 'counter',
+        'help': 'user-mode execution time',
+        'unit': 'seconds',
+        'select': metric_keys('meta', 'rusage', 'utime'),
+        'samples': {
+            '_total': ('%.3f', metric_walk('meta', 'rusage', 'utime')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_stime',
+        'type': 'counter',
+        'help': 'kernel-mode execution time',
+        'unit': 'seconds',
+        'select': metric_keys('meta', 'rusage', 'stime'),
+        'samples': {
+            '_total': ('%.3f', metric_walk('meta', 'rusage', 'stime')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_maxrss',
+        'type': 'counter',
+        'help': 'maximum resident set size',
+        'unit': 'kilobytes',
+        'select': metric_keys('meta', 'rusage', 'maxrss'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'maxrss')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_minflt',
+        'type': 'counter',
+        'help': 'page faults serviced without I/O',
+        'select': metric_keys('meta', 'rusage', 'minflt'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'minflt')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_maxflt',
+        'type': 'counter',
+        'help': 'page faults serviced requiring I/O',
+        'select': metric_keys('meta', 'rusage', 'maxflt'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'maxflt')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_inblock',
+        'type': 'counter',
+        'help': 'filesytem input events',
+        'select': metric_keys('meta', 'rusage', 'inblock'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'inblock')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_oublock',
+        'type': 'counter',
+        'help': 'filesytem output events',
+        'select': metric_keys('meta', 'rusage', 'oublock'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'oublock')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_nvcsw',
+        'type': 'counter',
+        'help': 'voluntary context switches',
+        'select': metric_keys('meta', 'rusage', 'oublock'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'nvcsw')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_nivcsw',
+        'type': 'counter',
+        'help': 'involuntary context switches',
+        'select': metric_keys('meta', 'rusage', 'oublock'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'nivcsw')),
+        },
+        'attrs': dict(),
+    },
+
     {
         'base': 'xrootd_collector_start_time',
         'type': 'counter',
