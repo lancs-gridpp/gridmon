@@ -142,7 +142,9 @@ Not that higher values cause delays in pushing detailed metrics, as anything wit
 
 `data.organizations` configures a mapping from various entities to VO identifier:
 
-- `filename` may point to a YAML file defining a [VO mapping](README.md#vo-mapping), whose timestamp is periodically tested to determine whether to reload.
+- `filename` may point to a YAML file defining a [VO mapping](vos.md), whose timestamp is periodically tested to determine whether to reload.
+- `counter_limit` controls how often the file's timestamp is tested.
+  Each attempt to map a context to a VO increments a counter which, upon reaching this limit, triggers a reload.
 
 ### Process configuration
 
