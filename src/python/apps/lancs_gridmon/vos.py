@@ -134,6 +134,8 @@ class WatchingVODatabase:
     def __set_from_path(self, dest, org_key, info):
         if info is None:
             return False
+        if self._paths is None:
+            return False
         org = self._paths[info]
         if org is None:
             return False
