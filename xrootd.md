@@ -330,4 +330,51 @@ client_addr=[::ffff:321.123.92.48] ipv=4 dn=##### auth=gsi \
 client_domain=###.example.com
 ```
 
-`vo_id` might be present if it could be determined.
+Loki's [`logfmt`](https://grafana.com/docs/loki/latest/query/log_queries/#logfmt) parser should be able to decompose these messages.
+
+Some fields exist on several event types:
+- `ipv` &ndash; the IP version; `4` or `6`
+- `prot` &ndash; the transport protocol; e.g., `xroot`, `https`, etc
+- `vo_id` &ndash; the (inferred) VO id
+- `subj` &ndash; the subject of the token used for authorization
+- `session` &ndash; the session id, to reference 'real' logs
+- `auth` &ndash; the authentication protocol; e.g., `gsi`, `http`, etc
+- `user` &ndash; the username extracted from the authentication
+- `dn` &ndash; the Distinguished Name extracted from the authentication
+- `client_name` &ndash; the hostname of the client
+- `client_domain` &ndash; the hostname of the client mapped to a DNS domain, if the mapping is defined
+- `client_addr` &ndash; the client's IP address (usually in IPv6 notation, even if IPv4)
+
+
+Here are some event types and the fields that are logged with them:
+
+- `tpc` &ndash; A third-party copy completed.
+  The following fields may be included:
+  - `dir` &ndash; `push` or `pull`
+  - `peer` &ndash; the URL of the remote resource
+  - `local_path` &ndash; the virtual path of the URL of the local resource
+  - `cmdr_host` &ndash; the host site instigating the transfer
+  - `cmdr_prot` &ndash; the transport protocol used to instigate the transfer; e.g., `https`
+  - `streams` &ndash; the number of streams used to perform the transfer
+  - `rc` &ndash; the exit code of the transfer; `0` for okay
+  - `size` &ndash; the size in bytes of the file transferred
+  - `duration` &ndash; the time in seconds taken to perform the transfer
+  - `peer_domain` &ndash; the peer host mapped to a DNS domain, if the mapping is defined
+  - `cmdr_domain` &ndash; the commanding host mapped to a DNS domain, if the mapping is defined
+- `disconnect` &ndash; A client disconnected.
+  The common fields `prot`, `user`, `session`, `client_name`, `client_addr`, `ipv`, `dn` and `auth` are included.
+  `client_domain`, `vo_id` and `subj` may also appear.
+- `open`/`close` &ndash; A client opened/closed a file.
+  The common fields `prot`, `user`, `session`, `client_name`, `client_addr`, `ipv`, `dn` and `auth` are included.
+  `client_domain`, `vo_id` and `subj` may also appear.
+  The following fields may be included:
+  - `rw` &ndash; true if the file is opened for read/write; false if read-only
+  - `path` &ndash; the LFN
+- `redirect` &ndash; A client was redirected.
+  The following fields may be included:
+  The common fields `prot`, `user`, `session`, `client_name`, `client_addr`, `ipv`, `dn` and `auth` are included.
+  `client_domain`, `vo_id` and `subj` may also appear.
+  - `op` &ndash; the operation type
+  - `redhost` &ndash; the host to which the client was redirected
+  - `redport` &ndash; the port to which the client was redirected
+  - `redpath` &ndash; the path that was sought (or redirected to?)
