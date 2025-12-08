@@ -655,15 +655,17 @@ class Peer:
             selfpt = ent['Src']
             pass
         bits = urlparse(ent['Peer'])
-        selfbits = urlparse(selfpt)
         ent['Peer_host'] = bits.hostname
         ent['proto'] = bits.scheme
+        selfbits = urlparse(selfpt)
+        lpath = selfbits[2]
         self.__add_domain(ent, 'Peer_host', 'Peer_domain')
         params = {
             'dir': xeq['Type'],
             'ipv': xeq['IPv'],
             'peer': ent['Peer'],
             'prot': ent['proto'],
+            'local_path': lpath,
             'cmdr_host': ent['Client']['host'],
             'cmdr_prot': ent['TPC'],
             'streams': xeq['Strm'],
@@ -671,7 +673,7 @@ class Peer:
             'size': ent['Size'],
             'duration': xeq['End_unix'] - xeq['Beg_unix'],
         }
-        self.__set_vo(params, path=selfbits[2])
+        self.__set_vo(params, path=lpath)
         if 'Peer_domain' in ent:
             params['peer_domain'] = ent['Peer_domain']
             pass
