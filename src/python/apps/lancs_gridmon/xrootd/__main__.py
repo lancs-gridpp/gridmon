@@ -424,12 +424,12 @@ meta_schema = [
     },
 
     {
-        'base': 'xrootd_collector_rusage_maxflt',
+        'base': 'xrootd_collector_rusage_majflt',
         'type': 'counter',
         'help': 'page faults serviced requiring I/O',
-        'select': metric_keys('meta', 'rusage', 'maxflt'),
+        'select': metric_keys('meta', 'rusage', 'majflt'),
         'samples': {
-            '_total': ('%d', metric_walk('meta', 'rusage', 'maxflt')),
+            '_total': ('%d', metric_walk('meta', 'rusage', 'majflt')),
         },
         'attrs': dict(),
     },
