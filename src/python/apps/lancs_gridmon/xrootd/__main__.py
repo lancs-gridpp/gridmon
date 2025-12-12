@@ -457,6 +457,50 @@ meta_schema = [
     },
 
     {
+        'base': 'xrootd_collector_rusage_msgsnd',
+        'type': 'counter',
+        'help': 'messages sent',
+        'select': metric_keys('meta', 'rusage', 'msgsnd'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'msgsnd')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_msgrcv',
+        'type': 'counter',
+        'help': 'messages received',
+        'select': metric_keys('meta', 'rusage', 'msgrcv'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'msgrcv')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_nsignals',
+        'type': 'counter',
+        'help': 'signals received',
+        'select': metric_keys('meta', 'rusage', 'nsignals'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'nsignals')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_rusage_nswap',
+        'type': 'counter',
+        'help': 'swap-outs',
+        'select': metric_keys('meta', 'rusage', 'nswap'),
+        'samples': {
+            '_total': ('%d', metric_walk('meta', 'rusage', 'nswap')),
+        },
+        'attrs': dict(),
+    },
+
+    {
         'base': 'xrootd_collector_rusage_nvcsw',
         'type': 'counter',
         'help': 'voluntary context switches',
