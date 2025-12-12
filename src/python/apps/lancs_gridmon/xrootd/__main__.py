@@ -460,7 +460,7 @@ meta_schema = [
         'base': 'xrootd_collector_rusage_nvcsw',
         'type': 'counter',
         'help': 'voluntary context switches',
-        'select': metric_keys('meta', 'rusage', 'oublock'),
+        'select': metric_keys('meta', 'rusage', 'nvcsw'),
         'samples': {
             '_total': ('%d', metric_walk('meta', 'rusage', 'nvcsw')),
         },
@@ -471,7 +471,7 @@ meta_schema = [
         'base': 'xrootd_collector_rusage_nivcsw',
         'type': 'counter',
         'help': 'involuntary context switches',
-        'select': metric_keys('meta', 'rusage', 'oublock'),
+        'select': metric_keys('meta', 'rusage', 'nivcsw'),
         'samples': {
             '_total': ('%d', metric_walk('meta', 'rusage', 'nivcsw')),
         },
