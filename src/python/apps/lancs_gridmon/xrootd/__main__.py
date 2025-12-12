@@ -362,9 +362,9 @@ def update_live_metrics(start_time, pmgr, hist):
     import resource
     ru = resource.getrusage(resource.RUSAGE_SELF)
     data[now]['meta']['rusage'] = dict()
-    for k in [ 'utime', 'maxrss', 'ixrss', 'idrss', 'isrss', 'minflt',
-               'majflt', 'nswap', 'inblock', 'oublock', 'msgsnd',
-               'msgrcv', 'nsignals', 'nvcsw', 'nivcsw' ]:
+    for k in [ 'utime', 'stime', 'maxrss', 'ixrss', 'idrss', 'isrss',
+               'minflt', 'majflt', 'nswap', 'inblock', 'oublock',
+               'msgsnd', 'msgrcv', 'nsignals', 'nvcsw', 'nivcsw' ]:
         v = getattr(ru, 'ru_' + k, None)
         if v is not None:
             data[now]['meta']['rusage'][k] = v
