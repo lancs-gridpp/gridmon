@@ -30,6 +30,8 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
+
 def expand_vars(tree, *args, **kwargs):
     for k, v in tree.items() if isinstance(tree, dict) else \
             enumerate(tree) if isinstance(tree, list) else \
@@ -71,3 +73,17 @@ def merge_trees(a, b, pfx=(), mismatch=0):
 
         continue
     pass
+
+def tree_size(node):
+    res = sys.getsizeof(node)
+    if isinstance(node, dict):
+        for k, v in node.items():
+            res += tree_size(k)
+            res += tree_size(v)
+            continue
+    elif isinstance(node, list):
+        for v in node:
+            res += tree_size(v)
+            continue
+        pass
+    return res
