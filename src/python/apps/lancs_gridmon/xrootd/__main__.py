@@ -349,6 +349,14 @@ else:
     udp_srv = pcapsrc
     pass
 
+def on_term(signum, frame):
+    global udp_srv
+    logging.info('terminating by signal')
+    ## We must call shutdown() in a different thread.
+    threading.Thread(target=UDPServer.shutdown, args=(udp_srv,)).start()
+    pass
+signal.signal(signal.SIGTERM, on_term)
+
 def update_live_metrics(start_time, pmgr, hist):
     now = (time.time() * 1000) // 1000
     data = dict()
