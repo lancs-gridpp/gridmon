@@ -86,11 +86,6 @@ class UDPQueuer:
         pass
 
     def _push(self, ts, peer, payload):
-        rec = {
-            'peer': peer,
-            'payload': payload,
-            'ts': ts,
-        }
         return self._q.push((ts, peer), payload)
 
     class Handler(DatagramRequestHandler):
