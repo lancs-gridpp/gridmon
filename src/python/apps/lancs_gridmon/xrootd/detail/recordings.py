@@ -146,6 +146,8 @@ class Recorder:
         pass
 
     def advance_to_clear(self):
+        if len(self._events) == 0:
+            return
         return self.advance(max(self._events) / 1000 + self._horiz_ival)
 
     def advance(self, now):
