@@ -146,8 +146,8 @@ class Shutdown(Exception):
     pass
 
 class PersistentQueue:
-    def __init__(self, path, encoder=lambda x: x,
-                 decoder=lambda x: x, chunk_size=1024*1024, name='queue'):
+    def __init__(self, path, encoder=lambda x: x, decoder=lambda x: x,
+                 chunk_size=1024*1024, ram_size=1024*1024, name='queue'):
         self._name = name
         self._encoder = encoder
         self._decoder = decoder
@@ -156,6 +156,7 @@ class PersistentQueue:
         self._file_lock = filelock.FileLock(self._dir / "queue.lock")
         self._file_lock.acquire(timeout=0)
         self._chunk_size = chunk_size
+        self._ram_size = ram_size
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
 
@@ -234,7 +235,7 @@ class PersistentQueue:
 
             bsz = len(body)
             nmsz = self._mem_size + bsz
-            if len(self._chunks) > 0 or nmsz > self._chunk_size:
+            if len(self._chunks) > 0 or nmsz > self._ram_size:
                 ## We have to write to a file.  Ensure that there is
                 ## at least one chunk.
                 stamp = None
