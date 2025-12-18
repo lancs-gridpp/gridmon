@@ -180,7 +180,7 @@ class FileQueue:
                     continue
                 pass
             seq[0][1].unlink()
-            seq = seq[1:]
+            del seq[0]
             continue
 
         ## We should be writing to a file next.
