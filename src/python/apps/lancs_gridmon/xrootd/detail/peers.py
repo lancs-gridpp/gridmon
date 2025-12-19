@@ -208,11 +208,12 @@ class Peer:
 
     ## Flush out identities with old expiry times.
     def id_clear(self, now):
-        ks = [ k for k, v in self._ids.items() if now > v["expiry"] ]
-        for k in ks:
-            self._ids.pop(k, None)
-            continue
-        self.__info('ev=purged-dict amount=%d rem=%d', len(ks), len(self._ids))
+        ## Create a new dictionary with the most recent entries,
+        ## replacing the old dictionary.
+        oldsz = len(self._ids)
+        self._ids = { k: v for k, v in self._ids.items() if now <= v["expiry"] }
+        disc = oldsz - len(self._ids)
+        self.__info('ev=purged-dict amount=%d rem=%d', disc, len(self._ids))
         pass
 
     def __log(self, lvl, msg, *args):
