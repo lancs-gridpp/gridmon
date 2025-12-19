@@ -143,6 +143,7 @@ class Peer:
 
         """
 
+        self._last_used = 0
         self._seq_win = seq_window
         self._fake_port = fake_port
         self._fake_port_count = 0
@@ -361,11 +362,15 @@ class Peer:
         return self._vo_db.set_vo(msg, org_key=org_name, subj_key=subj_name,
                                   xrootd=auth, path=path, xfer_user=user)
 
+    def age(self, now):
+        return now - self._last_used
+
     ## Accept a decoded packet for processing.  This usually means
     ## working out what sequence it belongs to, and submitting it for
     ## resequencing.  Return true if the supplied data was neither
     ## used nor logged.
     def process(self, now, pseq, typ, data):
+        self._last_used = now
         if typ in [ 'mapping', 'traces', 'rstream' ]:
             ## All mapping, trace and rstream messages belong to the
             ## same sequence.  Submitting to the resequencer results

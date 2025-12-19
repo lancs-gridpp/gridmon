@@ -172,6 +172,8 @@ class PeerManager:
             raise e
         finally:
             if now - self._id_ts > self._id_to:
+                self._peers = { k: v for k, v in self._peers.items()
+                                if v.age(now) > 2 * 60 * 60 }
                 for addr, peer in self._peers.items():
                     peer.id_clear(now)
                     continue
