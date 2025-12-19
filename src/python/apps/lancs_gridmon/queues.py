@@ -49,15 +49,15 @@ class _Chunk:
             self._handle = open(self._path, 'wb+')
             self._size = 0
             self._count = 0
-            self._handle.write(self._size.to_bytes(4))
-            self._handle.write(self._count.to_bytes(2))
+            self._handle.write(self._size.to_bytes(4, byteorder='big'))
+            self._handle.write(self._count.to_bytes(2, byteorder='big'))
             logging.debug('%s:%s new open wb+' % (self._name, self._path))
         else:
             self._handle = None
             with open(self._path, 'rb') as fh:
                 buf = fh.read(6)
-                self._size = int.from_bytes(buf[0:4])
-                self._count = int.from_bytes(buf[4:6])
+                self._size = int.from_bytes(buf[0:4], byteorder='big')
+                self._count = int.from_bytes(buf[4:6], byteorder='big')
                 pass
             logging.debug('%s:%s counted %d:%d' % \
                           (self._name, self._path, self._count, self._size))
@@ -69,8 +69,8 @@ class _Chunk:
             buf = fh.read(6)
             while self._count > 0:
                 buf = fh.read(6)
-                hsz = int.from_bytes(buf[0:2])
-                bsz = int.from_bytes(buf[2:6])
+                hsz = int.from_bytes(buf[0:2], byteorder='big')
+                bsz = int.from_bytes(buf[2:6], byteorder='big')
                 header = fh.read(hsz)
                 body = fh.read(bsz)
                 self._count -= 1
@@ -110,8 +110,8 @@ class _Chunk:
             logging.debug('%s:%s opened rb+' % (self._name, self._path))
             self._handle.seek(0, os.SEEK_END)
             pass
-        self._handle.write(len(header).to_bytes(2))
-        self._handle.write(len(body).to_bytes(4))
+        self._handle.write(len(header).to_bytes(2, byteorder='big'))
+        self._handle.write(len(body).to_bytes(4, byteorder='big'))
         self._handle.write(header)
         self._handle.write(body)
         self._size += len(body)
@@ -126,8 +126,8 @@ class _Chunk:
         assert self._handle.seekable()
         self._handle.seek(0, os.SEEK_SET)
         assert self._handle.tell() == 0
-        self._handle.write(self._size.to_bytes(4))
-        self._handle.write(self._count.to_bytes(2))
+        self._handle.write(self._size.to_bytes(4, byteorder='big'))
+        self._handle.write(self._count.to_bytes(2, byteorder='big'))
         self._handle.close()
         logging.debug('%s:%s completed %d:%d' % \
                       (self._name, self._path, self._count, self._size))
