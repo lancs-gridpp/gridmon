@@ -61,6 +61,9 @@ data:
     counter_limit: 1000
   horizon: "5m"
   fake_port: null
+  purge: "15m"
+  peers:
+    timeout: "20m"
   dictids:
     timeout: "2h"
   sequencing:
@@ -130,6 +133,11 @@ Although this provides no actual metrics, it can provide documentation for pushe
 
 `data.horizon` specifies young data must be to be accepted.
 Not that higher values cause delays in pushing detailed metrics, as anything within the time period until now is deferred until it is certain that no further out-of-order information will arrive.
+
+`data.purge` specifies the minimum time between purges of expired entries (peers, dictids, etc).
+
+`data.peers.timeout` specifies a timeout for discarding old peer records.
+A peer record exists for each distinct UDP source address.
 
 `data.dictids.timeout` specifies a timeout for discarding old dictids.
 
