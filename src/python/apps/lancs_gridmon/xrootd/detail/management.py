@@ -38,7 +38,7 @@ from lancs_gridmon.xrootd.detail.recordings import Recorder as XRootDRecorder
 class PeerManager:
     def __init__(self, now, evrec, adv, domains=None, id_to=120*60,
                  seq_to=2, epoch=0, fake_port=None, seq_win=128,
-                 vo_db=None):
+                 vo_db=None, purge=30*60, peer_to=30*60):
         self._evrec = evrec
         self._adv = adv
         self._domains = domains
@@ -47,18 +47,22 @@ class PeerManager:
         self._seq_win = seq_win
         self._vo_db = vo_db
 
+        ## Record how often we purge, and remember when we last
+        ## purged.
+        self._purge = purge
+        self._purge_ts = now
+
         ## We map from client host/port to Peer.
         self._peers = { }
+        self._peer_to = peer_to
 
         ## When we get an identity, we map it to the client host/port
         ## here.  If the old value is different, we purge the old
         ## value from self._peers.
         self._names = { }
 
-        ## Set the timeout for ids.  Remember when we last purged
-        ## them.
+        ## Set the timeout for ids.
         self._id_to = id_to
-        self._id_ts = now
 
         ## Set the timeout for missing sequence numbers.
         self._seq_to = seq_to
@@ -171,13 +175,17 @@ class PeerManager:
             logging.error('error processing %s' % dgram)
             raise e
         finally:
-            if now - self._id_ts > self._id_to:
+            if now - self._purge_ts > self._purge:
+                ## Flush peers we haven't heard from lately.
                 self._peers = { k: v for k, v in self._peers.items()
-                                if v.age(now) > 2 * 60 * 60 }
+                                if v.age(now) > self._peer_to }
+
+                ## Flush stale dictids in each peer.
                 for addr, peer in self._peers.items():
                     peer.id_clear(now)
                     continue
-                self._id_ts = now
+
+                self._purge_ts = now
                 pass
             self._adv(now)
             pass

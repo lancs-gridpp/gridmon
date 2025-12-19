@@ -140,7 +140,11 @@ def get_config(raw_args):
                 'counter_limit': 1000,
             },
             'horizon': '5m',
+            'purge': '15m',
             'fake_port': None,
+            'peers': {
+                'timeout': '20m',
+            },
             'dictids': {
                 'timeout': '2h',
             },
@@ -235,6 +239,8 @@ def get_config(raw_args):
     convert_memory(config, 'source', 'xrootd', 'queue', 'chunk_size')
     convert_memory(config, 'source', 'xrootd', 'queue', 'ram_size')
     convert_memory(config, 'source', 'xrootd', 'rcvbuf')
+    convert_duration(config, 'data', 'purge')
+    convert_duration(config, 'data', 'peers', 'timeout')
     convert_duration(config, 'data', 'dictids', 'timeout')
     convert_duration(config, 'data', 'sequencing', 'timeout')
     convert_duration(config, 'data', 'horizon')
@@ -314,6 +320,8 @@ det_proc = XRootDPeerManager(now,
                              vo_db=vo_db,
                              fake_port=config['data']['fake_port'],
                              id_to=config['data']['dictids']['timeout'],
+                             peer_to=config['data']['peers']['timeout'],
+                             purge=config['data']['purge'],
                              seq_to=config['data']['sequencing']['timeout'],
                              seq_win=config['data']['sequencing']['window'])
 
