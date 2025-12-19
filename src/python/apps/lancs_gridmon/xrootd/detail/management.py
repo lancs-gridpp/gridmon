@@ -178,7 +178,7 @@ class PeerManager:
             if now - self._purge_ts > self._purge:
                 ## Flush peers we haven't heard from lately.
                 self._peers = { k: v for k, v in self._peers.items()
-                                if v.age(now) > self._peer_to }
+                                if v.age(now) <= self._peer_to }
 
                 ## Flush stale dictids in each peer.
                 for addr, peer in self._peers.items():
