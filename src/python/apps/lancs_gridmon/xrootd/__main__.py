@@ -358,10 +358,14 @@ else:
     pass
 
 def on_term(signum, frame):
-    global udp_srv
+    global udp_srv, udp_q
     logging.info('terminating by signal')
+    if udp_q is not None:
+        udp_q.halt()
+        pass
     ## We must call shutdown() in a different thread.
-    threading.Thread(target=UDPServer.shutdown, args=(udp_srv,)).start()
+    ut = threading.Thread(target=UDPServer.shutdown, args=(udp_srv,))
+    ut.start()
     pass
 signal.signal(signal.SIGTERM, on_term)
 
