@@ -95,7 +95,12 @@ class UDPQueuer:
             pass
 
         def handle(self):
-            self._rcvr._push(time.time(), self.client_address, self.request[0])
+            try:
+                self._rcvr._push(time.time(),
+                                 self.client_address,
+                                 self.request[0])
+            except Shutdown:
+                pass
             pass
 
         pass
