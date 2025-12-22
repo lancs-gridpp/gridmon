@@ -72,14 +72,27 @@ class _Chunk:
                 hsz = int.from_bytes(buf[0:2], byteorder='big')
                 bsz = int.from_bytes(buf[2:6], byteorder='big')
                 header = fh.read(hsz)
+                if len(header) < hsz:
+                    logging.warning(('discarding incomplete header' + \
+                                     ' exp=%d got=%d f=%s') % \
+                                    (hsz, len(header), self._path))
+                    break
                 body = fh.read(bsz)
+                if len(body) < bsz:
+                    logging.warning(('discarding incomplete body' + \
+                                     ' exp=%d got=%d f=%s') % \
+                                    (bsz, len(body), self._path))
+                    break
                 self._count -= 1
                 self._size -= len(body)
                 logging.debug('%s:%s loaded elem %d:%d' % \
                               (self._name, self._path, len(header), len(body)))
                 yield (header, body)
                 continue
-            assert self._size == 0
+            if self._size > 0 or self._count > 0:
+                logging.warning('excess %d/%d on %s' % \
+                                (self._size, self._count, self._path))
+                pass
             pass
         pass
 
@@ -198,6 +211,12 @@ class PersistentQueue:
             self._disk_count -= 1
             continue
         self._chunks[0].unlink()
+
+        ## If there's any truncation, the chunk's counters will be
+        ## non-zero.
+        self._disk_size -= self.chunks[0]._size
+        self._disk_count -= self.chunks[0]._count
+
         del self._chunks[0]
         pass
 
