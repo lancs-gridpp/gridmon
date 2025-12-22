@@ -357,15 +357,22 @@ else:
     udp_srv = pcapsrc
     pass
 
+is_termed = False
+udp_term = threading.Thread(target=UDPServer.shutdown, args=(udp_srv,))
 def on_term(signum, frame):
-    global udp_srv, udp_q
+    global udp_q, is_termed, udp_term
+    if is_termed:
+        logging.info('duplicate sigterm ignored')
+        return
+    is_termed = True
     logging.info('terminating by signal')
     if udp_q is not None:
         udp_q.halt()
         pass
+    logging.info('queue terminated')
     ## We must call shutdown() in a different thread.
-    ut = threading.Thread(target=UDPServer.shutdown, args=(udp_srv,))
-    ut.start()
+    udp_term.start()
+    logging.info('socket asked to shut down')
     pass
 signal.signal(signal.SIGTERM, on_term)
 
