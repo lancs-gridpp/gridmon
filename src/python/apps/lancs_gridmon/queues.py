@@ -215,8 +215,8 @@ class PersistentQueue:
 
         ## If there's any truncation, the chunk's counters will be
         ## non-zero.
-        self._disk_size -= self.chunks[0]._size
-        self._disk_count -= self.chunks[0]._count
+        self._disk_size -= self._chunks[0]._size
+        self._disk_count -= self._chunks[0]._count
 
         del self._chunks[0]
         pass
