@@ -142,6 +142,7 @@ class _Chunk:
         self._handle.write(self._size.to_bytes(4, byteorder='big'))
         self._handle.write(self._count.to_bytes(2, byteorder='big'))
         self._handle.close()
+        self._handle = None
         logging.debug('%s:%s completed %d:%d' % \
                       (self._name, self._path, self._count, self._size))
         return
