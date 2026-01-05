@@ -299,8 +299,7 @@ class PersistentQueue:
             while not self._complete and len(self._mem_elems) == 0:
                 self._cond.wait()
                 continue
-            if len(self._mem_elems) == 0:
-                assert self._complete
+            if self._complete:
                 raise Shutdown()
             header, body = self._mem_elems[0]
             del self._mem_elems[0]
