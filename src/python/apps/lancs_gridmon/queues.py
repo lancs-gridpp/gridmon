@@ -244,8 +244,6 @@ class PersistentQueue:
             }
 
     def push(self, header, body):
-        if len(header) > 0xffff:
-            raise ValueError('header %d too big' % len(header))
         if len(body) > 0xffffffff:
             raise ValueError('body %d too big' % len(body))
             
@@ -280,7 +278,10 @@ class PersistentQueue:
                     pass
 
                 ## Add to the last chunk.
-                self._chunks[-1].append(header, body)
+                ehdr = self._encoder(header)
+                if len(ehdr) > 0xffff:
+                    raise ValueError('header %d too big' % len(ehdr))
+                self._chunks[-1].append(ehdr, body)
                 self._disk_count += 1
                 self._disk_size += len(body)
             else:
