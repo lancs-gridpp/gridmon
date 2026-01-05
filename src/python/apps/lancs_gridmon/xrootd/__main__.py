@@ -351,30 +351,31 @@ if pcapsrc is None:
         rcvbuf = udp_srv.socket.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
         logging.info('rcvbuf set to %d' % rcvbuf)
         pass
+
+    ## Make sure SIGTERM gracefull shuts down the UDP processing.
+    is_termed = False
+    udp_term = threading.Thread(target=UDPServer.shutdown, args=(udp_srv,))
+    def on_term(signum, frame):
+        global udp_q, is_termed, udp_term
+        if is_termed:
+            logging.info('duplicate sigterm ignored')
+            return
+        is_termed = True
+        logging.info('terminating by signal')
+        if udp_q is not None:
+            udp_q.halt()
+            pass
+        logging.info('queue terminated')
+        ## We must call shutdown() in a different thread.
+        udp_term.start()
+        logging.info('socket asked to shut down')
+        pass
+    signal.signal(signal.SIGTERM, on_term)
 else:
     udp_q = None
     pcapsrc.set_action(msg_fltr.process)
     udp_srv = pcapsrc
     pass
-
-is_termed = False
-udp_term = threading.Thread(target=UDPServer.shutdown, args=(udp_srv,))
-def on_term(signum, frame):
-    global udp_q, is_termed, udp_term
-    if is_termed:
-        logging.info('duplicate sigterm ignored')
-        return
-    is_termed = True
-    logging.info('terminating by signal')
-    if udp_q is not None:
-        udp_q.halt()
-        pass
-    logging.info('queue terminated')
-    ## We must call shutdown() in a different thread.
-    udp_term.start()
-    logging.info('socket asked to shut down')
-    pass
-signal.signal(signal.SIGTERM, on_term)
 
 def update_live_metrics(start_time, pmgr, hist):
     now = (time.time() * 1000) // 1000
