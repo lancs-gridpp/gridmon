@@ -151,7 +151,15 @@ class Peer:
         self._mgr = mgr
         self._evrec = evrec
         self._seq_to = seq_timeout
+
+        ## When a dictid is resolved, its expiry time is reset to
+        ## 'now' plus this time in seconds.
         self._id_to = id_timeout
+        ## Optionally, a dictid can be given a short timeout if it's
+        ## not expected to be resolved again, allowing it to be
+        ## flushed out earlier.  TODO: Allow this to be configured.
+        self._id_sto = 2 * 60
+
         self._domains = domains
         self.stod = stod
         self.addr = addr
@@ -200,11 +208,11 @@ class Peer:
         data[key_in] = dom
         return True
 
-    def __id_get(self, now, dictid):
+    def __id_get(self, now, dictid, short=False):
         r = self._ids.get(dictid)
         if r is None:
             return None
-        r['expiry'] = now + self._id_to
+        r['expiry'] = now + (self._id_sto if short else self._id_to)
         return r['info']
 
     ## Flush out identities with old expiry times.
@@ -268,11 +276,11 @@ class Peer:
         ## TODO: Maybe flush out any old data?
         pass
 
-    def __replace_dictid(self, now, obj, k, rec):
+    def __replace_dictid(self, now, obj, k, rec, short=False):
         did = obj.get(k + '_dictid', None)
         if did is None:
             return
-        r = self.__id_get(now, did)
+        r = self.__id_get(now, did, short)
         if r is None:
             self.__warning('dictid=%d field=%s' +
                            ' ev=unknown-dictid' +
@@ -535,7 +543,8 @@ class Peer:
             if 'disc' in ent:
                 msg = dict()
                 usr = self.__replace_dictid(ts, ent['disc'],
-                                            'user', 'file-disconnect')
+                                            'user', 'file-disconnect',
+                                            short=True)
                 if usr is not None:
                     merge_trees(msg, {
                         'prot': usr['prot'],
@@ -736,7 +745,8 @@ class Peer:
                         pass
                     rec['redport'] = self._fake_port
                     pass
-                usr = self.__replace_dictid(now, ent, 'user', 'redirect')
+                usr = self.__replace_dictid(now, ent, 'user', 'redirect',
+                                            short=True)
                 if usr is not None:
                     merge_trees(rec, {
                         'prot': usr['prot'],
