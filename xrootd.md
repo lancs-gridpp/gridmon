@@ -310,6 +310,7 @@ The following metrics are defined:
 - `xrootd_redirection_total` &ndash; This counts redirections, indexed by:
   - `ip_version`: `4` or `6`;
   - `protocol`: such as `https` or `root`;
+  - `op`: the operation that was rediected, such as `mkdir`, `stat`, etc;
   - `redhost`: the hostname of the server redirected to;
   - `redport`: the port of the server redirected to.
   The port can be overridden by setting `data.fake_port`.
