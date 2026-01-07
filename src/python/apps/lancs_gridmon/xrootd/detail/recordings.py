@@ -250,6 +250,7 @@ class Recorder:
                     substats = stats.setdefault('redir', { }) \
                                     .setdefault(params['ipv'], { }) \
                                     .setdefault(params['prot'], { }) \
+                                    .setdefault(params['op'], { }) \
                                     .setdefault(params.get('vo_id', ''), { }) \
                                     .setdefault(params['redhost'], { }) \
                                     .setdefault(params['redport'], { })
