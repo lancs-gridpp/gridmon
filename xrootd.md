@@ -66,6 +66,7 @@ data:
     timeout: "20m"
   dictids:
     timeout: "2h"
+    short_timeout: "2m"
   sequencing:
     window: 240
     timeout: "750ms"
@@ -140,6 +141,7 @@ Not that higher values cause delays in pushing detailed metrics, as anything wit
 A peer record exists for each distinct UDP source address.
 
 `data.dictids.timeout` specifies a timeout for discarding old dictids.
+`short_timeout` is used for dictids that are not expected to be encountered again (e.g., referenced by a disconnect or a redirect).
 
 `data.sequencing` specifies how to re-order detailed messages.
 

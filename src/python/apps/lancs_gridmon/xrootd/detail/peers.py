@@ -135,7 +135,8 @@ class Stats:
 class Peer:
     def __init__(self, stod, addr, mgr, evrec,
                  id_timeout=60*120, seq_timeout=2, domains=None, epoch=0,
-                 fake_port=None, seq_window=128, vo_db=None):
+                 fake_port=None, seq_window=128, vo_db=None,
+                 short_id_timeout=60*2):
         """mgr(self, pgm, host, inst) is invoked when the peer has
         identified itself.  evrec(pgm, host, inst, ts, ev, data, ctxt)
         is invoked to record an event ev (str) with parameters data
@@ -157,8 +158,8 @@ class Peer:
         self._id_to = id_timeout
         ## Optionally, a dictid can be given a short timeout if it's
         ## not expected to be resolved again, allowing it to be
-        ## flushed out earlier.  TODO: Allow this to be configured.
-        self._id_sto = 2 * 60
+        ## flushed out earlier.
+        self._id_sto = short_id_timeout
 
         self._domains = domains
         self.stod = stod

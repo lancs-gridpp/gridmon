@@ -147,6 +147,7 @@ def get_config(raw_args):
             },
             'dictids': {
                 'timeout': '2h',
+                'short_timeout': '2m',
             },
             'sequencing': {
                 "window": 240,
@@ -242,6 +243,7 @@ def get_config(raw_args):
     convert_duration(config, 'data', 'purge')
     convert_duration(config, 'data', 'peers', 'timeout')
     convert_duration(config, 'data', 'dictids', 'timeout')
+    convert_duration(config, 'data', 'dictids', 'short_timeout')
     convert_duration(config, 'data', 'sequencing', 'timeout')
     convert_duration(config, 'data', 'horizon')
     if 'level' in config['process']['log']:
@@ -320,6 +322,7 @@ det_proc = XRootDPeerManager(now,
                              vo_db=vo_db,
                              fake_port=config['data']['fake_port'],
                              id_to=config['data']['dictids']['timeout'],
+                             id_sto=config['data']['dictids']['short_timeout'],
                              peer_to=config['data']['peers']['timeout'],
                              purge=config['data']['purge'],
                              seq_to=config['data']['sequencing']['timeout'],

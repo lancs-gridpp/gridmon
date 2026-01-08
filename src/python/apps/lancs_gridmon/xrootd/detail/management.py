@@ -38,7 +38,8 @@ from lancs_gridmon.xrootd.detail.recordings import Recorder as XRootDRecorder
 class PeerManager:
     def __init__(self, now, evrec, adv, domains=None, id_to=120*60,
                  seq_to=2, epoch=0, fake_port=None, seq_win=128,
-                 vo_db=None, purge=30*60, peer_to=30*60):
+                 vo_db=None, purge=30*60, peer_to=30*60,
+                 id_sto=2*60):
         self._evrec = evrec
         self._adv = adv
         self._domains = domains
@@ -63,6 +64,7 @@ class PeerManager:
 
         ## Set the timeout for ids.
         self._id_to = id_to
+        self._id_sto = id_sto
 
         ## Set the timeout for missing sequence numbers.
         self._seq_to = seq_to
@@ -157,6 +159,7 @@ class PeerManager:
                 self._peers[addr] = peer = \
                     Peer(stod, addr, self._identify, self._evrec,
                          id_timeout=self._id_to,
+                         short_id_timeout=self._id_sto,
                          seq_timeout=self._seq_to,
                          seq_window=self._seq_win,
                          domains=self._domains,
