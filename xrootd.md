@@ -14,11 +14,11 @@ The events are also logged (separately from the script's own log), and can be in
 `xrootd-monitor` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, and `defusedxml` for parsing XRootD summary reports, so try one of these:
 
 ```
-sudo dnf install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock
+sudo dnf install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock python3-psutil
 ```
 
 ```
-sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict python3-defusedxml python3-filelock python3-psutil
 ```
 
 

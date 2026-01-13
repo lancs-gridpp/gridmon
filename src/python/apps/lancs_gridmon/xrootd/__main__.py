@@ -401,6 +401,17 @@ def update_live_metrics(start_time, pmgr, hist):
             data[now]['meta']['rusage'][k] = v
             pass
         continue
+
+    import psutil
+    ps = psutil.Process().memory_info()
+    data[now]['meta']['psutil'] = { 'mem': dict() }
+    for k in [ 'rss', 'vms', 'shared', 'text', 'lib', 'data', 'dirty' ]:
+        v = getattr(ps, k, None)
+        if v is not None:
+            data[now]['meta']['psutil']['mem'][k] = v / 1024
+            pass
+        continue
+
     hist.install(data)
     pass
 
@@ -439,6 +450,18 @@ meta_schema = [
         'select': metric_keys('meta', 'rusage', 'maxrss'),
         'samples': {
             '_total': ('%d', metric_walk('meta', 'rusage', 'maxrss')),
+        },
+        'attrs': dict(),
+    },
+
+    {
+        'base': 'xrootd_collector_psutil_mem_rss',
+        'type': 'gauge',
+        'help': 'current resident set size',
+        'unit': 'kilobytes',
+        'select': metric_keys('meta', 'psutil', 'mem', 'rss'),
+        'samples': {
+            '': ('%d', metric_walk('meta', 'psutil', 'mem', 'rss')),
         },
         'attrs': dict(),
     },
