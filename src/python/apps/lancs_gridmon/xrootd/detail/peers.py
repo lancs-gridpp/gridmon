@@ -577,10 +577,11 @@ class Peer:
                     ## mapping.
                     msg['path'] = ufn_p
 
-                    ## Augment the file dictid with the LFN.  This can
-                    ## be accessed by the 'close' event.
+                    ## Augment the file dictid with the mode and
+                    ## LFN, so the 'close' event can use them.
                     if fil is not None:
                         fil['lfn'] = ufn_p
+                        fil['rw'] = ent['open']['rw']
                         pass
                     pass
                 if ufn is not None:
@@ -618,6 +619,10 @@ class Peer:
                     'forced': ent['close']['forced'],
                 }
                 if fil is not None:
+                    rw = fil.get('rw')
+                    if rw is not None:
+                        msg['rw'] = rw
+                        pass
                     merge_trees(msg, {
                         'prot': fil['prot'],
                         'user': fil['user'],
