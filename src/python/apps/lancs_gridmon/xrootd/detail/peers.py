@@ -584,8 +584,10 @@ class Peer:
                         pass
                     pass
                 if ufn is not None:
-                    fil['usr'] = ufn
-                    sess = ufn.get('sess') or fil.get('sess')
+                    if fil is not None:
+                        fil['usr'] = ufn
+                        pass
+                    sess = ufn.get('sess') or (fil and fil.get('sess'))
                     ## TODO: Can we make use of
                     ## ent['open']['file_size']?  Is it the size of
                     ## the file at opening?
