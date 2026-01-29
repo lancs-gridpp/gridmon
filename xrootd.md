@@ -303,6 +303,7 @@ The following metrics are defined:
   - `streams`: the number of streams used;
   - `commander_domain`: the domain of the client instigating the copy;
   - `peer_domain`: the domain of the source for a pull, or of the destination for a push.
+
   The metrics include:
   - `xrootd_tpc_total` &ndash; the total number of TPCs.
   - `xrootd_tpc_failure_total` &ndash; the number of failed TPCs (with a non-zero exit code);
@@ -315,6 +316,7 @@ The following metrics are defined:
   - `op`: the operation that was rediected, such as `mkdir`, `stat`, etc;
   - `redhost`: the hostname of the server redirected to;
   - `redport`: the port of the server redirected to.
+
   The port can be overridden by setting `data.fake_port`.
 
 All pushed metrics include the label `job="xrootd_detail"`, overridden by `destination.push.detail_job`.

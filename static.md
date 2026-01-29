@@ -49,6 +49,7 @@ The following keys are recognized:
   - `roles` &ndash; an arbitrary set of roles that the interface fulfils
   - `slaves` &ndash; a list of internal names of devices that are bonded to form this device
   `network` and `device` appear in the metric `ip_metadata`.
+
   The interface name appears as the label `iface` on almost all `ip_` metrics.
   Each role generates an `ip_role` metric.
   Additionally, a role of `xroot` identifies the device that XRootD uses to determine its full name.
@@ -96,6 +97,7 @@ A `clusters` top-level map entry may exist, whose keys are cluster identifiers, 
     - `accounts` &ndash; a list of accounts used by the VO;
   - `transfers` &ndash; a map of:
     - `users` &ndash; a list of file-transfer usernames used by the VO.
+
   The display name is used to generate a metric `vo_meta` with `cluster` as the cluster id, `vo_id` as the VO identifier and `vo_name` as the display name.
   The other entries generate the metric `vo_affiliation` with `cluster` and `vo_id` as before, `affiliation` as `job_user`, `job_account`, `transfer_user` or `dn`, and `affiliate` as the user name or DN.
   The value of these metrics is always `1`.
