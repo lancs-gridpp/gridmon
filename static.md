@@ -60,7 +60,7 @@ The following keys are recognized:
   - `roles` &ndash; This specifies an array of role names.
     A metric `machine_role` is generated for each one on that node.
   - `xroots` &ndash; This lists names of XRootD instances expected to be running on the node.
-    Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `INSTANCE-NAME@INTERFACE-NAME`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` is set to `xrootd`.
+    Exactly one interface must be assigned the role `xroot`, and then all instances full names are formed from `INSTANCE-NAME@INTERFACE-NAME`, which appears as the label `xrdid` in a metric `xrootd_expect`, with the label `pgm` set to `xrootd`.
   - `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
     Exactly one interface must be assigned the role `xroot`, as described for `xroots`.
     The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
