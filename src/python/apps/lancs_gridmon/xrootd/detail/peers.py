@@ -623,6 +623,12 @@ class Peer:
                         'user': fil['user'],
                         'session': fil['sess'],
                         'client_name': fil['host'],
+
+                        ## TODO: fil['path'] is likely the PFN, and
+                        ## could be different from the LFN.  We should
+                        ## really have a separate field for the
+                        ## physical, and define 'path' here as the
+                        ## logical.
                         'path': fil.get('lfn') or fil['path'],
                     })
                     self.__set_vo(msg,
