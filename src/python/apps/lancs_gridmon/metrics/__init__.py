@@ -40,6 +40,11 @@ from http.server import BaseHTTPRequestHandler
 
 from lancs_gridmon.trees import merge_trees
 
+INSTALL_OKAY=0
+INSTALL_INVALID=1 ## data too old
+INSTALL_LATER=2 ## temporary server/comms error
+INSTALL_FAIL=3 ## HTTP or URL error
+
 def _safe_mod(spec, idx, snapshot):
     vals = list()
     for af in spec[1:]:
@@ -159,7 +164,7 @@ class MetricHistory:
             for k in [ k for k in self.entries if k < threshold ]:
                 del self.entries[k]
                 continue
-        pass
+        return INSTALL_OKAY
 
     def __sample(self, k, tup, mtr, fmt, func, attrs, gcount_name, gsum_name):
         entry = self.entries[k]
@@ -475,7 +480,7 @@ class RemoteMetricsWriter:
         ## Values are a usually a dict hierarchy specified by the
         ## schema.  Each of these is referred to as a snapshot below.
         if len(data) == 0:
-            return True
+            return INSTALL_OKAY
 
         ## Get all the timestamps in order.
         tss = [ ts for ts in data ]
@@ -581,7 +586,7 @@ class RemoteMetricsWriter:
 
         ## Do nothing on empty data.
         if len(series) == 0:
-            return True
+            return INSTALL_OKAY
 
         ## Retries are pointless after this time.
         expiry = self.expiry + lasttime
@@ -615,7 +620,7 @@ class RemoteMetricsWriter:
 
         if self.endpoint is None:
             print(rw)
-            return True
+            return INSTALL_OKAY
 
         ## Compress using Snappy block format.
         import snappy
@@ -636,29 +641,31 @@ class RemoteMetricsWriter:
                 rsp = request.urlopen(req)
                 code = rsp.getcode()
                 logging.info('target %s response %d' % (self.endpoint, code))
+                if code == 400:
+                    return INSTALL_INVALID
                 if code >= 500 and code <= 599:
                     now = time.time()
                     delay = min(random.randint(240, 360), expiry - now - 1)
                     if delay < 1:
                         logging.error('target %s response %d; aborting' % \
                                       (self.endpoint, code))
-                        return False
+                        return INSTALL_LATER
                     logging.warning('target %s response %d; retrying in %ds' % \
                                     (self.endpoint, code, delay))
                     time.sleep(delay)
                     continue
-                return True
+                return INSTALL_OKAY
             except HTTPError as e:
                 logging.error('HTTP %d (%s) from target %s; aborting' %
                               (e.code, e.reason, self.endpoint))
-                return False
+                return INSTALL_FAIL
             except URLError as e:
                 now = time.time()
                 delay = min(random.randint(60, 120), expiry - now - 1)
                 if delay < 1:
                     logging.error('no target %s "%s"; aborting' %
                                   (self.endpoint, e.reason))
-                    return False
+                    return INSTALL_FAIL
                 logging.warning('no target %s; retrying in %ds' % \
                                 (self.endpoint, delay))
                 time.sleep(delay)
