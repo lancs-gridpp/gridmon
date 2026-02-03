@@ -36,6 +36,7 @@ import os
 import math
 from datetime import datetime
 import lancs_gridmon.logfmt as logfmt
+from lancs_gridmon.metrics import INSTALL_INVALID
 
 class Recorder:
     def __init__(self, t0, logname, rmw, wr_ival=60, horizon=5*60, epoch=0):
@@ -201,9 +202,28 @@ class Recorder:
             continue
 
         ## Send the message, if it's not empty.
-        if len(data) > 0:
+        max_age = 60 * 60
+        while len(data) > 0:
             logging.info('xrootd monitor writing %s' % list(data.keys()))
-            self._writer.install(data)
+            if self._writer.install(data) != INSTALL_INVALID:
+                return
+            ## We failed because the request is faulty, so try again
+            ## after pruning old data.
+
+            ## Choose a threshold that guarantees to remove at least
+            ## one element.
+            thr = max(min(recent), now - max_age)
+
+            ## Apply the threshold.
+            recent = { k: v for k, v in data.items() if k > thr }
+            assert len(recent) < len(data)
+            logging.info('eliminated %d out of %d as too old (max=%gs)' % \
+                         (len(data) - len(recent), len(data), max_age))
+            data = recent
+
+            ## Reduce the maximum age by 10%, or enough to cover the
+            ## guaranteed removal.
+            max_age = min(now - thr, max_age * 0.9)
             pass
         return
 
