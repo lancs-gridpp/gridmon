@@ -96,6 +96,9 @@ class _Chunk:
             pass
         pass
 
+    def name(self):
+        return '%s:%s' % (self._name, self._path)
+
     def next_time(self, stamp):
         return self._stamp + 1 if stamp <= self._stamp else stamp
 
@@ -201,24 +204,30 @@ class PersistentQueue:
         return self._dir / ('queue-%016x.chk' % stamp)
 
     def __repop(self):
-        ## Populate the in-memory queue from the first chunk.
-        if len(self._chunks) == 0:
-            return
-        for header, body in self._chunks[0]:
-            header = self._decoder(header)
-            self._mem_elems.append((header, body))
-            self._mem_size += len(body)
-            self._disk_size -= len(body)
-            self._disk_count -= 1
+        while len(self._mem_elems) == 0:
+            ## Populate the in-memory queue from the first chunk.
+            if len(self._chunks) == 0:
+                return
+            for header, body in self._chunks[0]:
+                try:
+                    header = self._decoder(header)
+                except:
+                    logging.error('%s broken' % self._chunks[0].name())
+                    break
+                self._mem_elems.append((header, body))
+                self._mem_size += len(body)
+                self._disk_size -= len(body)
+                self._disk_count -= 1
+                continue
+            self._chunks[0].unlink()
+
+            ## If there's any truncation, the chunk's counters will be
+            ## non-zero.
+            self._disk_size -= self._chunks[0]._size
+            self._disk_count -= self._chunks[0]._count
+
+            del self._chunks[0]
             continue
-        self._chunks[0].unlink()
-
-        ## If there's any truncation, the chunk's counters will be
-        ## non-zero.
-        self._disk_size -= self._chunks[0]._size
-        self._disk_count -= self._chunks[0]._count
-
-        del self._chunks[0]
         pass
 
     def shutdown(self):
