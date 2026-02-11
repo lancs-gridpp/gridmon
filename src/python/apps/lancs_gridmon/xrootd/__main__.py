@@ -136,6 +136,7 @@ def get_config(raw_args):
         },
         'data': {
             'organizations': {
+                'default': 'unknown',
                 'filename': None,
                 'counter_limit': 1000,
             },

@@ -57,6 +57,7 @@ destination:
   log: "/tmp/xrootd-detail-{instance}.log"
 data:
   organizations:
+    default: unknown
     filename: None
     counter_limit: 1000
   horizon: "5m"
@@ -155,6 +156,8 @@ A peer record exists for each distinct UDP source address.
 - `filename` may point to a YAML file defining a [VO mapping](vos.md), whose timestamp is periodically tested to determine whether to reload.
 - `counter_limit` controls how often the file's timestamp is tested.
   Each attempt to map a context to a VO increments a counter which, upon reaching this limit, triggers a reload.
+- `default` sets the VO identifier to be used if no VO could be determined.
+  It is recommended that this not be an empty string, as some tools might take that to be a missing value, and map it to something else, or ignore it.
 
 ### Process configuration
 

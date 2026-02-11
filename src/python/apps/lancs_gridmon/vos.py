@@ -37,9 +37,10 @@ import logging
 from lancs_gridmon.paths import LongestPathMapping as VOPathMapping
 
 class WatchingVODatabase:
-    def __init__(self, filename, counter_limit=1000, **kwargs):
+    def __init__(self, filename, counter_limit=1000, default='', **kwargs):
         self._filename = filename
         self._mtime = None
+        self._default = default
 
         ## These are the methods for determining VO.
         self._issuers = dict()
@@ -169,7 +170,11 @@ class WatchingVODatabase:
         if self.__set_from_xfer_user(dest, org_key, xfer_user):
             return True
 
-        ## Report failure if no source was effective.
+        ## Report failure if no source was effective.  Use the default
+        ## if specified.
+        if self._default is not None:
+            dest[org_key] = self._default
+            pass
         return False
 
     ## TODO: Generate metrics.
