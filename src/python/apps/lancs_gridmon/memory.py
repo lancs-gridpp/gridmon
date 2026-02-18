@@ -43,7 +43,7 @@ _elems = {
     'T': 1024 * 1024 * 1024 * 1024,
 }
 
-_mem_pat = r'^(' + \
+_mem_pat = r'(' + \
     r'(?:' + \
     r'\d+(?:\.\d+)?' + \
     r'|\.\d+' + \
@@ -52,7 +52,7 @@ _mem_pat = r'^(' + \
     r')' + \
     r'([kmgtKMGT])?'
 #_mem_pat = r'^(\d+(?:e(?:-?)\d+)?)([KMG])?$'
-_mem_fmt = re.compile(_mem_pat)
+_mem_fmt = re.compile('^' + _mem_pat + '$')
 
 def parse_memory(s):
     m = _mem_fmt.match(str(s))
@@ -67,9 +67,33 @@ def parse_memory(s):
 
     return int(val)
 
+_range_pat = _mem_pat + r'(?:-' + _mem_pat + r')?'
+_range_fmt = re.compile('^' + _range_pat + '$')
+
+def parse_memory_range(s):
+    m = _range_fmt.match(str(s))
+    if m is None:
+        return None
+
+    r = list()
+    val = float(m[1])
+    if m[2]:
+        val *= _elems[m[2]]
+        pass
+    r.append(val)
+    if m[3]:
+        val = float(m[3])
+        if m[4]:
+            val *= _elems[m[4]]
+            pass
+        pass
+    r.append(val)
+    r.sort()
+    return { 'min': r[0], 'max': r[1] }
+
 if __name__ == '__main__':
     import sys
     for s in sys.argv[1:]:
-        print('%s -> %s' % (s, parse_memory(s)))
+        print('%s -> %s' % (s, parse_memory_range(s)))
         continue
     pass
