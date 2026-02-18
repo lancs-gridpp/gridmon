@@ -48,6 +48,8 @@ The following keys are recognized:
   - `network` &ndash; any form of network identifier, e.g., `public`, which can be cross-referenced with other interfaces to infer connectivity
   - `roles` &ndash; an arbitrary set of roles that the interface fulfils
   - `slaves` &ndash; a list of internal names of devices that are bonded to form this device
+  - `speed` &ndash; an expected network speed or range, e.g., `10g` or `10g-25g`, used to generate `ip_speed_min_bits_per_second` and `ip_speed_max_bits_per_second`
+
   `network` and `device` appear in the metric `ip_metadata`.
 
   The interface name appears as the label `iface` on almost all `ip_` metrics.
@@ -65,6 +67,7 @@ The following keys are recognized:
   - `cmses` &ndash; This lists names of CMSd instances expected to be running on the node.
     Exactly one interface must be assigned the role `xroot`, as described for `xroots`.
     The corresponding metric `xrootd_expect` has the label `pgm` set to `cmsd`.
+
 
 All node names must be unique.
 All interface names must be unique.
