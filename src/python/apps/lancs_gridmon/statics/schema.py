@@ -229,7 +229,6 @@ schema = [
         },
         'attrs': {
             'iface': ('%s', lambda t, d: t[1]),
-            'node': ('%s', lambda t, d: t[0]),
         },
     },
 
@@ -244,7 +243,6 @@ schema = [
         },
         'attrs': {
             'iface': ('%s', lambda t, d: t[1]),
-            'node': ('%s', lambda t, d: t[0]),
         },
     },
 
