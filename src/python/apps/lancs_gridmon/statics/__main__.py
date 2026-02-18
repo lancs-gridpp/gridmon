@@ -223,13 +223,9 @@ if 'filename' in log_params:
 
 ## Serve HTTP metric documentation.
 methist = metrics.MetricHistory(statics_schema, horizon=horizon)
-if metrics_endpoint is None:
-    hist = methist
-else:
-    hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
-                                       schema=statics_schema,
-                                       job='statics', expiry=horizon)
-    pass
+hist = metrics.RemoteMetricsWriter(endpoint=metrics_endpoint,
+                                   schema=statics_schema,
+                                   job='statics', expiry=horizon)
 
 ## Serve the history on demand.  Even if we don't store anything
 ## in the history, the HELP, TYPE and UNIT strings are exposed,
