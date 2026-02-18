@@ -51,6 +51,7 @@ import socket
 from lancs_gridmon.statics.schema import schema as statics_schema
 import lancs_gridmon.metrics as metrics
 from lancs_gridmon.trees import merge_trees
+from lancs_gridmon.memory import parse_memory_range
 
 def _walk(root, path):
     if len(path) == 0:
@@ -463,6 +464,10 @@ try:
                             ient[k] = sub[k]
                             pass
                         continue
+                    speed = parse_memory_range(sub.get('speed', ''))
+                    if speed:
+                        ient['speed'] = speed
+                        pass
                     for slave in sub.get('slaves', list()):
                         ## TODO: Just use a set, and make
                         ## lancs_gridmon.metrics.walk/keys

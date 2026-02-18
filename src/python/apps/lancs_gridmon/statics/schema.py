@@ -219,6 +219,36 @@ schema = [
     },
 
     {
+        'base': 'ip_speed_min',
+        'unit': 'bits_per_second',
+        'type': 'gauge',
+        'help': 'minimum expected interface speed',
+        'select': metric_keys('node', 1, 'iface', 1, 'speed', 'min'),
+        'samples': {
+            '': ('%d', metric_walk('node', 1, 'iface', 1, 'speed', 'min')),
+        },
+        'attrs': {
+            'iface': ('%s', lambda t, d: t[1]),
+            'node': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
+        'base': 'ip_speed_max',
+        'unit': 'bits_per_second',
+        'type': 'gauge',
+        'help': 'maximum expected interface speed',
+        'select': metric_keys('node', 1, 'iface', 1, 'speed', 'max'),
+        'samples': {
+            '': ('%d', metric_walk('node', 1, 'iface', 1, 'speed', 'max')),
+        },
+        'attrs': {
+            'iface': ('%s', lambda t, d: t[1]),
+            'node': ('%s', lambda t, d: t[0]),
+        },
+    },
+
+    {
         'base': 'ip_metadata',
         'help': 'extra info about an IP address',
         'select': lambda e: [ (n, i) for n in e.get('node', { })
