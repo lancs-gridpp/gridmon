@@ -119,7 +119,96 @@ All pushed metrics include the label `job="statics"`.
 
 The `drive_paths` top-level map entry contains `patterns` and `layouts` map elements.
 `patterns` defines device paths for drives, so they can be mapped to more meaningful label sets.
-For example, the following defines a pattern called `gen1_hotplugs`, and matches strings such as `pci-0000:18:00.0-scsi-0:0:14:0` slot 14, row 2, column 4:
+`layouts` then combines several such patterns
+For example, the following defines a pattern called `gen1_middle`, and matches strings such as `pci-0000:18:00.0-scsi-0:0:14:0` against a middle bank of drives, row 3, or slot `3M1`:
+
+```
+drive_paths:
+  patterns:
+    gen1_front:
+      path: "pci-0000:18:00.0-scsi-0:0:{n}:0"
+      fields:
+        - name: 'n'
+          min: 0
+          max: 11
+        - name: x
+          compute: 'n // 3 + 1'
+        - name: 'y'
+          compute: 'n % 3 + 1'
+      labels:
+        drive_bank: front
+      formatted_labels:
+        drive_slot: '{y}F{x}'
+        drive_row: '{y}'
+        drive_column: '{x}'
+    gen1_middle:
+      path: "pci-0000:18:00.0-scsi-0:0:{n}:0"
+      fields:
+        - name: 'n'
+          min: 12
+          max: 23
+        - name: x
+          compute: '(n - 12) // 3 + 1'
+        - name: 'y'
+          compute: '(n - 12) % 3 + 1'
+      labels:
+        drive_bank: middle
+      formatted_labels:
+        drive_slot: '{y}M{x}'
+        drive_row: '{y}'
+        drive_column: '{x}'
+drive_paths:
+  layouts:
+    gen1:
+      - gen1_front
+      - gen1_middle
+```
+
+`gen1_front` corresponds to a drive layout like this:
+
+| `pci-0000:18:00.0-scsi-0:0:0:0` | `pci-0000:18:00.0-scsi-0:0:3:0` | `pci-0000:18:00.0-scsi-0:0:6:0` | `pci-0000:18:00.0-scsi-0:0:9:0` |
+| `pci-0000:18:00.0-scsi-0:0:1:0` | `pci-0000:18:00.0-scsi-0:0:4:0` | `pci-0000:18:00.0-scsi-0:0:7:0` | `pci-0000:18:00.0-scsi-0:0:10:0` |
+| `pci-0000:18:00.0-scsi-0:0:2:0` | `pci-0000:18:00.0-scsi-0:0:5:0` | `pci-0000:18:00.0-scsi-0:0:8:0` | `pci-0000:18:00.0-scsi-0:0:11:0` |
+
+It maps them to slots whose names give the corresponding co-ordinates:
+
+| `1F1` | `1F2` | `1F3` | `1F4` |
+| `2F1` | `2F2` | `2F3` | `2F4` |
+| `3F1` | `3F2` | `3F3` | `3F4` |
+
+`gen1_middle` is similar, but starts from `pci-0000:18:00.0-scsi-0:0:12:0`, and maps to slots of the form `2M3`.
+
+Fields can be of three forms:
+
+- ranged, with `max` (required), `min` (default `0`) and `step` (default `1`) parameters;
+- enumerated, with a `values` listing the available values; or
+- computed, with `compute` being a limited Python expression that can refer to other field, provided there are no loops.
+
+Meta-data metrics of the following form are generated:
+
+```
+dlo_meta{dloid="gen1",
+         path="pci-0000:18:00.0-scsi-0:0:14:0",
+         drive_bank="middle",
+         drive_slot="3M1",
+         drive_row="3",
+         drive_column="1"} 1
+```
+
+The products of the sizes of the value sets of enumerated and ranged fields determine the number of time series generated.
+Each of the example patterns has a single ranged field with 12 values, so each pattern generates 12 time series.
+
+The `dloid` label matches that of `machine_drive_layout`, and `path` matches that of `cephhealth_disk_fitting`, so a metric with `node` and `path` can first be augmented with `dloid` using `machine_drive_layout` on `node`, and then with additional labels using `dlo_meta` on `dloid` and `path`:
+
+```
+my_expr * on(node) group_left(dloid) machine_drive_layout
+        * on(dloid, path) group_left(drive_slot) dlo_meta
+```
+
+### Deprecated layouts
+
+There is a deprecated configuration format.
+For example:
 
 ```
 drive_paths:
@@ -141,33 +230,5 @@ drive_paths:
 ```
 
 `computed_labels` values are limited Python expressions, referring to the variables named in `fields`.
-`labels` defines only static values.
 Elements of `formats` override the default `%s` used to format the label value.
-
-The `layouts` map defines layouts are unions of patterns.
-For example, the following defines that layout `gen1` is the single set of mappings from `gen1_hotplugs` (defined above):
-
-```
-drive_paths:
-  layouts:
-    gen1:
-      - gen1_hotplugs
-```
-
-Together, they generate metrics such as:
-
-```
-dlo_meta{dloid="gen1",
-         path="pci-0000:18:00.0-scsi-0:0:14:0",
-         drive_bank="hotplug",
-         drive_slot="14",
-         drive_row="2",
-         drive_column="2"} 1
-```
-
-The `dloid` label matches that of `machine_drive_layout`, and `path` matches that of `cephhealth_disk_fitting`, so a metric with `node` and `path` can first be augmented with `dloid` using `machine_drive_layout` on `node`, and then with these additional metrics using `dlo_meta` on `dloid` and `path`:
-
-```
-my_expr * on(node) group_left(dloid) machine_drive_layout
-        * on(dloid, path) group_left(drive_bank, drive_slot) dlo_meta
-```
+Computed fields and `formatted_labels` are now preferred over `computed_labels` and `formats`.
