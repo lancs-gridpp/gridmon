@@ -166,12 +166,14 @@ drive_paths:
 
 `gen1_front` corresponds to a drive layout like this:
 
+| -- | -- | -- | -- |
 | `pci-0000:18:00.0-scsi-0:0:0:0` | `pci-0000:18:00.0-scsi-0:0:3:0` | `pci-0000:18:00.0-scsi-0:0:6:0` | `pci-0000:18:00.0-scsi-0:0:9:0` |
 | `pci-0000:18:00.0-scsi-0:0:1:0` | `pci-0000:18:00.0-scsi-0:0:4:0` | `pci-0000:18:00.0-scsi-0:0:7:0` | `pci-0000:18:00.0-scsi-0:0:10:0` |
 | `pci-0000:18:00.0-scsi-0:0:2:0` | `pci-0000:18:00.0-scsi-0:0:5:0` | `pci-0000:18:00.0-scsi-0:0:8:0` | `pci-0000:18:00.0-scsi-0:0:11:0` |
 
 It maps them to slots whose names give the corresponding co-ordinates:
 
+| -- | -- | -- | -- |
 | `1F1` | `1F2` | `1F3` | `1F4` |
 | `2F1` | `2F2` | `2F3` | `2F4` |
 | `3F1` | `3F2` | `3F3` | `3F4` |
