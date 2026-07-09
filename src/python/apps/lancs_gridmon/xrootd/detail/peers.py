@@ -314,8 +314,8 @@ class Peer:
 
     def __drop_mapping(self, now, base, lim, pseq, typ, data):
         self._map_stats.dropped()
-        self.__info('ev=drop-map pseq=%d base=%d lim=%d typ=%s data=%s' % \
-                    (pseq, base, lim, typ, data))
+        self.__info('ev=drop-map pseq=%d base=%d lim=%d typ=%s data=%s',
+                    pseq, base, lim, typ, data)
         pass
 
     def __get_file_resequencer(self, sid):
@@ -338,8 +338,8 @@ class Peer:
 
     def __drop_file(self, now, base, lim, pseq, data):
         self._file_stats.dropped()
-        self.__info('drop-file pseq=%d base=%d lim=%d data=%s' % \
-                    (pseq, base, lim, data))
+        self.__info('drop-file pseq=%d base=%d lim=%d data=%s',
+                    pseq, base, lim, data)
         pass
 
     def __get_gstream_resequencer(self, sid):
@@ -362,8 +362,8 @@ class Peer:
 
     def __drop_gstream(self, now, base, lim, pseq, data):
         self._gstream_stats.dropped()
-        self.__info('drop-gstream pseq=%d base=%d lim=%d data=%s' % \
-                    (pseq, base, lim, data))
+        self.__info('drop-gstream pseq=%d base=%d lim=%d data=%s',
+                    pseq, base, lim, data)
         pass
 
     def __set_vo(self, msg, auth=None, path=None, user=None,
