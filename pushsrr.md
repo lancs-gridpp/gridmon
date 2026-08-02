@@ -5,8 +5,15 @@ This command reads an SRR, and pushes it as Prometheus metrics to a remote-write
 
 ## Run-time dependencies
 
-`push-srr` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus.
+`push-srr` requires `frozendict`, [Protocol Buffers](https://developers.google.com/protocol-buffers) and [Snappy compression](http://google.github.io/snappy/) for pushing to Prometheus, so try one of these:
 
+```
+sudo dnf install python3-snappy python3-protobuf python3-frozendict
+```
+
+```
+sudo apt-get install python3-snappy python3-protobuf python3-frozendict
+```
 
 ## Invocation
 
