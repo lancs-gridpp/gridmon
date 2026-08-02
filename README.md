@@ -10,8 +10,8 @@ These are custom scripts to augment metrics available for collection by Promethe
 - [`hammercloud-events`](hammercloud.md) &ndash; Run from Procmail, this converts a HammerCloud notification email into a metric point, best used for annotating HammerCloud exclusions.
 - [`kafka-exporter`](kafka.md) &ndash; Run continuously, this consumes from one or more Kafka queues, counting key/value bytes, messages and connections, and reporting whether up.
 - [`perfsonar-stats`](perfsonar.md) &ndash; Run continuously, this polls a perfSONAR endpoint for measurements, and serves them to Prometheus.
-<!-- - `static-metrics` (deprecated; use `ip-statics-exporter` instead) &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion. -->
 - [`push-srr`](pushsrr.md) &ndash; This single-shot command reads an SRR in JSON, and remote-writes metrics derived from it to Prometheus.
+<!-- - `static-metrics` (deprecated; use `ip-statics-exporter` instead) &ndash; Run as a cronjob, this generates a file holding Prometheus metrics describing static intent, and bungs in some ping times just for the sake of high coupling and low cohesion. -->
 
 ## Installation
 

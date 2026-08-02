@@ -53,6 +53,7 @@ The following metrics are defined:
   - `vo_id` &ndash; the name of a VO, excluding role/group conditions
   - `vo_role` &ndash; a role within a VO, as defined by a `/Role=` attribute in `storageservice.storageshares[*].vos[*]`
   - `vo_group` &ndash; a group within a VO, as defined by a `/Group=` attribute in `storageservice.storageshares[*].vos[*]`
+  (The format of these attributes is a guess based on limited examples!)
 - `srr_share_endpoint_info` has the value `1` and the following additional label:
   - `ep`
 
