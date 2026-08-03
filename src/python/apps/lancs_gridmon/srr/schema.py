@@ -86,7 +86,7 @@ def srr2data(srr):
         'implvers': root.get('implementationversion'),
         'quality': root.get('qualitylevel'),
     }
-    data[now * 1000] = { srv: ev }
+    data[now] = { srv: ev }
 
     for ent in root.get('storageendpoints', dict()):
         ev['endpoint'][ent['name']] = {
