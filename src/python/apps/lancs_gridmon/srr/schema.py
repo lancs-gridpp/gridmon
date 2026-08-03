@@ -47,10 +47,8 @@ def vo2vo(inp):
         ent = { 'vo': vo, 'role': '', 'group': '' }
         result[vostr] = ent
         attrsstr = vm['attrs']
-        print('[%s] => [%s][%s]' % (vostr, vo, attrsstr))
         for am in _voattrfmt.finditer(attrsstr):
             k, v = am['key'], am['value']
-            print('k=[%s] v=[%s]' % (k, v))
             if k == 'Role':
                 ent['role'] = v
             elif k == 'Group':
