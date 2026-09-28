@@ -3,6 +3,11 @@ all::
 ## Configurable defaults
 PREFIX=/usr/local
 FIND=find
+TAR=tar
+
+VWORDS:=$(shell src/getversion.sh --prefix=v MAJOR MINOR)
+VERSION:=$(word 1,$(VWORDS))
+BUILD:=$(word 2,$(VWORDS))
 
 ## Provide a version of $(abspath) that can cope with spaces in the
 ## current directory.
@@ -43,9 +48,28 @@ apps_pyproto += lancs_gridmon/metrics/remote_write
 include binodeps.mk
 include pynodeps.mk
 
-all:: python-zips
+all:: python-zips out/VERSION out/BUILD
 install:: install-python-zips
 install:: install-hidden-scripts
 
+out/gridmon.tgz: PREFIX=scratch/out
+out/gridmon.tgz: all install
+	$(TAR) czf '$@' -C $(PREFIX) share
+
 tidy::
 	$(FIND) . -name "*~" -delete
+
+MYCMPCP=$(CMP) -s '$1' '$2' || $(CP) '$1' '$2'
+.PHONY: prepare-version
+prepare-version:
+	@$(MKDIR) tmp/
+ifneq ($(BUILD),)
+	$(file >tmp/BUILD,$(BUILD))
+endif
+ifneq ($(VERSION),)
+	$(file >tmp/VERSION,$(VERSION))
+endif
+out/BUILD: prepare-version
+	@$(call MYCMPCP,tmp/BUILD,$@)
+out/VERSION: prepare-version
+	@$(call MYCMPCP,tmp/VERSION,$@)
