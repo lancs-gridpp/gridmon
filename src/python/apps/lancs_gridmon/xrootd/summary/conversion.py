@@ -210,7 +210,7 @@ class MetricConverter:
                      .setdefault('rc', dict()) \
                      .setdefault('known', dict())
             for i in range(100, 600):
-                el = blk.find('./response/http_' + i)
+                el = blk.find('./response/http_%03d' % i)
                 if el is None:
                     continue
                 rcs['%03d' % i] = int(el.text)
@@ -224,7 +224,7 @@ class MetricConverter:
                      .setdefault('known', dict())
             for i in ('GET', 'PUT', 'HEAD', 'OPTIONS', 'PATCH', 'DELETE',
                       'PROPFIND', 'MKCOL', 'MOVE', 'POST', 'COPY'):
-                el = blk.dins('./request/' + i)
+                el = blk.find('./request/%s' % i)
                 if el is None:
                     continue
                 rcs[i] = int(el.text)
