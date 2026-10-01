@@ -1754,16 +1754,24 @@ schema = [
         'base': 'xrootd_http_method',
         'type': 'counter',
         'help': 'HTTP requests by method',
-        'select': metric_keys('summary', 1, 'http', 'req', 'meth', 'known', 1),
+        'select': lambda e: [
+            t + (m,)
+            for t in e['summary']
+            if 'http' in e['summary'][t]
+            and 'req' in e['summary'][t]['http']
+            and 'meth' in e['summary'][t]['http']['req']
+            and 'known' in e['summary'][t]['http']['req']['meth']
+            for m in e['summary'][t]['http']['req']['meth']['known']
+        ] if 'summary' in e else list(),
         'samples': {
-            '_total': ('%d', metric_walk('summary', 1, 'http', 'req',
-                                         'meth', 'known', 1)),
-            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+            '_total': ('%d', lambda t, d: d['summary'][t[0:3]]['http']['req'] \
+                       ['meth']['known'][t[3]]),
+            '_created': ('%.3f', lambda t, d: d['summary'][t[0:3]]['start']),
         },
         'attrs': {
-            'pgm': ('%s', lambda t, d: t[0][2]),
-            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
-            'method': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
+            'method': ('%s', lambda t, d: t[3]),
         }
     },
 
@@ -1771,14 +1779,20 @@ schema = [
         'base': 'xrootd_http_malformed',
         'type': 'counter',
         'help': 'malformed HTTP requests',
-        'select': metric_keys('summary', 1, 'http', 'req', 'malf'),
+        'select': lambda e: [
+            t for t in e['summary']
+            if 'http' in e['summary'][t]
+            and 'req' in e['summary'][t]['http']
+            and 'malf' in e['summary'][t]['http']['req']
+        ] if 'summary' in e else list(),
         'samples': {
-            '_total': ('%d', metric_walk('summary', 1, 'http', 'req', 'malf')),
-            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+            '_total': ('%d', lambda t, d: d['summary'][t[0:3]]['http']['req'] \
+                       ['malf']),
+            '_created': ('%.3f', lambda t, d: d['summary'][t[0:3]]['start']),
         },
         'attrs': {
-            'pgm': ('%s', lambda t, d: t[0][2]),
-            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+            'pgm': ('%s', lambda t, d: t[2]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1786,15 +1800,21 @@ schema = [
         'base': 'xrootd_http_unknown_method',
         'type': 'counter',
         'help': 'malformed HTTP requests',
-        'select': metric_keys('summary', 1, 'http', 'req', 'meth', 'unk'),
+        'select': lambda e: [
+            t for t in e['summary']
+            if 'http' in e['summary'][t]
+            and 'req' in e['summary'][t]['http']
+            and 'meth' in e['summary'][t]['http']['req']
+            and 'unk' in e['summary'][t]['http']['req']['meth']
+        ] if 'summary' in e else list(),
         'samples': {
-            '_total': ('%d', metric_walk('summary', 1, 'http', 'req', 'meth',
-                                         'unk')),
-            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+            '_total': ('%d', lambda t, d: d['summary'][t[0:3]]['http']['req'] \
+                       ['meth']['unk']),
+            '_created': ('%.3f', lambda t, d: d['summary'][t[0:3]]['start']),
         },
         'attrs': {
-            'pgm': ('%s', lambda t, d: t[0][2]),
-            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+            'pgm': ('%s', lambda t, d: t[2]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 
@@ -1802,31 +1822,45 @@ schema = [
         'base': 'xrootd_http_status',
         'type': 'counter',
         'help': 'HTTP requests by status',
-        'select': metric_keys('summary', 1, 'http', 'rsp', 'rc', 'known', 1),
+        'select': lambda e: [
+            t + (m,)
+            for t in e['summary']
+            if 'http' in e['summary'][t]
+            and 'rsp' in e['summary'][t]['http']
+            and 'rc' in e['summary'][t]['http']['rsp']
+            and 'known' in e['summary'][t]['http']['rsp']['rc']
+            for m in e['summary'][t]['http']['rsp']['rc']['known']
+        ] if 'summary' in e else list(),
         'samples': {
-            '_total': ('%d', metric_walk('summary', 1, 'http', 'rsp',
-                                         'rc', 'known', 1)),
-            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+            '_total': ('%d', lambda t, d: d['summary'][t[0:3]]['http']['rsp'] \
+                       ['rc']['known'][t[3]]),
+            '_created': ('%.3f', lambda t, d: d['summary'][t[0:3]]['start']),
         },
         'attrs': {
-            'pgm': ('%s', lambda t, d: t[0][2]),
-            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
-            'status': ('%s', lambda t, d: t[1]),
+            'pgm': ('%s', lambda t, d: t[2]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
+            'status': ('%s', lambda t, d: t[3]),
         }
     },
 
     {
         'base': 'xrootd_http_other_response',
         'type': 'counter',
-        'help': 'HTTP requests by status',
-        'select': metric_keys('summary', 1, 'http', 'rsp', 'other'),
+        'help': 'other HTTP responses',
+        'select': lambda e: [
+            t for t in e['summary']
+            if 'http' in e['summary'][t]
+            and 'rsp' in e['summary'][t]['http']
+            and 'other' in e['summary'][t]['http']['rsp']
+        ] if 'summary' in e else list(),
         'samples': {
-            '_total': ('%d', metric_walk('summary', 1, 'http', 'other')),
-            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+            '_total': ('%d', lambda t, d: d['summary'][t[0:3]]['http']['rsp'] \
+                       ['other']),
+            '_created': ('%.3f', lambda t, d: d['summary'][t[0:3]]['start']),
         },
         'attrs': {
-            'pgm': ('%s', lambda t, d: t[0][2]),
-            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+            'pgm': ('%s', lambda t, d: t[2]),
+            'xrdid': ('%s@%s', lambda t, d: t[1], lambda t, d: t[0]),
         }
     },
 ]
