@@ -203,6 +203,42 @@ class MetricConverter:
                 + int(blk.find('./usr/u').text) / 1000000.0
             pass
 
+        blk = stats.get('http_plugin')
+        if blk is not None:
+            sub = data.setdefault('http', { })
+            rcs = sub.setdefault('rsp', dict()) \
+                     .setdefault('rc', dict()) \
+                     .setdefault('known', dict())
+            for i in range(100, 600):
+                el = blk.find('./response/http_' + i)
+                if el is None:
+                    continue
+                rcs[i] = int(el.text)
+                continue
+            el = blk.find('./response/OTHERS')
+            if el is not None:
+                sub['rsp']['rc']['other'] = int(el.text)
+                pass
+            rcs = sub.setdefault('req', dict()) \
+                     .setdefault('meth', dict()) \
+                     .setdefault('known', dict())
+            for i in ('GET', 'PUT', 'HEAD', 'OPTIONS', 'PATCH', 'DELETE',
+                      'PROPFIND', 'MKCOL', 'MOVE', 'POST', 'COPY'):
+                el = blk.dins('./request/' + i)
+                if el is None:
+                    continue
+                rcs[i] = int(el.text)
+                continue
+            el = blk.find('./request/Malformed')
+            if el is not None:
+                sub['req']['meth']['malf'] = int(el.text)
+                pass
+            el = blk.find('./request/Unknown')
+            if el is not None:
+                sub['req']['meth']['unk'] = int(el.text)
+                pass
+            pass
+
         ## Get the entry we want to populate, indexed by timestamp and
         ## by (host, name).
         self._hist.install( { timestamp: { 'summary': { inst: data } } } )
