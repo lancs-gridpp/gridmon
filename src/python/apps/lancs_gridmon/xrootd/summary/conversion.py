@@ -213,11 +213,11 @@ class MetricConverter:
                 el = blk.find('./response/http_' + i)
                 if el is None:
                     continue
-                rcs[i] = int(el.text)
+                rcs['%03d' % i] = int(el.text)
                 continue
             el = blk.find('./response/OTHERS')
             if el is not None:
-                sub['rsp']['rc']['other'] = int(el.text)
+                sub['rsp']['other'] = int(el.text)
                 pass
             rcs = sub.setdefault('req', dict()) \
                      .setdefault('meth', dict()) \
@@ -231,7 +231,7 @@ class MetricConverter:
                 continue
             el = blk.find('./request/Malformed')
             if el is not None:
-                sub['req']['meth']['malf'] = int(el.text)
+                sub['req']['malf'] = int(el.text)
                 pass
             el = blk.find('./request/Unknown')
             if el is not None:
