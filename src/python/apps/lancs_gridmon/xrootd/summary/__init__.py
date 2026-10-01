@@ -30,6 +30,8 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 ## OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from lancs_gridmon.metrics import keys as metric_keys, walk as metric_walk
+
 schema = [
     {
         'base': 'xrootd_buff_mem',
@@ -1745,6 +1747,86 @@ schema = [
             'lp': ('%s', lambda t, d: t[3]),
             'rp': ('%s', lambda t, d: d['summary'][t[0:3]] \
                    ['oss']['paths'][t[3]]['rp']),
+        }
+    },
+
+    {
+        'base': 'xrootd_http_method',
+        'type': 'counter',
+        'help': 'HTTP requests by method',
+        'select': metric_keys('summary', 1, 'http', 'req', 'meth', 'known', 1),
+        'samples': {
+            '_total': ('%d', metric_walk('summary', 1, 'http', 'req',
+                                         'meth', 'known', 1)),
+            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0][2]),
+            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+            'method': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_http_malformed',
+        'type': 'counter',
+        'help': 'malformed HTTP requests',
+        'select': metric_keys('summary', 1, 'http', 'req', 'malf'),
+        'samples': {
+            '_total': ('%d', metric_walk('summary', 1, 'http', 'req', 'malf')),
+            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0][2]),
+            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+        }
+    },
+
+    {
+        'base': 'xrootd_http_unknown_method',
+        'type': 'counter',
+        'help': 'malformed HTTP requests',
+        'select': metric_keys('summary', 1, 'http', 'req', 'meth', 'unk'),
+        'samples': {
+            '_total': ('%d', metric_walk('summary', 1, 'http', 'req', 'meth',
+                                         'unk')),
+            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0][2]),
+            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+        }
+    },
+
+    {
+        'base': 'xrootd_http_status',
+        'type': 'counter',
+        'help': 'HTTP requests by status',
+        'select': metric_keys('summary', 1, 'http', 'rsp', 'rc', 'known', 1),
+        'samples': {
+            '_total': ('%d', metric_walk('summary', 1, 'http', 'rsp',
+                                         'rc', 'known', 1)),
+            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0][2]),
+            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
+            'status': ('%s', lambda t, d: t[1]),
+        }
+    },
+
+    {
+        'base': 'xrootd_http_other_response',
+        'type': 'counter',
+        'help': 'HTTP requests by status',
+        'select': metric_keys('summary', 1, 'http', 'rsp', 'other'),
+        'samples': {
+            '_total': ('%d', metric_walk('summary', 1, 'http', 'other')),
+            '_created': ('%.3f', metric_walk('summary', 1, 'start')),
+        },
+        'attrs': {
+            'pgm': ('%s', lambda t, d: t[0][2]),
+            'xrdid': ('%s@%s', lambda t, d: t[0][1], lambda t, d: t[0][0]),
         }
     },
 ]
