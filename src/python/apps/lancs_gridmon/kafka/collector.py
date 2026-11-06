@@ -305,6 +305,7 @@ def listen_to_kafka(queue, conf, stats, stats_lock):
                 pass
             logging.info('conn(%s) as %s\n' % (boot, group_id))
             cons = KafkaConsumer(*topics,
+                                 consumer_timeout_ms=3*60*1000,
                                  bootstrap_servers=boot,
                                  group_id=group_id)
             with stats_lock:
